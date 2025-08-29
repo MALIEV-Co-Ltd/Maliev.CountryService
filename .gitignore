@@ -72,3 +72,7 @@ nunit-*.xml
 # OS generated files
 [Tt]humbs.db
 [Dd]esktop.ini
+
+# Migration and Reference folders
+migration_source/
+reference_project/
