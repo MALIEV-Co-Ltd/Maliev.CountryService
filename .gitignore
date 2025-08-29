@@ -76,3 +76,5 @@ nunit-*.xml
 # Migration and Reference folders
 migration_source/
 reference_project/
+.gemini/
+gha-creds-*.json
