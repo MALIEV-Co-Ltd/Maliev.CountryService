@@ -52,3 +52,23 @@ CodeCoverage/
 *.VisualState.xml
 TestResult.xml
 nunit-*.xml
+
+# XML Documentation files
+*.xml
+
+# Project User files
+*.csproj.user
+
+# Visual Studio and IDE files
+.vs/
+*.suo
+*.user
+
+# Log and Temporary files
+*.log
+*.pdb
+*.tmp
+
+# OS generated files
+[Tt]humbs.db
+[Dd]esktop.ini
