@@ -247,13 +247,16 @@ try
     app.UseCorrelationId();
 
     // Configure the HTTP request pipeline
-    app.UseSwagger();
+    app.UseSwagger(c => 
+    {
+        c.RouteTemplate = "countries/swagger/{documentName}/swagger.json";
+    });
     app.UseSwaggerUI(c =>
     {
         var provider = app.Services.GetRequiredService<IApiVersionDescriptionProvider>();
         foreach (var description in provider.ApiVersionDescriptions)
         {
-            c.SwaggerEndpoint($"./{description.GroupName}/swagger.json", description.GroupName.ToUpperInvariant());
+            c.SwaggerEndpoint($"/countries/swagger/{description.GroupName}/swagger.json", description.GroupName.ToUpperInvariant());
         }
         c.RoutePrefix = "countries/swagger";
     });
