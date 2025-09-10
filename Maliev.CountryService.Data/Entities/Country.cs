@@ -1,8 +1,8 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace Maliev.CountryService.Api.Models;
+namespace Maliev.CountryService.Data.Entities;
 
-public class CountryDto
+public class Country
 {
     public int Id { get; set; }
 
@@ -14,11 +14,6 @@ public class CountryDto
     [MaxLength(50)]
     public required string Continent { get; set; }
 
-    public List<CountryCodeDto> CountryCodes { get; set; } = new List<CountryCodeDto>();
-
-    // Backward compatibility property - returns primary country code
-    public string? CountryCode => CountryCodes.FirstOrDefault(c => c.IsPrimary)?.Code;
-
     [Required]
     [MaxLength(2)]
     public required string ISO2 { get; set; }
@@ -28,5 +23,9 @@ public class CountryDto
     public required string ISO3 { get; set; }
 
     public DateTime CreatedDate { get; set; }
+
     public DateTime ModifiedDate { get; set; }
+
+    // Navigation properties
+    public ICollection<CountryCode> CountryCodes { get; set; } = new List<CountryCode>();
 }

@@ -1,30 +1,42 @@
-# See https://aka.ms/customizecontainer to learn how to customize your debug container and how Visual Studio uses this Dockerfile to build your images for faster debugging.
-
-# This stage is used when running from VS in fast mode (Default for Debug configuration)
-FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS base
-USER $APP_UID
-WORKDIR /app
-EXPOSE 8080
-EXPOSE 8081
-
-
-# This stage is used to build the service project
+# Build stage
 FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
-ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
+
+# Copy csproj and restore as distinct layers
 COPY ["Maliev.CountryService.Api/Maliev.CountryService.Api.csproj", "Maliev.CountryService.Api/"]
-RUN dotnet restore "./Maliev.CountryService.Api/Maliev.CountryService.Api.csproj"
+COPY ["Maliev.CountryService.Data/Maliev.CountryService.Data.csproj", "Maliev.CountryService.Data/"]
+RUN dotnet restore "Maliev.CountryService.Api/Maliev.CountryService.Api.csproj"
+
+# Copy everything and build
 COPY . .
 WORKDIR "/src/Maliev.CountryService.Api"
-RUN dotnet build "./Maliev.CountryService.Api.csproj" -c $BUILD_CONFIGURATION -o /app/build
+RUN dotnet build "Maliev.CountryService.Api.csproj" -c Release -o /app/build
 
-# This stage is used to publish the service project to be copied to the final stage
+# Publish stage  
 FROM build AS publish
-ARG BUILD_CONFIGURATION=Release
-RUN dotnet publish "./Maliev.CountryService.Api.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
+RUN dotnet publish "Maliev.CountryService.Api.csproj" -c Release -o /app/publish /p:UseAppHost=false
 
-# This stage is used in production or when running from VS in regular mode (Default when not using the Debug configuration)
-FROM base AS final
+# Final stage/image
+FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS final
 WORKDIR /app
+
+# Create non-root user for security
+RUN adduser --disabled-password --gecos "" --uid 10001 appuser
+
+# Create logs directory and set permissions
+RUN mkdir -p /app/logs && chown -R appuser:appuser /app
+
+# Copy published app
 COPY --from=publish /app/publish .
+
+# Switch to non-root user
+USER appuser
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+  CMD curl -f http://localhost:8080/countries/liveness || exit 1
+
+# Expose port
+EXPOSE 8080
+
 ENTRYPOINT ["dotnet", "Maliev.CountryService.Api.dll"]

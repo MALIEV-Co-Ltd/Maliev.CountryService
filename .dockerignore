@@ -11,6 +11,8 @@
 **/*.*proj.user
 **/*.dbmdl
 **/*.jfm
+**/*.xml
+**/*.sln
 **/azds.yaml
 **/bin
 **/charts
@@ -28,12 +30,3 @@ README.md
 !.git/config
 !.git/packed-refs
 !.git/refs/heads/**
-
-# Custom exclusions for Maliev.CountryService
-Maliev.CountryService.Tests/
-migration_source/
-*.sln
-secrets.yaml
-deploy.ps1
-deploy-service.ps1
-*.xml

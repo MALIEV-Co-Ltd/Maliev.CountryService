@@ -37,9 +37,14 @@ ScaffoldingReadMe.txt
 *.snupkg
 
 # Others
+.vs/
+*.suo
+*.csproj.user
+*.xml
 ~$*
 *~
 CodeCoverage/
+*.log
 
 # MSBuild Binary and Structured Log
 *.binlog
@@ -53,28 +58,9 @@ CodeCoverage/
 TestResult.xml
 nunit-*.xml
 
-# XML Documentation files
-*.xml
-
-# Project User files
-*.csproj.user
-
-# Visual Studio and IDE files
-.vs/
-*.suo
-*.user
-
-# Log and Temporary files
-*.log
-*.pdb
-*.tmp
-
-# OS generated files
-[Tt]humbs.db
-[Dd]esktop.ini
-
-# Migration and Reference folders
-migration_source/
-reference_project/
+# Custom
+migration_source
 .gemini/
 gha-creds-*.json
+secrets.yaml
+.claude/settings.local.json
