@@ -152,7 +152,9 @@ docker run -p 8080:8080 maliev-country-service
 ## 📚 API Documentation
 
 ### Base URL
-- **Development**: `https://dev.api.maliev.com/countries/v1.0`
+- **Development**: 
+  - API Base URL: `https://dev.api.maliev.com/countries/v1.0`
+  - Swagger UI: `https://dev.api.maliev.com/countries/swagger`
 - **Production**: `https://api.maliev.com/countries/v1.0`
 
 ### Authentication
