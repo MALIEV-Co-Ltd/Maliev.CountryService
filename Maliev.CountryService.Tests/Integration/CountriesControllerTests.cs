@@ -51,10 +51,7 @@ public class CountriesControllerTests : IClassFixture<WebApplicationFactory<Prog
                 });
 
                 // Add missing service registrations required by CountryService
-                services.AddMemoryCache(options =>
-                {
-                    options.SizeLimit = 1000;
-                });
+                services.AddMemoryCache(); // No size limit for tests to avoid cache entry size requirements
                 
                 // Simplified CacheOptions registration for tests (no validation)
                 services.AddSingleton<IOptions<CacheOptions>>(provider =>
