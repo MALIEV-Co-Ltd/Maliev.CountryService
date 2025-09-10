@@ -1,5 +1,6 @@
 using FluentAssertions;
 using Maliev.CountryService.Api.Models;
+using Maliev.CountryService.Api.Services;
 using Maliev.CountryService.Data.DbContexts;
 using Maliev.CountryService.Data.Entities;
 using Microsoft.AspNetCore.Authentication;
@@ -23,9 +24,13 @@ public class CountriesControllerTests : IClassFixture<WebApplicationFactory<Prog
     private readonly WebApplicationFactory<Program> _factory;
     private readonly HttpClient _client;
     private readonly CountryDbContext _context;
+    private readonly string _databaseName;
 
     public CountriesControllerTests(WebApplicationFactory<Program> factory)
     {
+        // Use consistent database name for this test class
+        _databaseName = $"TestDb_{nameof(CountriesControllerTests)}";
+        
         _factory = factory.WithWebHostBuilder(builder =>
         {
             builder.UseEnvironment("Testing");
@@ -39,11 +44,31 @@ public class CountriesControllerTests : IClassFixture<WebApplicationFactory<Prog
                     services.Remove(descriptor);
                 }
 
-                // Add InMemory database for testing
+                // Add InMemory database for testing with shared name
                 services.AddDbContext<CountryDbContext>(options =>
                 {
-                    options.UseInMemoryDatabase($"TestDb_{Guid.NewGuid()}");
+                    options.UseInMemoryDatabase(_databaseName);
                 });
+
+                // Add missing service registrations required by CountryService
+                services.AddMemoryCache(options =>
+                {
+                    options.SizeLimit = 1000;
+                });
+                
+                // Simplified CacheOptions registration for tests (no validation)
+                services.AddSingleton<IOptions<CacheOptions>>(provider =>
+                {
+                    var options = new CacheOptions
+                    {
+                        CountryCacheDurationMinutes = 60,
+                        SearchCacheDurationMinutes = 30,
+                        MaxCacheSize = 1000
+                    };
+                    return Options.Create(options);
+                });
+                    
+                services.AddScoped<ICountryService, Maliev.CountryService.Api.Services.CountryService>();
 
                 // Reduce logging noise during tests
                 services.AddLogging(builder =>
@@ -52,7 +77,11 @@ public class CountriesControllerTests : IClassFixture<WebApplicationFactory<Prog
                     builder.SetMinimumLevel(LogLevel.Warning);
                 });
 
-                // Authentication is disabled in Testing environment
+                // Add test authentication scheme to bypass [Authorize] attributes
+                services.AddAuthentication("Test")
+                    .AddScheme<AuthenticationSchemeOptions, TestAuthenticationSchemeHandler>(
+                        "Test", options => { });
+                services.AddAuthorization();
             });
         });
 
@@ -66,9 +95,22 @@ public class CountriesControllerTests : IClassFixture<WebApplicationFactory<Prog
         // Authentication is handled by TestAuthenticationSchemeHandler
     }
 
+    private async Task CleanDatabase()
+    {
+        using var scope = _factory.Services.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<CountryDbContext>();
+        
+        context.CountryCodes.RemoveRange(context.CountryCodes);
+        context.Countries.RemoveRange(context.Countries);
+        await context.SaveChangesAsync();
+    }
+
     [Fact]
     public async Task GetById_ExistingCountry_ReturnsOk()
     {
+        // Clean database before test
+        await CleanDatabase();
+        
         // Arrange
         var country = new Country
         {
@@ -127,6 +169,9 @@ public class CountriesControllerTests : IClassFixture<WebApplicationFactory<Prog
     [Fact]
     public async Task Search_WithValidParameters_ReturnsOk()
     {
+        // Clean database before test
+        await CleanDatabase();
+        
         // Arrange
         var countries = new[]
         {
@@ -202,7 +247,9 @@ public class CountriesControllerTests : IClassFixture<WebApplicationFactory<Prog
         // Verify the country was actually created in the database
         using var scope = _factory.Services.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<CountryDbContext>();
-        var countryInDb = await context.Countries.FirstOrDefaultAsync(c => c.Id == result.Id);
+        var countryInDb = await context.Countries
+            .Include(c => c.CountryCodes)
+            .FirstOrDefaultAsync(c => c.Id == result.Id);
         countryInDb.Should().NotBeNull();
         countryInDb!.Name.Should().Be("New Country");
     }
@@ -361,6 +408,9 @@ public class CountriesControllerTests : IClassFixture<WebApplicationFactory<Prog
     [Fact]
     public async Task GetContinents_ReturnsOk()
     {
+        // Clean database before test
+        await CleanDatabase();
+        
         // Arrange
         var countries = new[]
         {
