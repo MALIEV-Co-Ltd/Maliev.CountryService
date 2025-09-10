@@ -48,7 +48,11 @@ public class CountryService : ICountryService
 
         var dto = MapToDto(country);
         
-        _cache.Set(cacheKey, dto, TimeSpan.FromMinutes(_cacheOptions.CountryCacheDurationMinutes));
+        _cache.Set(cacheKey, dto, new MemoryCacheEntryOptions
+        {
+            AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(_cacheOptions.CountryCacheDurationMinutes),
+            Size = 1 // Each country entry counts as 1 unit
+        });
         _logger.LogDebug("Country {CountryId} cached for {Duration} minutes", id, _cacheOptions.CountryCacheDurationMinutes);
 
         return dto;
@@ -126,7 +130,11 @@ public class CountryService : ICountryService
             PageSize = request.PageSize
         };
 
-        _cache.Set(cacheKey, result, TimeSpan.FromMinutes(_cacheOptions.SearchCacheDurationMinutes));
+        _cache.Set(cacheKey, result, new MemoryCacheEntryOptions
+        {
+            AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(_cacheOptions.SearchCacheDurationMinutes),
+            Size = result.Items.Count() // Size based on number of items in result
+        });
         _logger.LogDebug("Country search results cached for {Duration} minutes", _cacheOptions.SearchCacheDurationMinutes);
 
         return result;
@@ -300,7 +308,11 @@ public class CountryService : ICountryService
             .OrderBy(c => c)
             .ToListAsync(cancellationToken);
 
-        _cache.Set(cacheKey, continents, TimeSpan.FromMinutes(_cacheOptions.CountryCacheDurationMinutes));
+        _cache.Set(cacheKey, continents, new MemoryCacheEntryOptions
+        {
+            AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(_cacheOptions.CountryCacheDurationMinutes),
+            Size = continents.Count() // Size based on number of continents
+        });
         _logger.LogDebug("Continents cached for {Duration} minutes", _cacheOptions.CountryCacheDurationMinutes);
 
         return continents;
