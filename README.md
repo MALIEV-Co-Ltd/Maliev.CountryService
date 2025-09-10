@@ -8,7 +8,8 @@ A comprehensive CRUD API service for managing country data with advanced feature
 - **Complete CRUD Operations**: Create, Read, Update, Delete countries with full validation
 - **Advanced Search & Filtering**: Search by name, continent, ISO codes, and country codes
 - **Paginated Results**: Efficient pagination with configurable page sizes
-- **Unique Constraints**: Enforced uniqueness for country names, ISO2, ISO3, and country codes
+- **Normalized Data Model**: Proper one-to-many relationship for multiple country codes per country
+- **Unique Constraints**: Enforced uniqueness for country names, ISO2, and ISO3 codes
 
 ### Performance & Scalability
 - **Memory Caching**: Intelligent caching of country data with configurable TTL
