@@ -173,24 +173,20 @@ try
             policy =>
             {
                 policy.WithOrigins(
-                    "https://www.maliev.com",
-                    "https://intranet.maliev.com",
-                    "https://api.maliev.com")
+                    "https://maliev.com",
+                    "https://*.maliev.com",
+                    "http://maliev.com",
+                    "http://*.maliev.com")
                 .AllowAnyHeader()
                 .AllowAnyMethod();
             });
     });
 
-    // JWT Bearer authentication configuration (skip in Testing environment)
+    // Configure JWT Authentication (skip in Testing environment)
     if (!builder.Environment.IsEnvironment("Testing"))
     {
-        // Check if JWT configuration is available from Google Secret Manager
-        var jwtConfig = builder.Configuration.GetSection(JwtOptions.SectionName);
-        var hasJwtConfig = !string.IsNullOrEmpty(jwtConfig["Issuer"]) && 
-                          !string.IsNullOrEmpty(jwtConfig["Audience"]) && 
-                          !string.IsNullOrEmpty(jwtConfig["SecurityKey"]);
-
-        if (hasJwtConfig)
+        var jwtSection = builder.Configuration.GetSection(JwtOptions.SectionName);
+        if (jwtSection.Exists())
         {
             builder.Services.AddAuthentication(options =>
             {
@@ -204,7 +200,7 @@ try
                     Audience = "default-audience", 
                     SecurityKey = "default-key"
                 };
-                jwtConfig.Bind(jwtOptions);
+                jwtSection.Bind(jwtOptions);
 
                 options.TokenValidationParameters = new TokenValidationParameters
                 {
@@ -270,12 +266,8 @@ try
     // JWT Authentication & Authorization (only if configured and not in Testing environment)
     if (!app.Environment.IsEnvironment("Testing"))
     {
-        var jwtMiddlewareConfig = app.Configuration.GetSection(JwtOptions.SectionName);
-        var hasJwtConfig = !string.IsNullOrEmpty(jwtMiddlewareConfig["Issuer"]) && 
-                          !string.IsNullOrEmpty(jwtMiddlewareConfig["Audience"]) && 
-                          !string.IsNullOrEmpty(jwtMiddlewareConfig["SecurityKey"]);
-
-        if (hasJwtConfig)
+        var jwtSection = app.Configuration.GetSection(JwtOptions.SectionName);
+        if (jwtSection.Exists())
         {
             app.UseAuthentication();
             app.UseAuthorization();
