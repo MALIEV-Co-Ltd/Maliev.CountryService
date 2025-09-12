@@ -62,7 +62,7 @@ public class CountryService : ICountryService
     {
         var cacheKey = $"country:search:{request.Name}:{request.Continent}:{request.ISO2}:{request.ISO3}:{request.CountryCode}:{request.PageNumber}:{request.PageSize}:{request.SortBy}:{request.SortDirection}";
         
-        if (_cache.TryGetValue(cacheKey, out PagedResult<CountryDto>? cachedResult))
+        if (_cache.TryGetValue(cacheKey, out PagedResult<CountryDto>? cachedResult) && cachedResult != null)
         {
             _logger.LogDebug("Country search result retrieved from cache");
             return cachedResult;
@@ -108,7 +108,7 @@ public class CountryService : ICountryService
             {
                 "name" => isAscending ? query.OrderBy(c => c.Name) : query.OrderByDescending(c => c.Name),
                 "continent" => isAscending ? query.OrderBy(c => c.Continent) : query.OrderByDescending(c => c.Continent),
-                "countrycode" => isAscending ? query.OrderBy(c => c.CountryCodes.FirstOrDefault(cc => cc.IsPrimary).Code) : query.OrderByDescending(c => c.CountryCodes.FirstOrDefault(cc => cc.IsPrimary).Code),
+                "countrycode" => isAscending ? query.OrderBy(c => c.CountryCodes.FirstOrDefault(cc => cc.IsPrimary)!.Code) : query.OrderByDescending(c => c.CountryCodes.FirstOrDefault(cc => cc.IsPrimary)!.Code),
                 "iso2" => isAscending ? query.OrderBy(c => c.ISO2) : query.OrderByDescending(c => c.ISO2),
                 "iso3" => isAscending ? query.OrderBy(c => c.ISO3) : query.OrderByDescending(c => c.ISO3),
                 "createddate" => isAscending ? query.OrderBy(c => c.CreatedDate) : query.OrderByDescending(c => c.CreatedDate),
@@ -295,7 +295,7 @@ public class CountryService : ICountryService
     {
         const string cacheKey = "country:continents";
         
-        if (_cache.TryGetValue(cacheKey, out IEnumerable<string>? cachedContinents))
+        if (_cache.TryGetValue(cacheKey, out IEnumerable<string>? cachedContinents) && cachedContinents != null)
         {
             _logger.LogDebug("Continents retrieved from cache");
             return cachedContinents;

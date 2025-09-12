@@ -82,12 +82,12 @@ try
     builder.Services.Configure<CacheOptions>(builder.Configuration.GetSection(CacheOptions.SectionName));
 
     // Configure JWT options only if available (to allow local development without secrets)
-    var jwtSection = builder.Configuration.GetSection(JwtOptions.SectionName);
-    if (!string.IsNullOrEmpty(jwtSection["Issuer"]) && !builder.Environment.IsEnvironment("Testing"))
+    var initialJwtSection = builder.Configuration.GetSection(JwtOptions.SectionName);
+    if (!string.IsNullOrEmpty(initialJwtSection["Issuer"]) && !builder.Environment.IsEnvironment("Testing"))
     {
-        builder.Services.Configure<JwtOptions>(jwtSection);
+        builder.Services.Configure<JwtOptions>(initialJwtSection);
         builder.Services.AddOptions<JwtOptions>()
-            .Bind(jwtSection)
+            .Bind(initialJwtSection)
             .ValidateDataAnnotations()
             .ValidateOnStart();
     }
@@ -185,8 +185,8 @@ try
     // Configure JWT Authentication (skip in Testing environment)
     if (!builder.Environment.IsEnvironment("Testing"))
     {
-        var jwtSection = builder.Configuration.GetSection(JwtOptions.SectionName);
-        if (jwtSection.Exists())
+        var builderJwtSection = builder.Configuration.GetSection(JwtOptions.SectionName);
+        if (builderJwtSection.Exists())
         {
             builder.Services.AddAuthentication(options =>
             {
@@ -200,7 +200,7 @@ try
                     Audience = "default-audience", 
                     SecurityKey = "default-key"
                 };
-                jwtSection.Bind(jwtOptions);
+                builderJwtSection.Bind(jwtOptions);
 
                 options.TokenValidationParameters = new TokenValidationParameters
                 {
@@ -266,8 +266,8 @@ try
     // JWT Authentication & Authorization (only if configured and not in Testing environment)
     if (!app.Environment.IsEnvironment("Testing"))
     {
-        var jwtSection = app.Configuration.GetSection(JwtOptions.SectionName);
-        if (jwtSection.Exists())
+        var appJwtSection = app.Configuration.GetSection(JwtOptions.SectionName);
+        if (appJwtSection.Exists())
         {
             app.UseAuthentication();
             app.UseAuthorization();
