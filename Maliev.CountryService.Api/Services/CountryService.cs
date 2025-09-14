@@ -28,7 +28,7 @@ public class CountryService : ICountryService
 
     public async Task<CountryDto?> GetByIdAsync(int id, CancellationToken cancellationToken = default)
     {
-        var cacheKey = $"country:id:{id}";
+        var cacheKey = CacheKeys.CountryById(id);
         
         if (_cache.TryGetValue(cacheKey, out CountryDto? cachedCountry))
         {
@@ -60,7 +60,16 @@ public class CountryService : ICountryService
 
     public async Task<PagedResult<CountryDto>> SearchAsync(CountrySearchRequest request, CancellationToken cancellationToken = default)
     {
-        var cacheKey = $"country:search:{request.Name}:{request.Continent}:{request.ISO2}:{request.ISO3}:{request.CountryCode}:{request.PageNumber}:{request.PageSize}:{request.SortBy}:{request.SortDirection}";
+        var cacheKey = CacheKeys.CountrySearch(
+            request.Name, 
+            request.Continent, 
+            request.ISO2, 
+            request.ISO3, 
+            request.CountryCode, 
+            request.PageNumber, 
+            request.PageSize, 
+            request.SortBy, 
+            request.SortDirection);
         
         if (_cache.TryGetValue(cacheKey, out PagedResult<CountryDto>? cachedResult) && cachedResult != null)
         {
@@ -214,7 +223,7 @@ public class CountryService : ICountryService
 
         await _context.SaveChangesAsync(cancellationToken);
 
-        InvalidateCache();
+        InvalidateCountryCache(country.Id);
         _logger.LogInformation("Country updated: {CountryName} with ID {CountryId}", country.Name, country.Id);
 
         return MapToDto(country);
@@ -232,7 +241,7 @@ public class CountryService : ICountryService
         _context.Countries.Remove(country);
         await _context.SaveChangesAsync(cancellationToken);
 
-        InvalidateCache();
+        InvalidateCountryCache(country.Id);
         _logger.LogInformation("Country deleted: {CountryName} with ID {CountryId}", country.Name, country.Id);
 
         return true;
@@ -293,9 +302,7 @@ public class CountryService : ICountryService
 
     public async Task<IEnumerable<string>> GetContinentsAsync(CancellationToken cancellationToken = default)
     {
-        const string cacheKey = "country:continents";
-        
-        if (_cache.TryGetValue(cacheKey, out IEnumerable<string>? cachedContinents) && cachedContinents != null)
+        if (_cache.TryGetValue(CacheKeys.Continents, out IEnumerable<string>? cachedContinents) && cachedContinents != null)
         {
             _logger.LogDebug("Continents retrieved from cache");
             return cachedContinents;
@@ -308,7 +315,7 @@ public class CountryService : ICountryService
             .OrderBy(c => c)
             .ToListAsync(cancellationToken);
 
-        _cache.Set(cacheKey, continents, new MemoryCacheEntryOptions
+        _cache.Set(CacheKeys.Continents, continents, new MemoryCacheEntryOptions
         {
             AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(_cacheOptions.CountryCacheDurationMinutes),
             Size = continents.Count() // Size based on number of continents
@@ -341,7 +348,28 @@ public class CountryService : ICountryService
     private void InvalidateCache()
     {
         // Remove all country-related cache entries
-        // Note: This is a simplified approach. In production, you might want to use cache tagging
         _logger.LogDebug("Invalidating country cache");
+        
+        // Remove continents cache
+        _cache.Remove(CacheKeys.Continents);
+        
+        // Note: For a more sophisticated cache invalidation strategy,
+        // we would need to track individual cache keys or use cache tagging.
+        // For now, we're invalidating the most critical cache entry (continents).
+        // In a production environment with Redis, we could use pattern-based deletion.
+    }
+    
+    private void InvalidateCountryCache(int countryId)
+    {
+        // Remove specific country cache
+        _cache.Remove(CacheKeys.CountryById(countryId));
+        
+        // Also invalidate the continents cache as it might be affected
+        _cache.Remove(CacheKeys.Continents);
+        
+        // Note: We're not invalidating search caches here because it would require
+        // tracking all possible search parameter combinations, which is complex.
+        // In a production environment with Redis, we could use pattern-based deletion
+        // to remove all search cache entries.
     }
 }
