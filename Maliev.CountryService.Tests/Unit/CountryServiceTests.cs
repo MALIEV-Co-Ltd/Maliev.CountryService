@@ -518,17 +518,365 @@ public class CountryServiceTests : IDisposable
     [Fact]
     public async Task GetAllCountriesAsync_WithInvalidPageSize_ThrowsArgumentException()
     {
-        // Act
+        // Arrange
         var action = async () => await _countryService.GetAllCountriesAsync(1, 0);
 
-        // Assert
+        // Act & Assert
         await action.Should().ThrowAsync<ArgumentException>()
             .WithMessage("Page size must be between 1 and 1000*");
     }
 
+    [Fact]
+    public async Task CreateAsync_WithDatabaseUnavailable_ThrowsDatabaseUnavailableException()
+    {
+        // Arrange
+        // Create a separate service instance with a disposed context to simulate database unavailable
+        var disposedContext = new CountryDbContext(new DbContextOptionsBuilder<CountryDbContext>()
+            .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
+            .Options);
+        
+        // Dispose the context to simulate database unavailable
+        await disposedContext.DisposeAsync();
+        
+        var serviceWithDisposedContext = new Api.Services.CountryService(
+            disposedContext, 
+            _cache, 
+            _cacheOptions, 
+            _loggerMock.Object,
+            _mapper);
+
+        var request = new CreateCountryRequest
+        {
+            Name = "Test Country",
+            Continent = "Test Continent",
+            CountryCode = "123",
+            ISO2 = "TC",
+            ISO3 = "TST"
+        };
+
+        // Act
+        var action = async () => await serviceWithDisposedContext.CreateAsync(request);
+
+        // Assert
+        await action.Should().ThrowAsync<DatabaseUnavailableException>()
+            .WithMessage("The database is currently unavailable. Please try again later.*");
+    }
+
+    [Fact]
+    public async Task UpdateAsync_WithDatabaseUnavailable_ThrowsDatabaseUnavailableException()
+    {
+        // Arrange
+        // Create a separate service instance with a disposed context to simulate database unavailable
+        var disposedContext = new CountryDbContext(new DbContextOptionsBuilder<CountryDbContext>()
+            .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
+            .Options);
+        
+        // Dispose the context to simulate database unavailable
+        await disposedContext.DisposeAsync();
+        
+        var serviceWithDisposedContext = new Api.Services.CountryService(
+            disposedContext, 
+            _cache, 
+            _cacheOptions, 
+            _loggerMock.Object,
+            _mapper);
+
+        var request = new UpdateCountryRequest
+        {
+            Name = "Updated Country",
+            Continent = "Updated Continent",
+            CountryCode = "456",
+            ISO2 = "UC",
+            ISO3 = "UPD"
+        };
+
+        // Act
+        var action = async () => await serviceWithDisposedContext.UpdateAsync(1, request);
+
+        // Assert
+        await action.Should().ThrowAsync<DatabaseUnavailableException>()
+            .WithMessage("The database is currently unavailable. Please try again later.*");
+    }
+
+    [Fact]
+    public async Task DeleteAsync_WithDatabaseUnavailable_ThrowsDatabaseUnavailableException()
+    {
+        // Arrange
+        // Create a separate service instance with a disposed context to simulate database unavailable
+        var disposedContext = new CountryDbContext(new DbContextOptionsBuilder<CountryDbContext>()
+            .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
+            .Options);
+        
+        // Dispose the context to simulate database unavailable
+        await disposedContext.DisposeAsync();
+        
+        var serviceWithDisposedContext = new Api.Services.CountryService(
+            disposedContext, 
+            _cache, 
+            _cacheOptions, 
+            _loggerMock.Object,
+            _mapper);
+
+        // Act
+        var action = async () => await serviceWithDisposedContext.DeleteAsync(1);
+
+        // Assert
+        await action.Should().ThrowAsync<DatabaseUnavailableException>()
+            .WithMessage("The database is currently unavailable. Please try again later.*");
+    }
+
+    [Fact]
+    public async Task GetByIdAsync_WithDatabaseUnavailable_ThrowsDatabaseUnavailableException()
+    {
+        // Arrange
+        // Create a separate service instance with a disposed context to simulate database unavailable
+        var disposedContext = new CountryDbContext(new DbContextOptionsBuilder<CountryDbContext>()
+            .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
+            .Options);
+        
+        // Dispose the context to simulate database unavailable
+        await disposedContext.DisposeAsync();
+        
+        var serviceWithDisposedContext = new Api.Services.CountryService(
+            disposedContext, 
+            _cache, 
+            _cacheOptions, 
+            _loggerMock.Object,
+            _mapper);
+
+        // Act
+        var action = async () => await serviceWithDisposedContext.GetByIdAsync(1);
+
+        // Assert
+        await action.Should().ThrowAsync<DatabaseUnavailableException>()
+            .WithMessage("The database is currently unavailable. Please try again later.*");
+    }
+
+    [Fact]
+    public async Task SearchAsync_WithDatabaseUnavailable_ThrowsDatabaseUnavailableException()
+    {
+        // Arrange
+        // Create a separate service instance with a disposed context to simulate database unavailable
+        var disposedContext = new CountryDbContext(new DbContextOptionsBuilder<CountryDbContext>()
+            .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
+            .Options);
+        
+        // Dispose the context to simulate database unavailable
+        await disposedContext.DisposeAsync();
+        
+        var serviceWithDisposedContext = new Api.Services.CountryService(
+            disposedContext, 
+            _cache, 
+            _cacheOptions, 
+            _loggerMock.Object,
+            _mapper);
+
+        var request = new CountrySearchRequest
+        {
+            PageNumber = 1,
+            PageSize = 10
+        };
+
+        // Act
+        var action = async () => await serviceWithDisposedContext.SearchAsync(request);
+
+        // Assert
+        await action.Should().ThrowAsync<DatabaseUnavailableException>()
+            .WithMessage("The database is currently unavailable. Please try again later.*");
+    }
+
+    [Fact]
+    public async Task GetAllCountriesAsync_WithDatabaseUnavailable_ThrowsDatabaseUnavailableException()
+    {
+        // Arrange
+        // Create a separate service instance with a disposed context to simulate database unavailable
+        var disposedContext = new CountryDbContext(new DbContextOptionsBuilder<CountryDbContext>()
+            .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
+            .Options);
+        
+        // Dispose the context to simulate database unavailable
+        await disposedContext.DisposeAsync();
+        
+        var serviceWithDisposedContext = new Api.Services.CountryService(
+            disposedContext, 
+            _cache, 
+            _cacheOptions, 
+            _loggerMock.Object,
+            _mapper);
+
+        // Act
+        var action = async () => await serviceWithDisposedContext.GetAllCountriesAsync(1, 10);
+
+        // Assert
+        await action.Should().ThrowAsync<DatabaseUnavailableException>()
+            .WithMessage("The database is currently unavailable. Please try again later.*");
+    }
+
+    [Fact]
+    public async Task ExistsAsync_WithDatabaseUnavailable_ThrowsDatabaseUnavailableException()
+    {
+        // Arrange
+        // Create a separate service instance with a disposed context to simulate database unavailable
+        var disposedContext = new CountryDbContext(new DbContextOptionsBuilder<CountryDbContext>()
+            .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
+            .Options);
+        
+        // Dispose the context to simulate database unavailable
+        await disposedContext.DisposeAsync();
+        
+        var serviceWithDisposedContext = new Api.Services.CountryService(
+            disposedContext, 
+            _cache, 
+            _cacheOptions, 
+            _loggerMock.Object,
+            _mapper);
+
+        // Act
+        var action = async () => await serviceWithDisposedContext.ExistsAsync(1);
+
+        // Assert
+        await action.Should().ThrowAsync<DatabaseUnavailableException>()
+            .WithMessage("The database is currently unavailable. Please try again later.*");
+    }
+
+    [Fact]
+    public async Task ExistsByNameAsync_WithDatabaseUnavailable_ThrowsDatabaseUnavailableException()
+    {
+        // Arrange
+        // Create a separate service instance with a disposed context to simulate database unavailable
+        var disposedContext = new CountryDbContext(new DbContextOptionsBuilder<CountryDbContext>()
+            .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
+            .Options);
+        
+        // Dispose the context to simulate database unavailable
+        await disposedContext.DisposeAsync();
+        
+        var serviceWithDisposedContext = new Api.Services.CountryService(
+            disposedContext, 
+            _cache, 
+            _cacheOptions, 
+            _loggerMock.Object,
+            _mapper);
+
+        // Act
+        var action = async () => await serviceWithDisposedContext.ExistsByNameAsync("Test Country");
+
+        // Assert
+        await action.Should().ThrowAsync<DatabaseUnavailableException>()
+            .WithMessage("The database is currently unavailable. Please try again later.*");
+    }
+
+    [Fact]
+    public async Task ExistsByIso2Async_WithDatabaseUnavailable_ThrowsDatabaseUnavailableException()
+    {
+        // Arrange
+        // Create a separate service instance with a disposed context to simulate database unavailable
+        var disposedContext = new CountryDbContext(new DbContextOptionsBuilder<CountryDbContext>()
+            .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
+            .Options);
+        
+        // Dispose the context to simulate database unavailable
+        await disposedContext.DisposeAsync();
+        
+        var serviceWithDisposedContext = new Api.Services.CountryService(
+            disposedContext, 
+            _cache, 
+            _cacheOptions, 
+            _loggerMock.Object,
+            _mapper);
+
+        // Act
+        var action = async () => await serviceWithDisposedContext.ExistsByIso2Async("TC");
+
+        // Assert
+        await action.Should().ThrowAsync<DatabaseUnavailableException>()
+            .WithMessage("The database is currently unavailable. Please try again later.*");
+    }
+
+    [Fact]
+    public async Task ExistsByIso3Async_WithDatabaseUnavailable_ThrowsDatabaseUnavailableException()
+    {
+        // Arrange
+        // Create a separate service instance with a disposed context to simulate database unavailable
+        var disposedContext = new CountryDbContext(new DbContextOptionsBuilder<CountryDbContext>()
+            .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
+            .Options);
+        
+        // Dispose the context to simulate database unavailable
+        await disposedContext.DisposeAsync();
+        
+        var serviceWithDisposedContext = new Api.Services.CountryService(
+            disposedContext, 
+            _cache, 
+            _cacheOptions, 
+            _loggerMock.Object,
+            _mapper);
+
+        // Act
+        var action = async () => await serviceWithDisposedContext.ExistsByIso3Async("TST");
+
+        // Assert
+        await action.Should().ThrowAsync<DatabaseUnavailableException>()
+            .WithMessage("The database is currently unavailable. Please try again later.*");
+    }
+
+    [Fact]
+    public async Task ExistsByCountryCodeAsync_WithDatabaseUnavailable_ThrowsDatabaseUnavailableException()
+    {
+        // Arrange
+        // Create a separate service instance with a disposed context to simulate database unavailable
+        var disposedContext = new CountryDbContext(new DbContextOptionsBuilder<CountryDbContext>()
+            .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
+            .Options);
+        
+        // Dispose the context to simulate database unavailable
+        await disposedContext.DisposeAsync();
+        
+        var serviceWithDisposedContext = new Api.Services.CountryService(
+            disposedContext, 
+            _cache, 
+            _cacheOptions, 
+            _loggerMock.Object,
+            _mapper);
+
+        // Act
+        var action = async () => await serviceWithDisposedContext.ExistsByCountryCodeAsync("123");
+
+        // Assert
+        await action.Should().ThrowAsync<DatabaseUnavailableException>()
+            .WithMessage("The database is currently unavailable. Please try again later.*");
+    }
+
+    [Fact]
+    public async Task GetContinentsAsync_WithDatabaseUnavailable_ThrowsDatabaseUnavailableException()
+    {
+        // Arrange
+        // Create a separate service instance with a disposed context to simulate database unavailable
+        var disposedContext = new CountryDbContext(new DbContextOptionsBuilder<CountryDbContext>()
+            .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
+            .Options);
+        
+        // Dispose the context to simulate database unavailable
+        await disposedContext.DisposeAsync();
+        
+        var serviceWithDisposedContext = new Api.Services.CountryService(
+            disposedContext, 
+            _cache, 
+            _cacheOptions, 
+            _loggerMock.Object,
+            _mapper);
+
+        // Act
+        var action = async () => await serviceWithDisposedContext.GetContinentsAsync();
+
+        // Assert
+        await action.Should().ThrowAsync<DatabaseUnavailableException>()
+            .WithMessage("The database is currently unavailable. Please try again later.*");
+    }
+
     public void Dispose()
     {
-        _context.Dispose();
-        _cache.Dispose();
+        _context?.Dispose();
+        _cache?.Dispose();
     }
 }
