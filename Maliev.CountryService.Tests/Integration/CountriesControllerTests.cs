@@ -208,6 +208,46 @@ public class CountriesControllerTests : IClassFixture<WebApplicationFactory<Prog
     }
 
     [Fact]
+    public async Task Search_WithInvalidPageNumber_ReturnsBadRequest()
+    {
+        // Act
+        var response = await _client.GetAsync("/countries/v1.0/search?pageNumber=0&pageSize=10");
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task Search_WithInvalidPageSize_ReturnsBadRequest()
+    {
+        // Act
+        var response = await _client.GetAsync("/countries/v1.0/search?pageNumber=1&pageSize=0");
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task Search_WithInvalidSortBy_ReturnsBadRequest()
+    {
+        // Act
+        var response = await _client.GetAsync("/countries/v1.0/search?pageNumber=1&pageSize=10&sortBy=InvalidField");
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task Search_WithInvalidSortDirection_ReturnsBadRequest()
+    {
+        // Act
+        var response = await _client.GetAsync("/countries/v1.0/search?pageNumber=1&pageSize=10&sortDirection=invalid");
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
     public async Task Create_ValidCountry_ReturnsCreated()
     {
         // Arrange

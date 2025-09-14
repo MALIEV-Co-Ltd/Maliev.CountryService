@@ -22,13 +22,16 @@ public class CountrySearchRequest
     [RegularExpression(@"^[\d\-\+]+$", ErrorMessage = "CountryCode can only contain digits, dashes, and plus signs")]
     public string? CountryCode { get; set; }
 
-    [Range(1, 1000)]
+    [Range(1, 1000, ErrorMessage = "PageSize must be between 1 and 1000")]
     public int PageSize { get; set; } = 50;
 
-    [Range(1, int.MaxValue)]
+    [Range(1, int.MaxValue, ErrorMessage = "PageNumber must be greater than 0")]
     public int PageNumber { get; set; } = 1;
 
+    [RegularExpression(@"^(Name|Continent|CountryCode|ISO2|ISO3|CreatedDate|ModifiedDate)$", 
+        ErrorMessage = "SortBy must be one of: Name, Continent, CountryCode, ISO2, ISO3, CreatedDate, ModifiedDate")]
     public string? SortBy { get; set; } = "Name";
 
+    [RegularExpression(@"^(asc|desc)$", ErrorMessage = "SortDirection must be either 'asc' or 'desc'")]
     public string? SortDirection { get; set; } = "asc";
 }
