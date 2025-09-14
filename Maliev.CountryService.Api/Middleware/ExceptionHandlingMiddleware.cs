@@ -1,3 +1,4 @@
+using Maliev.CountryService.Api.Exceptions;
 using System.Net;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
@@ -41,6 +42,8 @@ public class ExceptionHandlingMiddleware
             UnauthorizedAccessException => (HttpStatusCode.Unauthorized, "Unauthorized access"),
             NotImplementedException => (HttpStatusCode.NotImplemented, "Feature not implemented"),
             TimeoutException => (HttpStatusCode.RequestTimeout, "Request timeout"),
+            DuplicateCountryException => (HttpStatusCode.Conflict, "A country with the same name, ISO code, or country code already exists."),
+            CountryServiceException => (HttpStatusCode.BadRequest, exception.Message),
             _ => (HttpStatusCode.InternalServerError, "An error occurred while processing your request")
         };
 

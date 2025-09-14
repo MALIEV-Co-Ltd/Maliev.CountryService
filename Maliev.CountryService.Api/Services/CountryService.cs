@@ -1,3 +1,4 @@
+using Maliev.CountryService.Api.Exceptions;
 using Maliev.CountryService.Api.Models;
 using Maliev.CountryService.Data.DbContexts;
 using Maliev.CountryService.Data.Entities;
@@ -176,7 +177,16 @@ public class CountryService : ICountryService
         }
 
         _context.Countries.Add(country);
-        await _context.SaveChangesAsync(cancellationToken);
+        
+        try
+        {
+            await _context.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateException ex)
+        {
+            _logger.LogError(ex, "Database constraint violation when creating country: {CountryName}", country.Name);
+            throw new DuplicateCountryException($"A country with the same name, ISO code, or country code already exists.");
+        }
 
         InvalidateCache();
         _logger.LogInformation("Country created: {CountryName} with ID {CountryId}", country.Name, country.Id);
@@ -221,7 +231,15 @@ public class CountryService : ICountryService
             country.CountryCodes.Add(countryCode);
         }
 
-        await _context.SaveChangesAsync(cancellationToken);
+        try
+        {
+            await _context.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateException ex)
+        {
+            _logger.LogError(ex, "Database constraint violation when updating country: {CountryName}", country.Name);
+            throw new DuplicateCountryException($"A country with the same name, ISO code, or country code already exists.");
+        }
 
         InvalidateCountryCache(country.Id);
         _logger.LogInformation("Country updated: {CountryName} with ID {CountryId}", country.Name, country.Id);
@@ -239,7 +257,16 @@ public class CountryService : ICountryService
         }
 
         _context.Countries.Remove(country);
-        await _context.SaveChangesAsync(cancellationToken);
+        
+        try
+        {
+            await _context.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateException ex)
+        {
+            _logger.LogError(ex, "Database error when deleting country: {CountryName}", country.Name);
+            throw new CountryServiceException($"An error occurred while deleting the country.");
+        }
 
         InvalidateCountryCache(country.Id);
         _logger.LogInformation("Country deleted: {CountryName} with ID {CountryId}", country.Name, country.Id);
