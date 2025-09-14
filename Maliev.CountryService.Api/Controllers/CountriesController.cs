@@ -80,28 +80,10 @@ public class CountriesController : ControllerBase
         }
 
         // Check for duplicates
-        if (await _countryService.ExistsByNameAsync(request.Name, cancellationToken: cancellationToken))
+        var duplicateCheckResult = await CheckForDuplicatesAsync(request.Name, request.ISO2, request.ISO3, request.CountryCode, null, cancellationToken);
+        if (duplicateCheckResult != null)
         {
-            ModelState.AddModelError(nameof(request.Name), "A country with this name already exists");
-            return Conflict(ModelState);
-        }
-
-        if (await _countryService.ExistsByIso2Async(request.ISO2, cancellationToken: cancellationToken))
-        {
-            ModelState.AddModelError(nameof(request.ISO2), "A country with this ISO2 code already exists");
-            return Conflict(ModelState);
-        }
-
-        if (await _countryService.ExistsByIso3Async(request.ISO3, cancellationToken: cancellationToken))
-        {
-            ModelState.AddModelError(nameof(request.ISO3), "A country with this ISO3 code already exists");
-            return Conflict(ModelState);
-        }
-
-        if (await _countryService.ExistsByCountryCodeAsync(request.CountryCode, cancellationToken: cancellationToken))
-        {
-            ModelState.AddModelError(nameof(request.CountryCode), "A country with this country code already exists");
-            return Conflict(ModelState);
+            return duplicateCheckResult;
         }
 
         var country = await _countryService.CreateAsync(request, cancellationToken);
@@ -135,28 +117,10 @@ public class CountriesController : ControllerBase
         }
 
         // Check for duplicates (excluding current record)
-        if (await _countryService.ExistsByNameAsync(request.Name, id, cancellationToken))
+        var duplicateCheckResult = await CheckForDuplicatesAsync(request.Name, request.ISO2, request.ISO3, request.CountryCode, id, cancellationToken);
+        if (duplicateCheckResult != null)
         {
-            ModelState.AddModelError(nameof(request.Name), "A country with this name already exists");
-            return Conflict(ModelState);
-        }
-
-        if (await _countryService.ExistsByIso2Async(request.ISO2, id, cancellationToken))
-        {
-            ModelState.AddModelError(nameof(request.ISO2), "A country with this ISO2 code already exists");
-            return Conflict(ModelState);
-        }
-
-        if (await _countryService.ExistsByIso3Async(request.ISO3, id, cancellationToken))
-        {
-            ModelState.AddModelError(nameof(request.ISO3), "A country with this ISO3 code already exists");
-            return Conflict(ModelState);
-        }
-
-        if (await _countryService.ExistsByCountryCodeAsync(request.CountryCode, id, cancellationToken))
-        {
-            ModelState.AddModelError(nameof(request.CountryCode), "A country with this country code already exists");
-            return Conflict(ModelState);
+            return duplicateCheckResult;
         }
 
         var country = await _countryService.UpdateAsync(id, request, cancellationToken);
@@ -170,6 +134,45 @@ public class CountriesController : ControllerBase
         _logger.LogInformation("Country updated successfully: {CountryName} with ID {CountryId}", country.Name, country.Id);
         
         return Ok(country);
+    }
+
+    private async Task<ActionResult<CountryDto>?> CheckForDuplicatesAsync(
+        string name, 
+        string iso2, 
+        string iso3, 
+        string countryCode, 
+        int? excludeId, 
+        CancellationToken cancellationToken)
+    {
+        // Check for duplicate name
+        if (await _countryService.ExistsByNameAsync(name, excludeId, cancellationToken))
+        {
+            ModelState.AddModelError(nameof(name), "A country with this name already exists");
+            return Conflict(ModelState);
+        }
+
+        // Check for duplicate ISO2
+        if (await _countryService.ExistsByIso2Async(iso2, excludeId, cancellationToken))
+        {
+            ModelState.AddModelError(nameof(iso2), "A country with this ISO2 code already exists");
+            return Conflict(ModelState);
+        }
+
+        // Check for duplicate ISO3
+        if (await _countryService.ExistsByIso3Async(iso3, excludeId, cancellationToken))
+        {
+            ModelState.AddModelError(nameof(iso3), "A country with this ISO3 code already exists");
+            return Conflict(ModelState);
+        }
+
+        // Check for duplicate country code
+        if (await _countryService.ExistsByCountryCodeAsync(countryCode, excludeId, cancellationToken))
+        {
+            ModelState.AddModelError(nameof(countryCode), "A country with this country code already exists");
+            return Conflict(ModelState);
+        }
+
+        return null; // No duplicates found
     }
 
     [HttpDelete("{id:int}")]
