@@ -1,3 +1,4 @@
+using AutoMapper;
 using Maliev.CountryService.Api.Exceptions;
 using Maliev.CountryService.Api.Models;
 using Maliev.CountryService.Data.DbContexts;
@@ -14,17 +15,20 @@ public class CountryService : ICountryService
     private readonly IMemoryCache _cache;
     private readonly CacheOptions _cacheOptions;
     private readonly ILogger<CountryService> _logger;
+    private readonly IMapper _mapper;
 
     public CountryService(
         CountryDbContext context,
         IMemoryCache cache,
         IOptions<CacheOptions> cacheOptions,
-        ILogger<CountryService> logger)
+        ILogger<CountryService> logger,
+        IMapper mapper)
     {
         _context = context;
         _cache = cache;
         _cacheOptions = cacheOptions.Value;
         _logger = logger;
+        _mapper = mapper;
     }
 
     public async Task<CountryDto?> GetByIdAsync(int id, CancellationToken cancellationToken = default)
@@ -442,24 +446,9 @@ public class CountryService : ICountryService
         return continents;
     }
 
-    private static CountryDto MapToDto(Country country)
+    private CountryDto MapToDto(Country country)
     {
-        return new CountryDto
-        {
-            Id = country.Id,
-            Name = country.Name,
-            Continent = country.Continent,
-            CountryCodes = country.CountryCodes.Select(cc => new CountryCodeDto
-            {
-                Id = cc.Id,
-                Code = cc.Code,
-                IsPrimary = cc.IsPrimary
-            }).ToList(),
-            ISO2 = country.ISO2,
-            ISO3 = country.ISO3,
-            CreatedDate = country.CreatedDate,
-            ModifiedDate = country.ModifiedDate
-        };
+        return _mapper.Map<CountryDto>(country);
     }
 
     private void InvalidateCache()

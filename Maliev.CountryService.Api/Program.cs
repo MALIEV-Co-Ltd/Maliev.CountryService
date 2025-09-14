@@ -127,6 +127,9 @@ try
 
     // Register application services
     builder.Services.AddScoped<ICountryService, Maliev.CountryService.Api.Services.CountryService>();
+    
+    // Register AutoMapper
+    builder.Services.AddAutoMapper(typeof(Program));
 
     // Configure Rate Limiting
     builder.Services.AddRateLimiter(options =>

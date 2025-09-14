@@ -1,5 +1,7 @@
+using AutoMapper;
 using FluentAssertions;
 using Maliev.CountryService.Api.Exceptions;
+using Maliev.CountryService.Api.Mapping;
 using Maliev.CountryService.Api.Models;
 using Maliev.CountryService.Api.Services;
 using Maliev.CountryService.Data.DbContexts;
@@ -18,6 +20,7 @@ public class CountryServiceTests : IDisposable
     private readonly IMemoryCache _cache;
     private readonly Mock<ILogger<Api.Services.CountryService>> _loggerMock;
     private readonly IOptions<CacheOptions> _cacheOptions;
+    private readonly IMapper _mapper;
     private readonly Api.Services.CountryService _countryService;
 
     public CountryServiceTests()
@@ -37,7 +40,14 @@ public class CountryServiceTests : IDisposable
             SearchCacheDurationMinutes = 30
         });
 
-        _countryService = new Api.Services.CountryService(_context, _cache, _cacheOptions, _loggerMock.Object);
+        // Create AutoMapper configuration
+        var config = new MapperConfiguration(cfg =>
+        {
+            cfg.AddProfile<CountryProfile>();
+        });
+        _mapper = config.CreateMapper();
+
+        _countryService = new Api.Services.CountryService(_context, _cache, _cacheOptions, _loggerMock.Object, _mapper);
     }
 
     [Fact]
