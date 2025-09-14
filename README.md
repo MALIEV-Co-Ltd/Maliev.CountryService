@@ -1,6 +1,6 @@
 # Maliev.CountryService
 
-A comprehensive CRUD API service for managing country data with advanced features including caching, rate limiting, and full-text search capabilities. Built with ASP.NET Core 9.0 and designed for high-performance, scalable operations in a microservices architecture.
+A comprehensive CRUD API service for managing country data with advanced features including caching, rate limiting, and full-text search capabilities. Built with ASP.NET Core 9.0 and designed for high-performance, scalable operations.
 
 ## 🌟 Features
 
@@ -12,7 +12,7 @@ A comprehensive CRUD API service for managing country data with advanced feature
 - **Unique Constraints**: Enforced uniqueness for country names, ISO2, and ISO3 codes
 
 ### Performance & Scalability
-- **Memory Caching**: Intelligent caching of country data with configurable TTL
+- **Memory Caching**: Intelligent caching of country data with configurable TTL and automatic invalidation
 - **Rate Limiting**: Multi-tiered rate limiting (global and endpoint-specific)
 - **Optimized Queries**: Async/await patterns with efficient database queries
 - **Resource Optimization**: CPU and memory optimized for resource-constrained environments
@@ -21,13 +21,13 @@ A comprehensive CRUD API service for managing country data with advanced feature
 - **JWT Authentication**: Bearer token authentication with configurable validation
 - **CORS Configuration**: Secure cross-origin resource sharing
 - **Input Validation**: Comprehensive request validation with detailed error responses
-- **Secrets Management**: Kubernetes-native secret injection
+- **Secrets Management**: Flexible configuration via environment variables, files, or cloud secrets
 
 ### DevOps & Monitoring
-- **Health Checks**: Liveness and readiness probes for Kubernetes
+- **Health Checks**: Liveness and readiness probes for container orchestration
 - **Structured Logging**: Serilog with correlation IDs and contextual enrichment
 - **Containerization**: Multi-stage Docker builds with security best practices
-- **GitOps Ready**: ArgoCD and Kustomize integration for automated deployments
+- **Observability**: Prometheus metrics and structured logging
 
 ## 🏗️ Architecture
 
@@ -40,7 +40,10 @@ Maliev.CountryService/
 │   ├── Models/                          # DTOs and request models
 │   ├── Middleware/                      # Custom middleware
 │   ├── HealthChecks/                    # Health check implementations
-│   └── Configurations/                  # Swagger and service configurations
+│   ├── Mapping/                         # AutoMapper profiles
+│   ├── Exceptions/                      # Custom exception types
+│   ├── Configurations/                  # Configuration models and options
+│   └── Properties/                      # Application properties
 ├── Maliev.CountryService.Data/          # Data access layer
 │   ├── DbContexts/                      # Entity Framework contexts
 │   ├── Entities/                        # Database entities
@@ -54,12 +57,13 @@ Maliev.CountryService/
 ### Technology Stack
 - **Framework**: ASP.NET Core 9.0
 - **Database**: PostgreSQL with Entity Framework Core 9.0
-- **Caching**: In-Memory caching with configurable policies
+- **Caching**: In-Memory caching with configurable policies and automatic invalidation
 - **Authentication**: JWT Bearer tokens
 - **API Documentation**: OpenAPI/Swagger with versioning
 - **Testing**: xUnit with FluentAssertions and Moq
 - **Containerization**: Docker with multi-stage builds
-- **CI/CD**: GitHub Actions with GitOps deployment
+- **CI/CD**: GitHub Actions
+- **Monitoring**: Prometheus metrics and Serilog structured logging
 
 ## 🚀 Getting Started
 
@@ -78,66 +82,44 @@ Maliev.CountryService/
 
 2. **Configure database connection**
    
-   **🔐 PRODUCTION SECURITY: All secrets are managed via Google Secret Manager**
-   
-   The application loads configuration in this order:
-   1. Google Secret Manager (via mounted Kubernetes secrets in `/mnt/secrets/`)
-   2. User Secrets (development only)
-   3. Environment Variables
-   4. appsettings.json (no secrets stored here)
-   
-   **For Development Setup:**
-   
-   **Option A: Full Production Environment (Recommended)**
+   **Option A: Using Docker PostgreSQL (Recommended for development)**
    ```bash
-   # Connect to development cluster and port-forward to database
-   kubectl port-forward -n maliev-dev service/postgres-cluster-rw 5432:5432
+   # Start PostgreSQL in Docker
+   docker run -d --name postgres-db -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=CountryService -p 5432:5432 postgres:15
    
-   # Set Google Cloud credentials (secrets loaded automatically)
-   export GOOGLE_APPLICATION_CREDENTIALS="path/to/your/service-account.json"
-   
-   # Run the application - all secrets loaded from Google Secret Manager
-   dotnet run
+   # Set connection string
+   dotnet user-secrets set "ConnectionStrings:CountryDbContext" "Host=localhost;Port=5432;Database=CountryService;Username=postgres;Password=postgres"
    ```
    
-   **Option B: Local Development (Limited - No Authentication)**
+   **Option B: Using existing PostgreSQL instance**
    ```bash
-   # For local PostgreSQL only (JWT authentication will be disabled)
-   dotnet user-secrets set "ConnectionStrings:Default" "Host=localhost;Port=5432;Database=country_app_db;Username=postgres;Password=your-local-password"
-   
-   # ⚠️ WARNING: API will start without authentication for development only
-   dotnet run
-   ```
-   
-   **Option C: Production Deployment**
-   ```yaml
-   # Secrets automatically mounted in Kubernetes from Google Secret Manager
-   # via External Secrets Operator at /mnt/secrets/
-   # No manual configuration needed
+   # Set connection string to your PostgreSQL instance
+   dotnet user-secrets set "ConnectionStrings:CountryDbContext" "Host=your-host;Port=5432;Database=your-database;Username=your-username;Password=your-password"
    ```
 
 3. **Create and run database migrations**
    ```bash
    cd Maliev.CountryService.Data
-   .\apply-migration.ps1 -ServiceName "country"
+   dotnet ef database update --project ../Maliev.CountryService.Api
    ```
 
 4. **Run the application**
    ```bash
-   dotnet run --project Maliev.CountryService.Api
+   cd ../Maliev.CountryService.Api
+   dotnet run
    ```
 
 5. **Access the API**
-   - Swagger UI: `https://localhost:5001/countries/swagger`
-   - API Base URL: `https://localhost:5001/countries/v1.0`
+   - Swagger UI: `http://localhost:5000/countries/swagger`
+   - API Base URL: `http://localhost:5000/countries/v1.0`
 
 ### Running Tests
 ```bash
 # Run all tests
-dotnet test Maliev.CountryService.sln
+dotnet test
 
 # Run with coverage
-dotnet test Maliev.CountryService.sln --collect:"XPlat Code Coverage"
+dotnet test --collect:"XPlat Code Coverage"
 ```
 
 ### Docker Deployment
@@ -145,20 +127,18 @@ dotnet test Maliev.CountryService.sln --collect:"XPlat Code Coverage"
 # Build container
 docker build -t maliev-country-service -f Maliev.CountryService.Api/Dockerfile .
 
-# Run container
-docker run -p 8080:8080 maliev-country-service
+# Run container (requires PostgreSQL)
+docker run -p 8080:8080 -e "ConnectionStrings__CountryDbContext=Host=host.docker.internal;Port=5432;Database=CountryService;Username=postgres;Password=postgres" maliev-country-service
 ```
 
 ## 📚 API Documentation
 
 ### Base URL
-- **Development**: 
-  - API Base URL: `https://dev.api.maliev.com/countries/v1.0`
-  - Swagger UI: `https://dev.api.maliev.com/countries/swagger`
-- **Production**: `https://api.maliev.com/countries/v1.0`
+- **Development**: `http://localhost:5000/countries/v1.0`
+- **Swagger UI**: `http://localhost:5000/countries/swagger`
 
 ### Authentication
-All endpoints require JWT Bearer token authentication:
+All endpoints except liveness and readiness require JWT Bearer token authentication:
 ```
 Authorization: Bearer <your-jwt-token>
 ```
@@ -168,6 +148,7 @@ Authorization: Bearer <your-jwt-token>
 #### Countries
 - `GET /countries/v1.0/{id}` - Get country by ID
 - `GET /countries/v1.0/search` - Search countries with filters
+- `GET /countries/v1.0` - Get all countries with pagination
 - `POST /countries/v1.0` - Create new country
 - `PUT /countries/v1.0/{id}` - Update existing country
 - `DELETE /countries/v1.0/{id}` - Delete country
@@ -176,6 +157,7 @@ Authorization: Bearer <your-jwt-token>
 - `GET /countries/v1.0/continents` - Get list of continents
 - `GET /countries/liveness` - Health check (liveness probe)
 - `GET /countries/readiness` - Health check (readiness probe)
+- `GET /countries/metrics` - Prometheus metrics
 
 ### Example Requests
 
@@ -185,7 +167,7 @@ POST /countries/v1.0
 {
   "name": "Singapore",
   "continent": "Asia",
-  "countryCode": 65,
+  "countryCode": "65",
   "iso2": "SG",
   "iso3": "SGP"
 }
@@ -196,13 +178,24 @@ POST /countries/v1.0
 GET /countries/v1.0/search?continent=Asia&pageSize=10&pageNumber=1&sortBy=name&sortDirection=asc
 ```
 
+#### Get All Countries (paginated)
+```
+GET /countries/v1.0?pageNumber=1&pageSize=50
+```
+
 ### Response Format
 ```json
 {
   "id": 1,
   "name": "Singapore",
   "continent": "Asia",
-  "countryCode": 65,
+  "countryCodes": [
+    {
+      "id": 1,
+      "code": "65",
+      "isPrimary": true
+    }
+  ],
   "iso2": "SG",
   "iso3": "SGP",
   "createdDate": "2024-01-01T00:00:00Z",
@@ -214,9 +207,9 @@ GET /countries/v1.0/search?continent=Asia&pageSize=10&pageNumber=1&sortBy=name&s
 
 ### Environment Variables
 - `ConnectionStrings__CountryDbContext` - Database connection string
-- `Jwt__SecurityKey` - JWT signing key
-- `Jwt__Issuer` - JWT issuer
-- `Jwt__Audience` - JWT audience
+- `Jwt__Issuer` - JWT issuer (optional)
+- `Jwt__Audience` - JWT audience (optional)
+- `Jwt__SecurityKey` - JWT signing key (optional)
 
 ### Configuration Sections
 
@@ -243,8 +236,8 @@ GET /countries/v1.0/search?continent=Asia&pageSize=10&pageNumber=1&sortBy=name&s
 {
   "Cache": {
     "CountryCacheDurationMinutes": 60,
-    "MaxCacheSize": 1000,
-    "SearchCacheDurationMinutes": 30
+    "SearchCacheDurationMinutes": 30,
+    "MaxCacheSize": 1000
   }
 }
 ```
@@ -255,7 +248,7 @@ GET /countries/v1.0/search?continent=Asia&pageSize=10&pageNumber=1&sortBy=name&s
 - **Unit Tests**: Service layer business logic testing
 - **Integration Tests**: Full API endpoint testing with in-memory database
 - **Validation Tests**: Input validation and error handling
-- **Performance Tests**: Caching and rate limiting validation
+- **Exception Handling Tests**: Specific exception scenarios
 
 ### Test Architecture
 - **In-Memory Database**: Isolated test database for each test
@@ -266,7 +259,7 @@ GET /countries/v1.0/search?continent=Asia&pageSize=10&pageNumber=1&sortBy=name&s
 ## 🔒 Security
 
 ### Authentication & Authorization
-- JWT Bearer token validation
+- JWT Bearer token validation (optional - can be disabled for development)
 - Configurable token validation parameters
 - Rate limiting per IP address
 - CORS policy enforcement
@@ -274,14 +267,12 @@ GET /countries/v1.0/search?continent=Asia&pageSize=10&pageNumber=1&sortBy=name&s
 ### Data Protection
 - Input sanitization and validation
 - SQL injection prevention via Entity Framework
-- **No secrets in source code or appsettings.json**
-- **Secure secret management via Kubernetes, User Secrets, or Environment Variables**
+- Secure secret management via environment variables or mounted volumes
 - Connection string and JWT secrets loaded from secure sources only
 
 ### Container Security
 - Non-root user execution
 - Minimal attack surface
-- Security-focused base images
 - Health check implementation
 
 ## 📊 Monitoring & Observability
@@ -297,30 +288,50 @@ GET /countries/v1.0/search?continent=Asia&pageSize=10&pageNumber=1&sortBy=name&s
 - **Readiness**: Database connectivity and dependencies
 - Kubernetes-native health check endpoints
 
-### Metrics & Performance
-- Response time monitoring via logging
+### Metrics
+- Prometheus metrics endpoint at `/countries/metrics`
+- Response time monitoring
 - Cache hit/miss rate tracking
 - Rate limiting metrics
 - Database query performance
 
 ## 🚀 Deployment
 
-### GitOps Pipeline
-1. **Code Push** → GitHub repository
-2. **CI Pipeline** → Build, test, and create container image
-3. **Image Registry** → Google Artifact Registry
-4. **GitOps Update** → Kustomize updates deployment manifests
-5. **ArgoCD Sync** → Automatic deployment to Kubernetes
+### Docker Compose (Simple Deployment)
+```yaml
+version: '3.8'
+services:
+  database:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: CountryService
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
 
-### Environments
-- **Development**: Auto-deploy from `develop` branch
-- **Staging**: Deploy from release tags (`release/v*`)
-- **Production**: Auto-deploy from `main` branch
+  api:
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      - ConnectionStrings__CountryDbContext=Host=database;Port=5432;Database=CountryService;Username=postgres;Password=postgres
+    depends_on:
+      - database
 
-### Container Registry
+volumes:
+  postgres_data:
 ```
-asia-southeast1-docker.pkg.dev/maliev-website/maliev-website-artifact-{env}/maliev-country-service
-```
+
+### Kubernetes Deployment
+The service is designed to run in Kubernetes with:
+- ConfigMaps for non-secret configuration
+- Secrets for sensitive data
+- Liveness and readiness probes
+- Resource limits and requests
+- Horizontal Pod Autoscaling
 
 ## 🤝 Contributing
 
