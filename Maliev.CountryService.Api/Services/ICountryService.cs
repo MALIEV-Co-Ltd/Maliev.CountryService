@@ -6,6 +6,7 @@ public interface ICountryService
 {
     Task<CountryDto?> GetByIdAsync(int id, CancellationToken cancellationToken = default);
     Task<PagedResult<CountryDto>> SearchAsync(CountrySearchRequest request, CancellationToken cancellationToken = default);
+    Task<PagedResult<CountryDto>> GetAllCountriesAsync(int pageNumber, int pageSize, CancellationToken cancellationToken = default);
     Task<CountryDto> CreateAsync(CreateCountryRequest request, CancellationToken cancellationToken = default);
     Task<CountryDto?> UpdateAsync(int id, UpdateCountryRequest request, CancellationToken cancellationToken = default);
     Task<bool> DeleteAsync(int id, CancellationToken cancellationToken = default);

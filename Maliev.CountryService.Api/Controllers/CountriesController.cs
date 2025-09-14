@@ -64,6 +64,33 @@ public class CountriesController : ControllerBase
         return Ok(result);
     }
 
+    [HttpGet]
+    [ProducesResponseType(typeof(PagedResult<CountryDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status429TooManyRequests)]
+    public async Task<ActionResult<PagedResult<CountryDto>>> GetAllCountries(
+        [FromQuery] int pageNumber = 1, 
+        [FromQuery] int pageSize = 50, 
+        CancellationToken cancellationToken = default)
+    {
+        _logger.LogInformation("Getting all countries with pagination: PageNumber={PageNumber}, PageSize={PageSize}", pageNumber, pageSize);
+
+        try
+        {
+            var result = await _countryService.GetAllCountriesAsync(pageNumber, pageSize, cancellationToken);
+            
+            _logger.LogInformation("Retrieved {Count} countries out of {Total} total", result.Items.Count(), result.TotalCount);
+            
+            return Ok(result);
+        }
+        catch (ArgumentException ex)
+        {
+            _logger.LogWarning("Invalid pagination parameters: {Message}", ex.Message);
+            return BadRequest(ex.Message);
+        }
+    }
+
     [HttpPost]
     [ProducesResponseType(typeof(CountryDto), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]

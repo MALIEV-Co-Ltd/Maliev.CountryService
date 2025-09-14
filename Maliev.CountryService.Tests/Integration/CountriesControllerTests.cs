@@ -248,6 +248,76 @@ public class CountriesControllerTests : IClassFixture<WebApplicationFactory<Prog
     }
 
     [Fact]
+    public async Task GetAllCountries_WithValidParameters_ReturnsOk()
+    {
+        // Clean database before test
+        await CleanDatabase();
+        
+        // Arrange
+        var countries = new[]
+        {
+            new Country { Name = "United States", Continent = "North America", ISO2 = "US", ISO3 = "USA", CreatedDate = DateTime.UtcNow, ModifiedDate = DateTime.UtcNow },
+            new Country { Name = "Canada", Continent = "North America", ISO2 = "CA", ISO3 = "CAN", CreatedDate = DateTime.UtcNow, ModifiedDate = DateTime.UtcNow },
+            new Country { Name = "France", Continent = "Europe", ISO2 = "FR", ISO3 = "FRA", CreatedDate = DateTime.UtcNow, ModifiedDate = DateTime.UtcNow },
+            new Country { Name = "Germany", Continent = "Europe", ISO2 = "DE", ISO3 = "DEU", CreatedDate = DateTime.UtcNow, ModifiedDate = DateTime.UtcNow }
+        };
+
+        using var scope = _factory.Services.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<CountryDbContext>();
+        context.Countries.AddRange(countries);
+        await context.SaveChangesAsync();
+
+        // Add country codes
+        var countryCodes = new[]
+        {
+            new CountryCode { CountryId = countries[0].Id, Code = "1", IsPrimary = true, CreatedDate = DateTime.UtcNow, ModifiedDate = DateTime.UtcNow },
+            new CountryCode { CountryId = countries[1].Id, Code = "1", IsPrimary = true, CreatedDate = DateTime.UtcNow, ModifiedDate = DateTime.UtcNow },
+            new CountryCode { CountryId = countries[2].Id, Code = "33", IsPrimary = true, CreatedDate = DateTime.UtcNow, ModifiedDate = DateTime.UtcNow },
+            new CountryCode { CountryId = countries[3].Id, Code = "49", IsPrimary = true, CreatedDate = DateTime.UtcNow, ModifiedDate = DateTime.UtcNow }
+        };
+        context.CountryCodes.AddRange(countryCodes);
+        await context.SaveChangesAsync();
+
+        // Act
+        var response = await _client.GetAsync("/countries/v1.0?pageNumber=1&pageSize=2");
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var content = await response.Content.ReadAsStringAsync();
+        var result = JsonSerializer.Deserialize<PagedResult<CountryDto>>(content, new JsonSerializerOptions
+        {
+            PropertyNameCaseInsensitive = true
+        });
+
+        result.Should().NotBeNull();
+        result!.Items.Should().HaveCount(2);
+        result.TotalCount.Should().Be(4);
+        result.PageNumber.Should().Be(1);
+        result.PageSize.Should().Be(2);
+    }
+
+    [Fact]
+    public async Task GetAllCountries_WithInvalidPageNumber_ReturnsBadRequest()
+    {
+        // Act
+        var response = await _client.GetAsync("/countries/v1.0?pageNumber=0&pageSize=10");
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task GetAllCountries_WithInvalidPageSize_ReturnsBadRequest()
+    {
+        // Act
+        var response = await _client.GetAsync("/countries/v1.0?pageNumber=1&pageSize=0");
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
     public async Task Create_ValidCountry_ReturnsCreated()
     {
         // Arrange

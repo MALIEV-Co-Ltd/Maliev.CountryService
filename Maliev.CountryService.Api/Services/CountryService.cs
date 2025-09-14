@@ -150,6 +150,53 @@ public class CountryService : ICountryService
         return result;
     }
 
+    public async Task<PagedResult<CountryDto>> GetAllCountriesAsync(int pageNumber, int pageSize, CancellationToken cancellationToken = default)
+    {
+        // Validate parameters
+        if (pageNumber < 1)
+            throw new ArgumentException("Page number must be greater than 0", nameof(pageNumber));
+        
+        if (pageSize < 1 || pageSize > 1000)
+            throw new ArgumentException("Page size must be between 1 and 1000", nameof(pageSize));
+
+        var cacheKey = $"country:all:{pageNumber}:{pageSize}";
+        
+        if (_cache.TryGetValue(cacheKey, out PagedResult<CountryDto>? cachedResult) && cachedResult != null)
+        {
+            _logger.LogDebug("All countries result retrieved from cache");
+            return cachedResult;
+        }
+
+        // Get total count
+        var totalCount = await _context.Countries.CountAsync(cancellationToken);
+
+        // Get paged results
+        var countries = await _context.Countries
+            .Include(c => c.CountryCodes)
+            .AsNoTracking()
+            .OrderBy(c => c.Name) // Default sort by name
+            .Skip((pageNumber - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(cancellationToken);
+
+        var result = new PagedResult<CountryDto>
+        {
+            Items = countries.Select(MapToDto),
+            TotalCount = totalCount,
+            PageNumber = pageNumber,
+            PageSize = pageSize
+        };
+
+        _cache.Set(cacheKey, result, new MemoryCacheEntryOptions
+        {
+            AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(_cacheOptions.SearchCacheDurationMinutes),
+            Size = result.Items.Count() // Size based on number of items in result
+        });
+        _logger.LogDebug("All countries results cached for {Duration} minutes", _cacheOptions.SearchCacheDurationMinutes);
+
+        return result;
+    }
+
     public async Task<CountryDto> CreateAsync(CreateCountryRequest request, CancellationToken cancellationToken = default)
     {
         var country = new Country

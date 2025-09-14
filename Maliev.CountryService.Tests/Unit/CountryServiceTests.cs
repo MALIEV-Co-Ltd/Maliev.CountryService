@@ -457,6 +457,65 @@ public class CountryServiceTests : IDisposable
         result.Should().BeInAscendingOrder();
     }
 
+    [Fact]
+    public async Task GetAllCountriesAsync_WithValidParameters_ReturnsPagedResult()
+    {
+        // Arrange
+        var countries = new[]
+        {
+            new Country { Name = "United States", Continent = "North America", ISO2 = "US", ISO3 = "USA", CreatedDate = DateTime.UtcNow, ModifiedDate = DateTime.UtcNow },
+            new Country { Name = "Canada", Continent = "North America", ISO2 = "CA", ISO3 = "CAN", CreatedDate = DateTime.UtcNow, ModifiedDate = DateTime.UtcNow },
+            new Country { Name = "France", Continent = "Europe", ISO2 = "FR", ISO3 = "FRA", CreatedDate = DateTime.UtcNow, ModifiedDate = DateTime.UtcNow },
+            new Country { Name = "Germany", Continent = "Europe", ISO2 = "DE", ISO3 = "DEU", CreatedDate = DateTime.UtcNow, ModifiedDate = DateTime.UtcNow }
+        };
+
+        _context.Countries.AddRange(countries);
+        await _context.SaveChangesAsync();
+
+        // Add country codes
+        var countryCodes = new[]
+        {
+            new CountryCode { CountryId = countries[0].Id, Code = "1", IsPrimary = true, CreatedDate = DateTime.UtcNow, ModifiedDate = DateTime.UtcNow },
+            new CountryCode { CountryId = countries[1].Id, Code = "1", IsPrimary = true, CreatedDate = DateTime.UtcNow, ModifiedDate = DateTime.UtcNow },
+            new CountryCode { CountryId = countries[2].Id, Code = "33", IsPrimary = true, CreatedDate = DateTime.UtcNow, ModifiedDate = DateTime.UtcNow },
+            new CountryCode { CountryId = countries[3].Id, Code = "49", IsPrimary = true, CreatedDate = DateTime.UtcNow, ModifiedDate = DateTime.UtcNow }
+        };
+        _context.CountryCodes.AddRange(countryCodes);
+        await _context.SaveChangesAsync();
+
+        // Act
+        var result = await _countryService.GetAllCountriesAsync(1, 2);
+
+        // Assert
+        result.Should().NotBeNull();
+        result.Items.Should().HaveCount(2);
+        result.TotalCount.Should().Be(4);
+        result.PageNumber.Should().Be(1);
+        result.PageSize.Should().Be(2);
+    }
+
+    [Fact]
+    public async Task GetAllCountriesAsync_WithInvalidPageNumber_ThrowsArgumentException()
+    {
+        // Act
+        var action = async () => await _countryService.GetAllCountriesAsync(0, 10);
+
+        // Assert
+        await action.Should().ThrowAsync<ArgumentException>()
+            .WithMessage("Page number must be greater than 0*");
+    }
+
+    [Fact]
+    public async Task GetAllCountriesAsync_WithInvalidPageSize_ThrowsArgumentException()
+    {
+        // Act
+        var action = async () => await _countryService.GetAllCountriesAsync(1, 0);
+
+        // Assert
+        await action.Should().ThrowAsync<ArgumentException>()
+            .WithMessage("Page size must be between 1 and 1000*");
+    }
+
     public void Dispose()
     {
         _context.Dispose();
