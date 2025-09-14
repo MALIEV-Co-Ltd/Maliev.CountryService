@@ -261,7 +261,19 @@ public class CountryService : ICountryService
         catch (DbUpdateException ex)
         {
             _logger.LogError(ex, "Database constraint violation when creating country: {CountryName}", country.Name);
+            
+            // Check if it's a concurrency conflict
+            if (IsConcurrencyConflict(ex))
+            {
+                throw new ConcurrencyConflictException($"A concurrency conflict occurred while creating country '{country.Name}'. Please try again.", ex);
+            }
+            
             throw new DuplicateCountryException($"A country with the same name, ISO code, or country code already exists.");
+        }
+        catch (Exception ex) when (IsDatabaseUnavailable(ex))
+        {
+            _logger.LogError(ex, "Database unavailable when creating country: {CountryName}", country.Name);
+            throw new DatabaseUnavailableException($"The database is currently unavailable. Please try again later.", ex);
         }
 
         InvalidateCache();
@@ -314,10 +326,22 @@ public class CountryService : ICountryService
         catch (DbUpdateException ex)
         {
             _logger.LogError(ex, "Database constraint violation when updating country: {CountryName}", country.Name);
+            
+            // Check if it's a concurrency conflict
+            if (IsConcurrencyConflict(ex))
+            {
+                throw new ConcurrencyConflictException($"A concurrency conflict occurred while updating country '{country.Name}'. Please try again.", ex);
+            }
+            
             throw new DuplicateCountryException($"A country with the same name, ISO code, or country code already exists.");
         }
+        catch (Exception ex) when (IsDatabaseUnavailable(ex))
+        {
+            _logger.LogError(ex, "Database unavailable when updating country: {CountryName}", country.Name);
+            throw new DatabaseUnavailableException($"The database is currently unavailable. Please try again later.", ex);
+        }
 
-        InvalidateCountryCache(country.Id);
+        InvalidateCache();
         _logger.LogInformation("Country updated: {CountryName} with ID {CountryId}", country.Name, country.Id);
 
         return MapToDto(country);
@@ -341,10 +365,22 @@ public class CountryService : ICountryService
         catch (DbUpdateException ex)
         {
             _logger.LogError(ex, "Database error when deleting country: {CountryName}", country.Name);
+            
+            // Check if it's a concurrency conflict
+            if (IsConcurrencyConflict(ex))
+            {
+                throw new ConcurrencyConflictException($"A concurrency conflict occurred while deleting country '{country.Name}'. Please try again.", ex);
+            }
+            
             throw new CountryServiceException($"An error occurred while deleting the country.");
         }
+        catch (Exception ex) when (IsDatabaseUnavailable(ex))
+        {
+            _logger.LogError(ex, "Database unavailable when deleting country: {CountryName}", country.Name);
+            throw new DatabaseUnavailableException($"The database is currently unavailable. Please try again later.", ex);
+        }
 
-        InvalidateCountryCache(country.Id);
+        InvalidateCache();
         _logger.LogInformation("Country deleted: {CountryName} with ID {CountryId}", country.Name, country.Id);
 
         return true;
@@ -465,17 +501,23 @@ public class CountryService : ICountryService
         // In a production environment with Redis, we could use pattern-based deletion.
     }
     
-    private void InvalidateCountryCache(int countryId)
+    private bool IsConcurrencyConflict(DbUpdateException ex)
     {
-        // Remove specific country cache
-        _cache.Remove(CacheKeys.CountryById(countryId));
-        
-        // Also invalidate the continents cache as it might be affected
-        _cache.Remove(CacheKeys.Continents);
-        
-        // Note: We're not invalidating search caches here because it would require
-        // tracking all possible search parameter combinations, which is complex.
-        // In a production environment with Redis, we could use pattern-based deletion
-        // to remove all search cache entries.
+        // Check if it's a concurrency conflict by looking at the inner exception
+        // This is a simplified check - in a real-world scenario, you'd need to check
+        // the specific database provider's exception types and error codes
+        return ex.InnerException?.Message.Contains("concurrency", StringComparison.OrdinalIgnoreCase) == true ||
+               ex.InnerException?.Message.Contains("conflict", StringComparison.OrdinalIgnoreCase) == true ||
+               ex.Message.Contains("concurrency", StringComparison.OrdinalIgnoreCase) == true ||
+               ex.Message.Contains("conflict", StringComparison.OrdinalIgnoreCase) == true;
+    }
+    
+    private bool IsDatabaseUnavailable(Exception ex)
+    {
+        // Check if it's a database unavailable error
+        return ex is InvalidOperationException && 
+               (ex.Message.Contains("database", StringComparison.OrdinalIgnoreCase) ||
+                ex.Message.Contains("connection", StringComparison.OrdinalIgnoreCase) ||
+                ex.Message.Contains("timeout", StringComparison.OrdinalIgnoreCase));
     }
 }

@@ -19,3 +19,25 @@ public class DuplicateCountryException : CountryServiceException
     {
     }
 }
+
+public class DatabaseUnavailableException : CountryServiceException
+{
+    public DatabaseUnavailableException(string message) : base(message)
+    {
+    }
+    
+    public DatabaseUnavailableException(string message, Exception innerException) : base(message, innerException)
+    {
+    }
+}
+
+public class ConcurrencyConflictException : CountryServiceException
+{
+    public ConcurrencyConflictException(string message) : base(message)
+    {
+    }
+    
+    public ConcurrencyConflictException(string message, Exception innerException) : base(message, innerException)
+    {
+    }
+}
