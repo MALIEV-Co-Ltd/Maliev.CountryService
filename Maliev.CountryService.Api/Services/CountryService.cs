@@ -29,6 +29,8 @@ public class CountryService : ICountryService
 
     public async Task<CountryDto?> GetByIdAsync(int id, CancellationToken cancellationToken = default)
     {
+        _logger.LogDebug("Getting country by ID: {CountryId}", id);
+        
         var cacheKey = CacheKeys.CountryById(id);
         
         if (_cache.TryGetValue(cacheKey, out CountryDto? cachedCountry))
@@ -37,6 +39,7 @@ public class CountryService : ICountryService
             return cachedCountry;
         }
 
+        _logger.LogDebug("Fetching country {CountryId} from database", id);
         var country = await _context.Countries
             .Include(c => c.CountryCodes)
             .AsNoTracking()
@@ -44,6 +47,7 @@ public class CountryService : ICountryService
 
         if (country == null)
         {
+            _logger.LogDebug("Country with ID {CountryId} not found", id);
             return null;
         }
 
@@ -61,6 +65,8 @@ public class CountryService : ICountryService
 
     public async Task<PagedResult<CountryDto>> SearchAsync(CountrySearchRequest request, CancellationToken cancellationToken = default)
     {
+        _logger.LogDebug("Searching for countries with request: {@SearchRequest}", request);
+        
         var cacheKey = CacheKeys.CountrySearch(
             request.Name, 
             request.Continent, 
@@ -85,29 +91,35 @@ public class CountryService : ICountryService
         if (!string.IsNullOrWhiteSpace(request.Name))
         {
             query = query.Where(c => c.Name.Contains(request.Name));
+            _logger.LogDebug("Applied name filter: {Name}", request.Name);
         }
 
         if (!string.IsNullOrWhiteSpace(request.Continent))
         {
             query = query.Where(c => c.Continent.Contains(request.Continent));
+            _logger.LogDebug("Applied continent filter: {Continent}", request.Continent);
         }
 
         if (!string.IsNullOrWhiteSpace(request.ISO2))
         {
             query = query.Where(c => c.ISO2 == request.ISO2);
+            _logger.LogDebug("Applied ISO2 filter: {ISO2}", request.ISO2);
         }
 
         if (!string.IsNullOrWhiteSpace(request.ISO3))
         {
             query = query.Where(c => c.ISO3 == request.ISO3);
+            _logger.LogDebug("Applied ISO3 filter: {ISO3}", request.ISO3);
         }
 
         if (!string.IsNullOrWhiteSpace(request.CountryCode))
         {
             query = query.Where(c => c.CountryCodes.Any(cc => cc.Code == request.CountryCode));
+            _logger.LogDebug("Applied country code filter: {CountryCode}", request.CountryCode);
         }
 
         var totalCount = await query.CountAsync(cancellationToken);
+        _logger.LogDebug("Found {Count} countries matching search criteria", totalCount);
 
         if (!string.IsNullOrWhiteSpace(request.SortBy))
         {
@@ -125,6 +137,8 @@ public class CountryService : ICountryService
                 "modifieddate" => isAscending ? query.OrderBy(c => c.ModifiedDate) : query.OrderByDescending(c => c.ModifiedDate),
                 _ => query.OrderBy(c => c.Name)
             };
+            
+            _logger.LogDebug("Applied sorting: {SortBy} {SortDirection}", request.SortBy, isAscending ? "ASC" : "DESC");
         }
 
         var countries = await query
@@ -145,19 +159,27 @@ public class CountryService : ICountryService
             AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(_cacheOptions.SearchCacheDurationMinutes),
             Size = result.Items.Count() // Size based on number of items in result
         });
-        _logger.LogDebug("Country search results cached for {Duration} minutes", _cacheOptions.SearchCacheDurationMinutes);
+        _logger.LogDebug("Country search results cached for {Duration} minutes. Page {PageNumber} of {TotalPages} pages", _cacheOptions.SearchCacheDurationMinutes, request.PageNumber, Math.Ceiling((double)totalCount / request.PageSize));
 
         return result;
     }
 
     public async Task<PagedResult<CountryDto>> GetAllCountriesAsync(int pageNumber, int pageSize, CancellationToken cancellationToken = default)
     {
+        _logger.LogDebug("Getting all countries - Page: {PageNumber}, Size: {PageSize}", pageNumber, pageSize);
+        
         // Validate parameters
         if (pageNumber < 1)
+        {
+            _logger.LogWarning("Invalid page number: {PageNumber}. Must be greater than 0", pageNumber);
             throw new ArgumentException("Page number must be greater than 0", nameof(pageNumber));
+        }
         
         if (pageSize < 1 || pageSize > 1000)
+        {
+            _logger.LogWarning("Invalid page size: {PageSize}. Must be between 1 and 1000", pageSize);
             throw new ArgumentException("Page size must be between 1 and 1000", nameof(pageSize));
+        }
 
         var cacheKey = $"country:all:{pageNumber}:{pageSize}";
         
@@ -168,9 +190,12 @@ public class CountryService : ICountryService
         }
 
         // Get total count
+        _logger.LogDebug("Fetching total count of countries from database");
         var totalCount = await _context.Countries.CountAsync(cancellationToken);
+        _logger.LogDebug("Total countries in database: {TotalCount}", totalCount);
 
         // Get paged results
+        _logger.LogDebug("Fetching page {PageNumber} of countries with page size {PageSize}", pageNumber, pageSize);
         var countries = await _context.Countries
             .Include(c => c.CountryCodes)
             .AsNoTracking()
@@ -192,7 +217,7 @@ public class CountryService : ICountryService
             AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(_cacheOptions.SearchCacheDurationMinutes),
             Size = result.Items.Count() // Size based on number of items in result
         });
-        _logger.LogDebug("All countries results cached for {Duration} minutes", _cacheOptions.SearchCacheDurationMinutes);
+        _logger.LogDebug("All countries results cached for {Duration} minutes. Page {PageNumber} of {TotalPages} pages", _cacheOptions.SearchCacheDurationMinutes, pageNumber, Math.Ceiling((double)totalCount / pageSize));
 
         return result;
     }
@@ -323,11 +348,15 @@ public class CountryService : ICountryService
 
     public async Task<bool> ExistsAsync(int id, CancellationToken cancellationToken = default)
     {
-        return await _context.Countries.AnyAsync(c => c.Id == id, cancellationToken);
+        _logger.LogDebug("Checking if country with ID {CountryId} exists", id);
+        var exists = await _context.Countries.AnyAsync(c => c.Id == id, cancellationToken);
+        _logger.LogDebug("Country with ID {CountryId} exists: {Exists}", id, exists);
+        return exists;
     }
 
     public async Task<bool> ExistsByNameAsync(string name, int? excludeId = null, CancellationToken cancellationToken = default)
     {
+        _logger.LogDebug("Checking if country with name '{CountryName}' exists (exclude ID: {ExcludeId})", name, excludeId);
         var query = _context.Countries.Where(c => c.Name == name);
         
         if (excludeId.HasValue)
@@ -335,11 +364,14 @@ public class CountryService : ICountryService
             query = query.Where(c => c.Id != excludeId.Value);
         }
         
-        return await query.AnyAsync(cancellationToken);
+        var exists = await query.AnyAsync(cancellationToken);
+        _logger.LogDebug("Country with name '{CountryName}' exists: {Exists}", name, exists);
+        return exists;
     }
 
     public async Task<bool> ExistsByIso2Async(string iso2, int? excludeId = null, CancellationToken cancellationToken = default)
     {
+        _logger.LogDebug("Checking if country with ISO2 '{ISO2}' exists (exclude ID: {ExcludeId})", iso2, excludeId);
         var query = _context.Countries.Where(c => c.ISO2 == iso2);
         
         if (excludeId.HasValue)
@@ -347,11 +379,14 @@ public class CountryService : ICountryService
             query = query.Where(c => c.Id != excludeId.Value);
         }
         
-        return await query.AnyAsync(cancellationToken);
+        var exists = await query.AnyAsync(cancellationToken);
+        _logger.LogDebug("Country with ISO2 '{ISO2}' exists: {Exists}", iso2, exists);
+        return exists;
     }
 
     public async Task<bool> ExistsByIso3Async(string iso3, int? excludeId = null, CancellationToken cancellationToken = default)
     {
+        _logger.LogDebug("Checking if country with ISO3 '{ISO3}' exists (exclude ID: {ExcludeId})", iso3, excludeId);
         var query = _context.Countries.Where(c => c.ISO3 == iso3);
         
         if (excludeId.HasValue)
@@ -359,11 +394,14 @@ public class CountryService : ICountryService
             query = query.Where(c => c.Id != excludeId.Value);
         }
         
-        return await query.AnyAsync(cancellationToken);
+        var exists = await query.AnyAsync(cancellationToken);
+        _logger.LogDebug("Country with ISO3 '{ISO3}' exists: {Exists}", iso3, exists);
+        return exists;
     }
 
     public async Task<bool> ExistsByCountryCodeAsync(string countryCode, int? excludeId = null, CancellationToken cancellationToken = default)
     {
+        _logger.LogDebug("Checking if country with country code '{CountryCode}' exists (exclude ID: {ExcludeId})", countryCode, excludeId);
         var query = _context.CountryCodes.Where(cc => cc.Code == countryCode);
         
         if (excludeId.HasValue)
@@ -371,17 +409,22 @@ public class CountryService : ICountryService
             query = query.Where(cc => cc.CountryId != excludeId.Value);
         }
         
-        return await query.AnyAsync(cancellationToken);
+        var exists = await query.AnyAsync(cancellationToken);
+        _logger.LogDebug("Country with country code '{CountryCode}' exists: {Exists}", countryCode, exists);
+        return exists;
     }
 
     public async Task<IEnumerable<string>> GetContinentsAsync(CancellationToken cancellationToken = default)
     {
+        _logger.LogDebug("Getting list of continents");
+        
         if (_cache.TryGetValue(CacheKeys.Continents, out IEnumerable<string>? cachedContinents) && cachedContinents != null)
         {
             _logger.LogDebug("Continents retrieved from cache");
             return cachedContinents;
         }
 
+        _logger.LogDebug("Fetching continents from database");
         var continents = await _context.Countries
             .AsNoTracking()
             .Select(c => c.Continent)
@@ -394,7 +437,7 @@ public class CountryService : ICountryService
             AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(_cacheOptions.CountryCacheDurationMinutes),
             Size = continents.Count() // Size based on number of continents
         });
-        _logger.LogDebug("Continents cached for {Duration} minutes", _cacheOptions.CountryCacheDurationMinutes);
+        _logger.LogDebug("Continents cached for {Duration} minutes. Found {Count} continents", _cacheOptions.CountryCacheDurationMinutes, continents.Count());
 
         return continents;
     }
