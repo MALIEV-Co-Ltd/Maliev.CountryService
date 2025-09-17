@@ -2,20 +2,19 @@ using Maliev.CountryService.Data.DbContexts;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
 
-namespace Maliev.CountryService.Data;
-
-public class DesignTimeDbContextFactory : IDesignTimeDbContextFactory<CountryDbContext>
+namespace Maliev.CountryService.Data
 {
-    public CountryDbContext CreateDbContext(string[] args)
+    public class DesignTimeDbContextFactory : IDesignTimeDbContextFactory<CountryDbContext>
     {
-        var optionsBuilder = new DbContextOptionsBuilder<CountryDbContext>();
-        
-        var connectionString = Environment.GetEnvironmentVariable("ConnectionStrings__Default")
-            ?? Environment.GetEnvironmentVariable("TEMP_MIGRATION_CONNECTION_STRING")
-            ?? throw new InvalidOperationException("Connection string must be provided via ConnectionStrings__Default or TEMP_MIGRATION_CONNECTION_STRING environment variable");
+        public CountryDbContext CreateDbContext(string[] args)
+        {
+            var optionsBuilder = new DbContextOptionsBuilder<CountryDbContext>();
 
-        optionsBuilder.UseNpgsql(connectionString);
+            var connectionString = Environment.GetEnvironmentVariable("ConnectionStrings__CountryDbContext");
 
-        return new CountryDbContext(optionsBuilder.Options);
+            optionsBuilder.UseNpgsql(connectionString);
+
+            return new CountryDbContext(optionsBuilder.Options);
+        }
     }
 }
