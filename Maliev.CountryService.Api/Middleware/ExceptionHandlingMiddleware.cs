@@ -44,10 +44,17 @@ public class ExceptionHandlingMiddleware
             TimeoutException => (HttpStatusCode.RequestTimeout, "Request timeout"),
             DuplicateCountryException => (HttpStatusCode.Conflict, "A country with the same name, ISO code, or country code already exists."),
             CountryServiceException => (HttpStatusCode.BadRequest, exception.Message),
+            Npgsql.NpgsqlException => (HttpStatusCode.ServiceUnavailable, "Database temporarily unavailable - please retry later"),
             _ => (HttpStatusCode.InternalServerError, "An error occurred while processing your request")
         };
 
         context.Response.StatusCode = (int)statusCode;
+
+        // T123: Add Retry-After header for 503 responses (based on circuit breaker duration)
+        if (statusCode == HttpStatusCode.ServiceUnavailable)
+        {
+            context.Response.Headers["Retry-After"] = "60"; // Circuit breaker duration in seconds
+        }
 
         var response = new
         {

@@ -1,0 +1,128 @@
+{
+  "countries": [
+    {
+      "iso2": "FR",
+      "iso3": "FRA",
+      "name": "France",
+      "officialName": "French Republic",
+      "numericCode": "250",
+      "capital": "Paris",
+      "region": "Europe",
+      "subregion": "Western Europe",
+      "latitude": 48.8566,
+      "longitude": 2.3522,
+      "demonym": "French",
+      "areaKm2": 551695,
+      "population": 67390000,
+      "giniCoefficient": 32.4,
+      "timezones": ["UTC+01:00"],
+      "borders": ["AND", "BEL", "DEU", "ITA", "LUX", "MCO", "ESP", "CHE"],
+      "callingCodes": ["+33"],
+      "topLevelDomains": [".fr"],
+      "currencies": {
+        "EUR": {
+          "name": "Euro",
+          "symbol": "€"
+        }
+      },
+      "languages": {
+        "fra": "French"
+      },
+      "translations": {
+        "eng": "France",
+        "deu": "Frankreich",
+        "spa": "Francia"
+      },
+      "flags": {
+        "svg": "https://flagcdn.com/fr.svg",
+        "png": "https://flagcdn.com/w320/fr.png"
+      },
+      "independent": true,
+      "unMember": true,
+      "landlocked": false
+    },
+    {
+      "iso2": "DE",
+      "iso3": "DEU",
+      "name": "Germany",
+      "officialName": "Federal Republic of Germany",
+      "numericCode": "276",
+      "capital": "Berlin",
+      "region": "Europe",
+      "subregion": "Western Europe",
+      "latitude": 52.52,
+      "longitude": 13.405,
+      "demonym": "German",
+      "areaKm2": 357114,
+      "population": 83240000,
+      "giniCoefficient": 31.9,
+      "timezones": ["UTC+01:00"],
+      "borders": ["AUT", "BEL", "CZE", "DNK", "FRA", "LUX", "NLD", "POL", "CHE"],
+      "callingCodes": ["+49"],
+      "topLevelDomains": [".de"],
+      "currencies": {
+        "EUR": {
+          "name": "Euro",
+          "symbol": "€"
+        }
+      },
+      "languages": {
+        "deu": "German"
+      },
+      "translations": {
+        "eng": "Germany",
+        "fra": "Allemagne",
+        "spa": "Alemania"
+      },
+      "flags": {
+        "svg": "https://flagcdn.com/de.svg",
+        "png": "https://flagcdn.com/w320/de.png"
+      },
+      "independent": true,
+      "unMember": true,
+      "landlocked": false
+    },
+    {
+      "iso2": "IT",
+      "iso3": "ITA",
+      "name": "Italy",
+      "officialName": "Italian Republic",
+      "numericCode": "380",
+      "capital": "Rome",
+      "region": "Europe",
+      "subregion": "Southern Europe",
+      "latitude": 41.9028,
+      "longitude": 12.4964,
+      "demonym": "Italian",
+      "areaKm2": 301336,
+      "population": 59554000,
+      "giniCoefficient": 35.9,
+      "timezones": ["UTC+01:00"],
+      "borders": ["AUT", "FRA", "SMR", "SVN", "CHE", "VAT"],
+      "callingCodes": ["+39"],
+      "topLevelDomains": [".it"],
+      "currencies": {
+        "EUR": {
+          "name": "Euro",
+          "symbol": "€"
+        }
+      },
+      "languages": {
+        "ita": "Italian"
+      },
+      "translations": {
+        "eng": "Italy",
+        "fra": "Italie",
+        "deu": "Italien",
+        "spa": "Italia"
+      },
+      "flags": {
+        "svg": "https://flagcdn.com/it.svg",
+        "png": "https://flagcdn.com/w320/it.png"
+      },
+      "independent": true,
+      "unMember": true,
+      "landlocked": false
+    }
+  ]
+}

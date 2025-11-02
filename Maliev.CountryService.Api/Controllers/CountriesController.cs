@@ -1,17 +1,20 @@
 using Asp.Versioning;
-using Maliev.CountryService.Api.Models;
+using Maliev.CountryService.Api.Metrics;
+using Maliev.CountryService.Api.Models.Countries;
 using Maliev.CountryService.Api.Services;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 
 namespace Maliev.CountryService.Api.Controllers;
 
+/// <summary>
+/// T061: CountriesController with base route /countries/v1
+/// User Story 1: Fast country lookup by ISO code with sub-50ms latency
+/// </summary>
 [ApiController]
-[Route("countries/v{version:apiVersion}")]
 [ApiVersion("1.0")]
-[EnableRateLimiting("CountryPolicy")]
-[Authorize] // Require valid JWT token for all endpoints
+[Route("countries/v{version:apiVersion}/countries")]
+[EnableRateLimiting("read-endpoints")]
 public class CountriesController : ControllerBase
 {
     private readonly ICountryService _countryService;
@@ -23,217 +26,214 @@ public class CountriesController : ControllerBase
         _logger = logger;
     }
 
-    [HttpGet("{id:int}")]
-    [ProducesResponseType(typeof(CountryDto), StatusCodes.Status200OK)]
+    /// <summary>
+    /// T062: GET /countries/v1/countries/{id}
+    /// Returns 200 with ETag, 304 if If-None-Match matches, 404 if not found
+    /// T065-T067: Add cache headers (X-Cache, X-Cache-Age, Last-Modified)
+    /// </summary>
+    [HttpGet("{id:long}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status304NotModified)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    [ProducesResponseType(StatusCodes.Status429TooManyRequests)]
-    public async Task<ActionResult<CountryDto>> GetById(int id, CancellationToken cancellationToken)
+    public async Task<IActionResult> GetById(long id, CancellationToken cancellationToken)
     {
-        _logger.LogInformation("Getting country with ID: {CountryId}", id);
+        var stopwatch = System.Diagnostics.Stopwatch.StartNew();
 
         var country = await _countryService.GetByIdAsync(id, cancellationToken);
-        
+
         if (country == null)
         {
-            _logger.LogWarning("Country with ID {CountryId} not found", id);
-            return NotFound();
+            BusinessMetrics.RequestDuration.WithLabels("GetById", "GET", "404").Observe(stopwatch.Elapsed.TotalSeconds);
+            return NotFound(new { error = "NOT_FOUND", message = $"Country with ID {id} not found" });
         }
 
+        // T062: Check If-None-Match for 304 response
+        var requestETag = Request.Headers["If-None-Match"].ToString();
+        if (!string.IsNullOrEmpty(requestETag) && requestETag == country.ETag)
+        {
+            BusinessMetrics.RequestDuration.WithLabels("GetById", "GET", "304").Observe(stopwatch.Elapsed.TotalSeconds);
+            return StatusCode(StatusCodes.Status304NotModified);
+        }
+
+        // T065: Add X-Cache header (HIT/MISS based on response time - heuristic)
+        var cacheStatus = stopwatch.ElapsedMilliseconds < 10 ? "HIT" : "MISS";
+        Response.Headers["X-Cache"] = cacheStatus;
+
+        // T066: Add X-Cache-Age header (seconds since cached - estimated from last modified)
+        var cacheAge = (int)(DateTime.UtcNow - country.LastModifiedUtc).TotalSeconds;
+        Response.Headers["X-Cache-Age"] = cacheAge.ToString();
+
+        // T067: Add Last-Modified header
+        Response.Headers["Last-Modified"] = country.LastModifiedUtc.ToString("R");
+
+        // Add ETag header
+        Response.Headers["ETag"] = country.ETag;
+
+        BusinessMetrics.RequestDuration.WithLabels("GetById", "GET", "200").Observe(stopwatch.Elapsed.TotalSeconds);
         return Ok(country);
     }
 
-    [HttpGet("search")]
-    [ProducesResponseType(typeof(PagedResult<CountryDto>), StatusCodes.Status200OK)]
+    /// <summary>
+    /// T063: GET /countries/v1/countries/iso2/{iso2}
+    /// Same behavior as GetById - validate ISO2 format
+    /// </summary>
+    [HttpGet("iso2/{iso2}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status304NotModified)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    [ProducesResponseType(StatusCodes.Status429TooManyRequests)]
-    public async Task<ActionResult<PagedResult<CountryDto>>> Search([FromQuery] CountrySearchRequest request, CancellationToken cancellationToken)
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetByIso2(string iso2, CancellationToken cancellationToken)
     {
-        _logger.LogInformation("Searching countries with request: {@SearchRequest}", request);
-
-        if (!ModelState.IsValid)
+        if (string.IsNullOrWhiteSpace(iso2) || iso2.Length != 2)
         {
-            return BadRequest(ModelState);
+            return BadRequest(new { error = "INVALID_ISO2", message = "ISO2 code must be exactly 2 characters" });
         }
 
-        var result = await _countryService.SearchAsync(request, cancellationToken);
-        
-        _logger.LogInformation("Found {Count} countries out of {Total} total", result.Items.Count(), result.TotalCount);
-        
+        var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+
+        var country = await _countryService.GetByIso2Async(iso2, cancellationToken);
+
+        if (country == null)
+        {
+            BusinessMetrics.RequestDuration.WithLabels("GetByIso2", "GET", "404").Observe(stopwatch.Elapsed.TotalSeconds);
+            return NotFound(new { error = "NOT_FOUND", message = $"Country with ISO2 code '{iso2}' not found" });
+        }
+
+        var requestETag = Request.Headers["If-None-Match"].ToString();
+        if (!string.IsNullOrEmpty(requestETag) && requestETag == country.ETag)
+        {
+            BusinessMetrics.RequestDuration.WithLabels("GetByIso2", "GET", "304").Observe(stopwatch.Elapsed.TotalSeconds);
+            return StatusCode(StatusCodes.Status304NotModified);
+        }
+
+        var cacheStatus = stopwatch.ElapsedMilliseconds < 10 ? "HIT" : "MISS";
+        Response.Headers["X-Cache"] = cacheStatus;
+        Response.Headers["X-Cache-Age"] = ((int)(DateTime.UtcNow - country.LastModifiedUtc).TotalSeconds).ToString();
+        Response.Headers["Last-Modified"] = country.LastModifiedUtc.ToString("R");
+        Response.Headers["ETag"] = country.ETag;
+
+        BusinessMetrics.RequestDuration.WithLabels("GetByIso2", "GET", "200").Observe(stopwatch.Elapsed.TotalSeconds);
+        return Ok(country);
+    }
+
+    /// <summary>
+    /// T064: GET /countries/v1/countries/iso3/{iso3}
+    /// Same behavior as GetById - validate ISO3 format
+    /// </summary>
+    [HttpGet("iso3/{iso3}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status304NotModified)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetByIso3(string iso3, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(iso3) || iso3.Length != 3)
+        {
+            return BadRequest(new { error = "INVALID_ISO3", message = "ISO3 code must be exactly 3 characters" });
+        }
+
+        var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+
+        var country = await _countryService.GetByIso3Async(iso3, cancellationToken);
+
+        if (country == null)
+        {
+            BusinessMetrics.RequestDuration.WithLabels("GetByIso3", "GET", "404").Observe(stopwatch.Elapsed.TotalSeconds);
+            return NotFound(new { error = "NOT_FOUND", message = $"Country with ISO3 code '{iso3}' not found" });
+        }
+
+        var requestETag = Request.Headers["If-None-Match"].ToString();
+        if (!string.IsNullOrEmpty(requestETag) && requestETag == country.ETag)
+        {
+            BusinessMetrics.RequestDuration.WithLabels("GetByIso3", "GET", "304").Observe(stopwatch.Elapsed.TotalSeconds);
+            return StatusCode(StatusCodes.Status304NotModified);
+        }
+
+        var cacheStatus = stopwatch.ElapsedMilliseconds < 10 ? "HIT" : "MISS";
+        Response.Headers["X-Cache"] = cacheStatus;
+        Response.Headers["X-Cache-Age"] = ((int)(DateTime.UtcNow - country.LastModifiedUtc).TotalSeconds).ToString();
+        Response.Headers["Last-Modified"] = country.LastModifiedUtc.ToString("R");
+        Response.Headers["ETag"] = country.ETag;
+
+        BusinessMetrics.RequestDuration.WithLabels("GetByIso3", "GET", "200").Observe(stopwatch.Elapsed.TotalSeconds);
+        return Ok(country);
+    }
+
+    /// <summary>
+    /// T072: GET /countries/v1/countries
+    /// Returns paginated list of countries with filtering and sorting support.
+    /// T073: Adds X-Total-Count header with total number of matching countries.
+    /// T075: Supports If-Modified-Since conditional requests.
+    /// </summary>
+    [HttpGet]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status304NotModified)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> List([FromQuery] CountryListRequest request, CancellationToken cancellationToken)
+    {
+        var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+
+        var result = await _countryService.ListAsync(request, cancellationToken);
+
+        // T075: If-Modified-Since support - get max LastModifiedUtc from result set
+        if (result.Data.Any())
+        {
+            var maxLastModified = result.Data.Max(c => c.LastModifiedUtc);
+
+            if (Request.Headers.ContainsKey("If-Modified-Since"))
+            {
+                if (DateTime.TryParse(Request.Headers["If-Modified-Since"].ToString(), out var ifModifiedSince))
+                {
+                    if (maxLastModified <= ifModifiedSince)
+                    {
+                        BusinessMetrics.RequestDuration.WithLabels("List", "GET", "304").Observe(stopwatch.Elapsed.TotalSeconds);
+                        return StatusCode(StatusCodes.Status304NotModified);
+                    }
+                }
+            }
+
+            Response.Headers["Last-Modified"] = maxLastModified.ToString("R");
+        }
+
+        // T073: Add X-Total-Count header
+        Response.Headers["X-Total-Count"] = result.TotalCount.ToString();
+
+        // Add cache headers
+        var cacheStatus = stopwatch.ElapsedMilliseconds < 10 ? "HIT" : "MISS";
+        Response.Headers["X-Cache"] = cacheStatus;
+
+        BusinessMetrics.RequestDuration.WithLabels("List", "GET", "200").Observe(stopwatch.Elapsed.TotalSeconds);
         return Ok(result);
     }
 
-    [HttpGet]
-    [ProducesResponseType(typeof(PagedResult<CountryDto>), StatusCodes.Status200OK)]
+    /// <summary>
+    /// T074: GET /countries/v1/countries/search
+    /// Full-text search on country names and ISO codes.
+    /// </summary>
+    [HttpGet("search")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    [ProducesResponseType(StatusCodes.Status429TooManyRequests)]
-    public async Task<ActionResult<PagedResult<CountryDto>>> GetAllCountries(
-        [FromQuery] int pageNumber = 1, 
-        [FromQuery] int pageSize = 50, 
+    public async Task<IActionResult> Search(
+        [FromQuery] string q,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20,
         CancellationToken cancellationToken = default)
     {
-        _logger.LogInformation("Getting all countries with pagination: PageNumber={PageNumber}, PageSize={PageSize}", pageNumber, pageSize);
-
-        try
+        if (string.IsNullOrWhiteSpace(q) || q.Length < 2)
         {
-            var result = await _countryService.GetAllCountriesAsync(pageNumber, pageSize, cancellationToken);
-            
-            _logger.LogInformation("Retrieved {Count} countries out of {Total} total", result.Items.Count(), result.TotalCount);
-            
-            return Ok(result);
-        }
-        catch (ArgumentException ex)
-        {
-            _logger.LogWarning("Invalid pagination parameters: {Message}", ex.Message);
-            return BadRequest(ex.Message);
-        }
-    }
-
-    [HttpPost]
-    [ProducesResponseType(typeof(CountryDto), StatusCodes.Status201Created)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    [ProducesResponseType(StatusCodes.Status409Conflict)]
-    [ProducesResponseType(StatusCodes.Status429TooManyRequests)]
-    public async Task<ActionResult<CountryDto>> Create([FromBody] CreateCountryRequest request, CancellationToken cancellationToken)
-    {
-        _logger.LogInformation("Creating country: {CountryName}", request.Name);
-
-        if (!ModelState.IsValid)
-        {
-            return BadRequest(ModelState);
+            return BadRequest(new { error = "INVALID_QUERY", message = "Search query must be at least 2 characters" });
         }
 
-        // Check for duplicates
-        var duplicateCheckResult = await CheckForDuplicatesAsync(request.Name, request.ISO2, request.ISO3, request.CountryCode, null, cancellationToken);
-        if (duplicateCheckResult != null)
-        {
-            return duplicateCheckResult;
-        }
+        var stopwatch = System.Diagnostics.Stopwatch.StartNew();
 
-        var country = await _countryService.CreateAsync(request, cancellationToken);
-        
-        _logger.LogInformation("Country created successfully: {CountryName} with ID {CountryId}", country.Name, country.Id);
-        
-        return CreatedAtAction(nameof(GetById), new { id = country.Id }, country);
-    }
+        var result = await _countryService.SearchAsync(q, page, pageSize, cancellationToken);
 
-    [HttpPut("{id:int}")]
-    [ProducesResponseType(typeof(CountryDto), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    [ProducesResponseType(StatusCodes.Status409Conflict)]
-    [ProducesResponseType(StatusCodes.Status429TooManyRequests)]
-    public async Task<ActionResult<CountryDto>> Update(int id, [FromBody] UpdateCountryRequest request, CancellationToken cancellationToken)
-    {
-        _logger.LogInformation("Updating country with ID: {CountryId}", id);
+        // Add headers
+        Response.Headers["X-Total-Count"] = result.TotalCount.ToString();
+        var cacheStatus = stopwatch.ElapsedMilliseconds < 10 ? "HIT" : "MISS";
+        Response.Headers["X-Cache"] = cacheStatus;
 
-        if (!ModelState.IsValid)
-        {
-            return BadRequest(ModelState);
-        }
-
-        // Check if country exists
-        if (!await _countryService.ExistsAsync(id, cancellationToken))
-        {
-            _logger.LogWarning("Country with ID {CountryId} not found for update", id);
-            return NotFound();
-        }
-
-        // Check for duplicates (excluding current record)
-        var duplicateCheckResult = await CheckForDuplicatesAsync(request.Name, request.ISO2, request.ISO3, request.CountryCode, id, cancellationToken);
-        if (duplicateCheckResult != null)
-        {
-            return duplicateCheckResult;
-        }
-
-        var country = await _countryService.UpdateAsync(id, request, cancellationToken);
-        
-        if (country == null)
-        {
-            _logger.LogWarning("Country with ID {CountryId} not found during update operation", id);
-            return NotFound();
-        }
-
-        _logger.LogInformation("Country updated successfully: {CountryName} with ID {CountryId}", country.Name, country.Id);
-        
-        return Ok(country);
-    }
-
-    private async Task<ActionResult<CountryDto>?> CheckForDuplicatesAsync(
-        string name, 
-        string iso2, 
-        string iso3, 
-        string countryCode, 
-        int? excludeId, 
-        CancellationToken cancellationToken)
-    {
-        // Check for duplicate name
-        if (await _countryService.ExistsByNameAsync(name, excludeId, cancellationToken))
-        {
-            ModelState.AddModelError(nameof(name), "A country with this name already exists");
-            return Conflict(ModelState);
-        }
-
-        // Check for duplicate ISO2
-        if (await _countryService.ExistsByIso2Async(iso2, excludeId, cancellationToken))
-        {
-            ModelState.AddModelError(nameof(iso2), "A country with this ISO2 code already exists");
-            return Conflict(ModelState);
-        }
-
-        // Check for duplicate ISO3
-        if (await _countryService.ExistsByIso3Async(iso3, excludeId, cancellationToken))
-        {
-            ModelState.AddModelError(nameof(iso3), "A country with this ISO3 code already exists");
-            return Conflict(ModelState);
-        }
-
-        // Check for duplicate country code
-        if (await _countryService.ExistsByCountryCodeAsync(countryCode, excludeId, cancellationToken))
-        {
-            ModelState.AddModelError(nameof(countryCode), "A country with this country code already exists");
-            return Conflict(ModelState);
-        }
-
-        return null; // No duplicates found
-    }
-
-    [HttpDelete("{id:int}")]
-    [ProducesResponseType(StatusCodes.Status204NoContent)]
-    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    [ProducesResponseType(StatusCodes.Status429TooManyRequests)]
-    public async Task<IActionResult> Delete(int id, CancellationToken cancellationToken)
-    {
-        _logger.LogInformation("Deleting country with ID: {CountryId}", id);
-
-        var deleted = await _countryService.DeleteAsync(id, cancellationToken);
-        
-        if (!deleted)
-        {
-            _logger.LogWarning("Country with ID {CountryId} not found for deletion", id);
-            return NotFound();
-        }
-
-        _logger.LogInformation("Country with ID {CountryId} deleted successfully", id);
-        
-        return NoContent();
-    }
-
-    [HttpGet("continents")]
-    [ProducesResponseType(typeof(IEnumerable<string>), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    [ProducesResponseType(StatusCodes.Status429TooManyRequests)]
-    public async Task<ActionResult<IEnumerable<string>>> GetContinents(CancellationToken cancellationToken)
-    {
-        _logger.LogInformation("Getting list of continents");
-
-        var continents = await _countryService.GetContinentsAsync(cancellationToken);
-        
-        return Ok(continents);
+        BusinessMetrics.RequestDuration.WithLabels("Search", "GET", "200").Observe(stopwatch.Elapsed.TotalSeconds);
+        return Ok(result);
     }
 }
