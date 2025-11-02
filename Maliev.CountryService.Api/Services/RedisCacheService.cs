@@ -105,7 +105,7 @@ public class RedisCacheService : ICacheService
                         key, (now - cacheEntry.CachedAtUtc).TotalSeconds);
 
                     // Trigger background refresh (fire-and-forget)
-                    _ = Task.Run(async () =>
+                    _ = Task.Run(() =>
                     {
                         try
                         {
