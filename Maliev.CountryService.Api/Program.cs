@@ -1,43 +1,30 @@
 using Asp.Versioning;
 using Asp.Versioning.ApiExplorer;
 using HealthChecks.UI.Client;
-using Maliev.CountryService.Api.Configurations;
+using Maliev.CountryService.Api.BackgroundServices;
 using Maliev.CountryService.Api.HealthChecks;
 using Maliev.CountryService.Api.Middleware;
-using Maliev.CountryService.Api.Models;
 using Maliev.CountryService.Api.Services;
-using Maliev.CountryService.Data.DbContexts;
+using Maliev.CountryService.Data;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
+using Prometheus;
 using Serilog;
-using Serilog.Filters;
-using Swashbuckle.AspNetCore.SwaggerGen;
+using StackExchange.Redis;
 using System.Text;
 using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Configure Serilog
+// T026: Configure Serilog (console only, structured JSON logging)
 Log.Logger = new LoggerConfiguration()
     .ReadFrom.Configuration(builder.Configuration)
     .Enrich.FromLogContext()
-    .Enrich.WithEnvironmentName()
-    .Enrich.WithMachineName()
-    .Enrich.WithProcessId()
-    .Enrich.WithThreadId()
-    .Filter.ByExcluding(Matching.WithProperty<string>("RequestPath", path =>
-        path.StartsWith("/health") || path.StartsWith("/metrics")))
     .WriteTo.Console(outputTemplate:
-        "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] {CorrelationId} {SourceContext} {Message:lj}{NewLine}{Exception}")
-    .WriteTo.File(
-        path: "logs/country-service-.txt",
-        rollingInterval: RollingInterval.Day,
-        retainedFileCountLimit: 31,
-        outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] {CorrelationId} {SourceContext} {Message:lj}{NewLine}{Exception}")
+        "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] {CorrelationId} {Message:lj}{NewLine}{Exception}")
     .CreateLogger();
 
 builder.Host.UseSerilog();
@@ -46,150 +33,142 @@ try
 {
     Log.Information("Starting Maliev Country Service");
 
-    // Load secrets.yaml
-    builder.Configuration.AddYamlFile("secrets.yaml", optional: true, reloadOnChange: true);
-
-    // Load secrets from mounted volume in GKE
+    // T028: Google Secret Manager integration (/mnt/secrets path, optional for development)
     var secretsPath = "/mnt/secrets";
     if (Directory.Exists(secretsPath))
     {
         builder.Configuration.AddKeyPerFile(directoryPath: secretsPath, optional: true);
+        Log.Information("Loaded secrets from {SecretPath}", secretsPath);
     }
 
     // Add services to the container
     builder.Services.AddControllers();
     builder.Services.AddEndpointsApiExplorer();
-    builder.Services.AddOpenApi();
-    
-    // API Versioning
+
+    // T033: Configure API versioning (v1 as default)
     builder.Services.AddApiVersioning(options =>
     {
-        options.DefaultApiVersion = new ApiVersion(1, 0);
+        options.DefaultApiVersion = new Asp.Versioning.ApiVersion(1, 0);
         options.AssumeDefaultVersionWhenUnspecified = true;
         options.ReportApiVersions = true;
-        options.ApiVersionReader = new UrlSegmentApiVersionReader();
+        options.ApiVersionReader = new Asp.Versioning.UrlSegmentApiVersionReader();
     }).AddApiExplorer(options =>
     {
         options.GroupNameFormat = "'v'VVV";
         options.SubstituteApiVersionInUrl = true;
     });
 
-    builder.Services.AddTransient<IConfigureOptions<SwaggerGenOptions>, ConfigureSwaggerOptions>();
-    builder.Services.AddSwaggerGen();
+    // OpenAPI/Swagger for Scalar
+    builder.Services.AddOpenApi();
 
-    // Configure strongly-typed configuration options with validation
-    builder.Services.Configure<RateLimitOptions>(builder.Configuration.GetSection(RateLimitOptions.SectionName));
-    builder.Services.Configure<CacheOptions>(builder.Configuration.GetSection(CacheOptions.SectionName));
-
-    // Configure JWT options only if available (to allow local development without secrets)
-    var initialJwtSection = builder.Configuration.GetSection(JwtOptions.SectionName);
-    if (!string.IsNullOrEmpty(initialJwtSection["Issuer"]) && !builder.Environment.IsEnvironment("Testing"))
+    // T027: Configure DbContext with connection string from configuration, retry on failure
+    builder.Services.AddDbContext<CountryServiceDbContext>(options =>
     {
-        builder.Services.Configure<JwtOptions>(initialJwtSection);
-        builder.Services.AddOptions<JwtOptions>()
-            .Bind(initialJwtSection)
-            .ValidateDataAnnotations()
-            .ValidateOnStart();
-    }
+        var connectionString = builder.Configuration.GetConnectionString("CountryServiceDbContext");
+        options.UseNpgsql(connectionString, npgsqlOptions =>
+        {
+            npgsqlOptions.EnableRetryOnFailure(
+                maxRetryCount: 3,
+                maxRetryDelay: TimeSpan.FromSeconds(5),
+                errorCodesToAdd: null);
+        });
+    });
 
-    builder.Services.AddOptions<RateLimitOptions>()
-        .Bind(builder.Configuration.GetSection(RateLimitOptions.SectionName))
-        .ValidateDataAnnotations();
+    // T030: Configure memory cache (simple AddMemoryCache without SizeLimit - CRITICAL per CLAUDE.md)
+    builder.Services.AddMemoryCache();
 
-    builder.Services.AddOptions<CacheOptions>()
-        .Bind(builder.Configuration.GetSection(CacheOptions.SectionName))
-        .ValidateDataAnnotations();
-
-    // Configure Country DbContext
-    if (builder.Environment.IsEnvironment("Testing"))
+    // T031: Configure Redis connection with StackExchange.Redis
+    var redisConnectionString = builder.Configuration.GetConnectionString("Redis");
+    if (!string.IsNullOrEmpty(redisConnectionString))
     {
-        builder.Services.AddDbContext<CountryDbContext>(options =>
-            options.UseInMemoryDatabase("TestDb"));
+        try
+        {
+            var redis = ConnectionMultiplexer.Connect(redisConnectionString);
+            builder.Services.AddSingleton<IConnectionMultiplexer>(redis);
+            Log.Information("Redis connection established: {RedisEndpoint}", redisConnectionString);
+        }
+        catch (Exception ex)
+        {
+            Log.Warning(ex, "Redis connection failed - will use in-memory cache fallback");
+            // Don't register Redis - services will handle fallback
+        }
     }
     else
     {
-        builder.Services.AddDbContext<CountryDbContext>(options =>
-        {
-            options.UseNpgsql(builder.Configuration.GetConnectionString("CountryDbContext"));
-        });
+        Log.Warning("Redis connection string not configured - using in-memory cache only");
     }
 
-    builder.Services.AddDatabaseDeveloperPageExceptionFilter();
-
-    // Configure Memory Cache
-    builder.Services.AddMemoryCache(options =>
-    {
-        var cacheOptions = new CacheOptions();
-        builder.Configuration.GetSection(CacheOptions.SectionName).Bind(cacheOptions);
-        options.SizeLimit = cacheOptions.MaxCacheSize;
-    });
-
-    // Register application services
-    builder.Services.AddScoped<ICountryService, Maliev.CountryService.Api.Services.CountryService>();
-    
-    // Register AutoMapper
-    builder.Services.AddAutoMapper(typeof(Program));
-
-    // Configure Rate Limiting
+    // T043: Configure rate limiting (read endpoints: 100/min per IP, admin endpoints: 20/min per JWT sub claim)
     builder.Services.AddRateLimiter(options =>
     {
-        var rateLimitOptions = new RateLimitOptions();
-        builder.Configuration.GetSection(RateLimitOptions.SectionName).Bind(rateLimitOptions);
-
-        // Country endpoint rate limiting
-        options.AddPolicy("CountryPolicy", context =>
+        // Read endpoints: 100 requests per minute per IP
+        options.AddPolicy("read-endpoints", context =>
             RateLimitPartition.GetSlidingWindowLimiter(
                 partitionKey: context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
                 factory: _ => new SlidingWindowRateLimiterOptions
                 {
-                    PermitLimit = rateLimitOptions.CountryEndpoint.PermitLimit,
-                    Window = rateLimitOptions.CountryEndpoint.Window,
+                    PermitLimit = 100,
+                    Window = TimeSpan.FromMinutes(1),
                     SegmentsPerWindow = 2,
                     QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
-                    QueueLimit = rateLimitOptions.CountryEndpoint.QueueLimit
+                    QueueLimit = 10
                 }));
 
-        // Global rate limiting
-        options.AddPolicy("GlobalPolicy", context =>
-            RateLimitPartition.GetSlidingWindowLimiter(
-                partitionKey: context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+        // Admin endpoints: 20 requests per minute per user (JWT sub claim)
+        options.AddPolicy("admin-endpoints", context =>
+        {
+            var userId = context.User?.FindFirst("sub")?.Value ??
+                        context.Connection.RemoteIpAddress?.ToString() ??
+                        "unknown";
+
+            return RateLimitPartition.GetSlidingWindowLimiter(
+                partitionKey: userId,
                 factory: _ => new SlidingWindowRateLimiterOptions
                 {
-                    PermitLimit = rateLimitOptions.Global.PermitLimit,
-                    Window = rateLimitOptions.Global.Window,
-                    SegmentsPerWindow = 4,
+                    PermitLimit = 20,
+                    Window = TimeSpan.FromMinutes(1),
+                    SegmentsPerWindow = 2,
                     QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
-                    QueueLimit = rateLimitOptions.Global.QueueLimit
-                }));
+                    QueueLimit = 5
+                });
+        });
 
         options.OnRejected = async (context, token) =>
         {
             context.HttpContext.Response.StatusCode = 429;
-            await context.HttpContext.Response.WriteAsync("Rate limit exceeded. Please try again later.", token);
+            context.HttpContext.Response.Headers["Retry-After"] = "60";
+            await context.HttpContext.Response.WriteAsJsonAsync(new
+            {
+                error = "RATE_LIMIT_EXCEEDED",
+                message = "Rate limit exceeded. Please try again later.",
+                retryAfter = 60
+            }, cancellationToken: token);
         };
     });
 
     // Configure CORS
     builder.Services.AddCors(options =>
     {
-        options.AddDefaultPolicy(
-            policy =>
-            {
-                policy.WithOrigins(
+        options.AddDefaultPolicy(policy =>
+        {
+            policy.WithOrigins(
                     "https://maliev.com",
                     "https://*.maliev.com",
-                    "http://maliev.com",
-                    "http://*.maliev.com")
+                    "http://localhost:3000") // Allow local development
                 .AllowAnyHeader()
-                .AllowAnyMethod();
-            });
+                .AllowAnyMethod()
+                .WithExposedHeaders("X-Correlation-ID", "ETag", "X-Cache", "X-Total-Count");
+        });
     });
 
-    // Configure JWT Authentication (skip in Testing environment)
+    // T042: Configure JWT authentication (JwtBearer with validation)
     if (!builder.Environment.IsEnvironment("Testing"))
     {
-        var builderJwtSection = builder.Configuration.GetSection(JwtOptions.SectionName);
-        if (builderJwtSection.Exists())
+        var jwtIssuer = builder.Configuration["JwtBearer:Issuer"];
+        var jwtAudience = builder.Configuration["JwtBearer:Audience"];
+        var jwtSecurityKey = builder.Configuration["JwtBearer:SecurityKey"];
+
+        if (!string.IsNullOrEmpty(jwtIssuer) && !string.IsNullOrEmpty(jwtSecurityKey))
         {
             builder.Services.AddAuthentication(options =>
             {
@@ -197,103 +176,138 @@ try
                 options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
             }).AddJwtBearer(options =>
             {
-                var jwtOptions = new JwtOptions
-                {
-                    Issuer = "default-issuer",
-                    Audience = "default-audience", 
-                    SecurityKey = "default-key"
-                };
-                builderJwtSection.Bind(jwtOptions);
-
                 options.TokenValidationParameters = new TokenValidationParameters
                 {
                     ValidateIssuer = true,
                     ValidateAudience = true,
                     ValidateLifetime = true,
                     ValidateIssuerSigningKey = true,
-                    ValidIssuer = jwtOptions.Issuer,
-                    ValidAudience = jwtOptions.Audience,
-                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtOptions.SecurityKey))
+                    ValidIssuer = jwtIssuer,
+                    ValidAudience = jwtAudience,
+                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecurityKey))
                 };
             });
+
+            Log.Information("JWT authentication configured for issuer: {Issuer}", jwtIssuer);
         }
         else
         {
-            // Log warning that JWT is not configured for local development
-            Log.Warning("JWT configuration not found - API will start but authentication will not work. Configure JWT secrets for full functionality.");
+            Log.Warning("JWT configuration not found - API will start but authentication will not work");
         }
     }
 
-    builder.Services.AddAuthorization();
+    // T044: Create authorization policies (CountryAdmin role, SuperAdmin role)
+    builder.Services.AddAuthorization(options =>
+    {
+        options.AddPolicy("CountryAdmin", policy =>
+            policy.RequireRole("CountryAdmin", "SuperAdmin"));
+
+        options.AddPolicy("SuperAdmin", policy =>
+            policy.RequireRole("SuperAdmin"));
+    });
 
     builder.Services.Configure<ForwardedHeadersOptions>(options =>
     {
-        options.ForwardedHeaders =
-            ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+        options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
         options.KnownNetworks.Clear();
         options.KnownProxies.Clear();
     });
 
-    builder.Services.AddHealthChecks()
-        .AddDbContextCheck<CountryDbContext>("CountryDbContext", tags: new[] { "readiness" })
-        .AddCheck<DatabaseHealthCheck>("Database Health Check", tags: new[] { "readiness" });
+    // T029: Add health checks (database EF Core check with "readiness" tag, Redis health check)
+    var healthChecksBuilder = builder.Services.AddHealthChecks()
+        .AddDbContextCheck<CountryServiceDbContext>("database", tags: new[] { "readiness" })
+        .AddCheck<DatabaseHealthCheck>("database-connection", tags: new[] { "readiness" });
+
+    // Add Redis health check if Redis is configured
+    if (builder.Services.Any(s => s.ServiceType == typeof(IConnectionMultiplexer)))
+    {
+        healthChecksBuilder.AddCheck<RedisHealthCheck>("redis", tags: new[] { "readiness" });
+    }
+
+    // User Story 1: Register application services for fast country lookup
+    // Register MemoryCacheService as fallback cache
+    builder.Services.AddSingleton<MemoryCacheService>();
+
+    // Register ICacheService - use Redis if available, otherwise MemoryCache
+    builder.Services.AddSingleton<ICacheService>(sp =>
+    {
+        var redis = sp.GetService<IConnectionMultiplexer>();
+        var logger = sp.GetRequiredService<ILogger<RedisCacheService>>();
+        var memoryCache = sp.GetRequiredService<MemoryCacheService>();
+
+        return new RedisCacheService(logger, memoryCache, redis);
+    });
+
+    // User Story 6: Register degradation tracking
+    builder.Services.AddScoped<DegradationContext>();
+
+    // Register ICountryService
+    builder.Services.AddScoped<ICountryService, CountryService>();
+
+    // User Story 5: Register bulk import services
+    builder.Services.AddScoped<IBulkImportService, BulkImportService>();
+
+    // Register hosted services
+    builder.Services.AddHostedService<CacheWarmingService>();
+    builder.Services.AddHostedService<BulkImportWorkerService>();
 
     var app = builder.Build();
 
     app.UseForwardedHeaders();
 
-    // Add correlation ID middleware early in pipeline
-    app.UseCorrelationId();
+    // T035: Configure middleware pipeline (exact order)
+    // 1. Correlation ID (early in pipeline)
+    app.UseMiddleware<CorrelationIdMiddleware>();
 
-    // Configure the HTTP request pipeline
-    app.UseSwagger(c => 
-    {
-        c.RouteTemplate = "countries/swagger/{documentName}/swagger.json";
-    });
-    app.UseSwaggerUI(c =>
-    {
-        var provider = app.Services.GetRequiredService<IApiVersionDescriptionProvider>();
-        foreach (var description in provider.ApiVersionDescriptions)
-        {
-            c.SwaggerEndpoint($"/countries/swagger/{description.GroupName}/swagger.json", description.GroupName.ToUpperInvariant());
-        }
-        c.RoutePrefix = "countries/swagger";
-    });
+    // 2. Security headers
+    app.UseMiddleware<SecurityHeadersMiddleware>();
 
+    // 3. Exception handling
     app.UseMiddleware<ExceptionHandlingMiddleware>();
-    app.UseHttpsRedirection();
 
+    // 4. Degradation header (T122)
+    app.UseMiddleware<DegradationHeaderMiddleware>();
+
+    // T034: Configure Scalar UI (TODO: Fix Scalar API reference - using OpenAPI for now)
+    app.MapOpenApi();
+
+    // T032: Configure Prometheus metrics (UseHttpMetrics middleware)
+    app.UseHttpMetrics();
+
+    app.UseHttpsRedirection();
     app.UseRateLimiter();
     app.UseCors();
-    
-    // JWT Authentication & Authorization (only if configured and not in Testing environment)
+
+    // JWT Authentication & Authorization
     if (!app.Environment.IsEnvironment("Testing"))
     {
-        var appJwtSection = app.Configuration.GetSection(JwtOptions.SectionName);
-        if (appJwtSection.Exists())
-        {
-            app.UseAuthentication();
-            app.UseAuthorization();
-        }
+        app.UseAuthentication();
+        app.UseAuthorization();
     }
 
     // Health check endpoints (allow anonymous access for monitoring)
-    app.MapGet("/countries/liveness", () => "Healthy").AllowAnonymous();
+    app.MapGet("/countries/v1/liveness", () => Results.Ok(new { status = "Healthy", timestamp = DateTime.UtcNow }))
+        .AllowAnonymous()
+        .WithTags("Health");
 
-    app.MapHealthChecks("/countries/readiness", new HealthCheckOptions
+    app.MapHealthChecks("/countries/v1/readiness", new HealthCheckOptions
     {
         Predicate = healthCheck => healthCheck.Tags.Contains("readiness"),
         ResponseWriter = UIResponseWriter.WriteHealthCheckUIResponse
     }).AllowAnonymous();
 
+    // Metrics endpoint
+    app.MapMetrics("/metrics").AllowAnonymous();
 
     app.MapControllers();
 
+    Log.Information("Maliev Country Service started successfully");
     app.Run();
 }
 catch (Exception ex)
 {
     Log.Fatal(ex, "Application terminated unexpectedly");
+    throw;
 }
 finally
 {
@@ -301,5 +315,4 @@ finally
 }
 
 // Make Program class accessible for integration tests
-public partial class Program
-{ }
+public partial class Program { }

@@ -1,0 +1,27 @@
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Design;
+
+namespace Maliev.CountryService.Data;
+
+/// <summary>
+/// Design-time factory for EF Core migrations.
+/// Uses environment variable for connection string.
+/// </summary>
+public class CountryServiceDbContextFactory : IDesignTimeDbContextFactory<CountryServiceDbContext>
+{
+    public CountryServiceDbContext CreateDbContext(string[] args)
+    {
+        var optionsBuilder = new DbContextOptionsBuilder<CountryServiceDbContext>();
+
+        // Read from environment variable for migration commands
+        var connectionString = Environment.GetEnvironmentVariable("CountryServiceDbContext")
+            ?? "Server=localhost;Port=5432;Database=country_service_app_db;User Id=postgres;Password=postgres;";
+
+        optionsBuilder.UseNpgsql(connectionString, npgsqlOptions =>
+        {
+            npgsqlOptions.MigrationsHistoryTable("__ef_migrations_history", "public");
+        });
+
+        return new CountryServiceDbContext(optionsBuilder.Options);
+    }
+}

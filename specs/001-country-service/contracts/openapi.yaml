@@ -1,0 +1,1273 @@
+openapi: 3.0.3
+info:
+  title: Country WebAPI Service
+  description: |
+    High-performance, read-optimized Country WebAPI Service serving as the canonical source for country data
+    across the Maliev microservices ecosystem. Features multi-layer caching, ETag-based conditional requests,
+    and comprehensive administrative endpoints with optimistic concurrency control.
+  version: 1.0.0
+  contact:
+    name: Maliev API Support
+    email: api-support@maliev.com
+
+servers:
+  - url: https://api.maliev.com/countries/v1
+    description: Production
+  - url: https://api-staging.maliev.com/countries/v1
+    description: Staging
+  - url: https://api-dev.maliev.com/countries/v1
+    description: Development
+  - url: http://localhost:5000/countries/v1
+    description: Local Development
+
+tags:
+  - name: Countries
+    description: Country data read operations (anonymous access)
+  - name: Admin
+    description: Administrative CRUD operations (requires authentication)
+  - name: Bulk Import
+    description: Bulk import operations (requires authentication)
+  - name: Health
+    description: Service health and monitoring
+
+paths:
+  # ===== READ ENDPOINTS (Anonymous) =====
+
+  /countries:
+    get:
+      tags: [Countries]
+      summary: List all active countries
+      description: |
+        Returns paginated list of all active countries. Supports filtering by region/subregion,
+        sorting, and pagination. Cached with 15-minute TTL.
+      operationId: listCountries
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/RegionFilter'
+        - $ref: '#/components/parameters/SubregionFilter'
+        - $ref: '#/components/parameters/PageNumber'
+        - $ref: '#/components/parameters/PageSize'
+        - $ref: '#/components/parameters/SortBy'
+        - $ref: '#/components/parameters/SortOrder'
+      responses:
+        '200':
+          description: Successful response
+          headers:
+            X-Cache:
+              schema:
+                type: string
+                enum: [HIT, MISS, STALE]
+              description: Cache status
+            X-Cache-Age:
+              schema:
+                type: integer
+              description: Cache age in seconds
+            X-Total-Count:
+              schema:
+                type: integer
+              description: Total number of countries matching filter
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedCountryResponse'
+              examples:
+                success:
+                  $ref: '#/components/examples/ListCountriesSuccess'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /countries/{id}:
+    get:
+      tags: [Countries]
+      summary: Get country by ID
+      description: Returns a single country by database ID. Cached with 15-minute TTL.
+      operationId: getCountryById
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/CountryId'
+        - $ref: '#/components/parameters/IfNoneMatch'
+      responses:
+        '200':
+          description: Successful response
+          headers:
+            ETag:
+              schema:
+                type: string
+              description: Entity version for optimistic concurrency
+            Last-Modified:
+              schema:
+                type: string
+                format: date-time
+              description: Last modification timestamp
+            X-Cache:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CountryResponse'
+              examples:
+                success:
+                  $ref: '#/components/examples/CountryDetailSuccess'
+        '304':
+          description: Not Modified (ETag match)
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /countries/iso2/{iso2}:
+    get:
+      tags: [Countries]
+      summary: Get country by ISO2 code
+      description: Returns a single country by two-letter ISO 3166-1 alpha-2 code (e.g., "US", "GB").
+      operationId: getCountryByIso2
+      security: []
+      parameters:
+        - name: iso2
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: '^[A-Z]{2}$'
+            example: US
+        - $ref: '#/components/parameters/IfNoneMatch'
+      responses:
+        '200':
+          description: Successful response
+          headers:
+            ETag:
+              schema:
+                type: string
+            Last-Modified:
+              schema:
+                type: string
+                format: date-time
+            X-Cache:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CountryResponse'
+        '304':
+          description: Not Modified
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /countries/iso3/{iso3}:
+    get:
+      tags: [Countries]
+      summary: Get country by ISO3 code
+      description: Returns a single country by three-letter ISO 3166-1 alpha-3 code (e.g., "USA", "GBR").
+      operationId: getCountryByIso3
+      security: []
+      parameters:
+        - name: iso3
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: '^[A-Z]{3}$'
+            example: USA
+        - $ref: '#/components/parameters/IfNoneMatch'
+      responses:
+        '200':
+          description: Successful response
+          headers:
+            ETag:
+              schema:
+                type: string
+            Last-Modified:
+              schema:
+                type: string
+                format: date-time
+            X-Cache:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CountryResponse'
+        '304':
+          description: Not Modified
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /countries/search:
+    get:
+      tags: [Countries]
+      summary: Search countries by name
+      description: Full-text search on country name using PostgreSQL GIN index. Supports partial matches.
+      operationId: searchCountries
+      security: []
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+            minLength: 2
+            maxLength: 100
+          description: Search query (minimum 2 characters)
+          example: united
+        - $ref: '#/components/parameters/PageNumber'
+        - $ref: '#/components/parameters/PageSize'
+      responses:
+        '200':
+          description: Successful response
+          headers:
+            X-Total-Count:
+              schema:
+                type: integer
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedCountryResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  # ===== ADMIN ENDPOINTS (Authenticated) =====
+
+  /admin/countries:
+    post:
+      tags: [Admin]
+      summary: Create new country
+      description: Creates a new country record. Requires CountryAdmin role.
+      operationId: createCountry
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCountryRequest'
+            examples:
+              minimal:
+                $ref: '#/components/examples/CreateCountryMinimal'
+              full:
+                $ref: '#/components/examples/CreateCountryFull'
+      responses:
+        '201':
+          description: Country created successfully
+          headers:
+            Location:
+              schema:
+                type: string
+              description: URL of created resource
+              example: /countries/v1/countries/123
+            ETag:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CountryResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          description: Conflict - ISO2/ISO3 already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /admin/countries/{id}:
+    put:
+      tags: [Admin]
+      summary: Update country (full replacement)
+      description: |
+        Updates all fields of an existing country. Requires If-Match header with current ETag
+        for optimistic concurrency control.
+      operationId: updateCountry
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/CountryId'
+        - $ref: '#/components/parameters/IfMatch'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateCountryRequest'
+      responses:
+        '200':
+          description: Country updated successfully
+          headers:
+            ETag:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CountryResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Conflict - version mismatch or duplicate ISO code
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '412':
+          description: Precondition Failed - If-Match header doesn't match current ETag
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+    patch:
+      tags: [Admin]
+      summary: Update country (partial update)
+      description: Updates only specified fields. Requires If-Match header.
+      operationId: patchCountry
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/CountryId'
+        - $ref: '#/components/parameters/IfMatch'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchCountryRequest'
+      responses:
+        '200':
+          description: Country updated successfully
+          headers:
+            ETag:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CountryResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '412':
+          $ref: '#/components/responses/PreconditionFailed'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+    delete:
+      tags: [Admin]
+      summary: Delete country (soft delete)
+      description: Soft-deletes country by setting isActive=false. Requires CountryAdmin role.
+      operationId: deleteCountry
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/CountryId'
+      responses:
+        '204':
+          description: Country deleted successfully (no content)
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /admin/countries/{id}/hard-delete:
+    delete:
+      tags: [Admin]
+      summary: Delete country permanently (hard delete)
+      description: |
+        Permanently deletes country from database. Requires SuperAdmin role.
+        WARNING: This operation is irreversible.
+      operationId: hardDeleteCountry
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/CountryId'
+      responses:
+        '204':
+          description: Country permanently deleted
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  # ===== BULK IMPORT ENDPOINTS (Authenticated) =====
+
+  /admin/bulk-import:
+    post:
+      tags: [Bulk Import]
+      summary: Submit bulk import job
+      description: |
+        Submits a bulk import job for validation. All records are validated atomically before
+        any data is persisted. Returns job ID for status polling.
+      operationId: submitBulkImport
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BulkImportRequest'
+      responses:
+        '202':
+          description: Import job accepted for processing
+          headers:
+            Location:
+              schema:
+                type: string
+              example: /countries/v1/admin/bulk-import/123
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BulkImportStatusResponse'
+        '400':
+          description: Validation failed - contains detailed errors per row
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BulkImportValidationErrorResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '413':
+          description: Payload too large (max 1000 countries per batch)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /admin/bulk-import/{jobId}:
+    get:
+      tags: [Bulk Import]
+      summary: Get bulk import job status
+      description: Returns current status of a bulk import job, including validation errors if any.
+      operationId: getBulkImportStatus
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: jobId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+          example: 123
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BulkImportStatusResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /admin/bulk-import/{jobId}/process:
+    post:
+      tags: [Bulk Import]
+      summary: Process validated bulk import job
+      description: |
+        Triggers processing of a validated import job. Only jobs in "Validated" status can be processed.
+        Processing is asynchronous - poll status endpoint for completion.
+      operationId: processBulkImport
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: jobId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '202':
+          description: Processing started
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BulkImportStatusResponse'
+        '400':
+          description: Job not in valid state for processing
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  # ===== HEALTH ENDPOINTS =====
+
+  /liveness:
+    get:
+      tags: [Health]
+      summary: Liveness probe
+      description: Returns 200 if service is running (Kubernetes liveness probe).
+      operationId: liveness
+      security: []
+      responses:
+        '200':
+          description: Service is alive
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: Healthy
+
+  /readiness:
+    get:
+      tags: [Health]
+      summary: Readiness probe
+      description: Returns 200 if service is ready to accept traffic (database connected).
+      operationId: readiness
+      security: []
+      responses:
+        '200':
+          description: Service is ready
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [Healthy, Degraded, Unhealthy]
+                  checks:
+                    type: object
+                    properties:
+                      database:
+                        type: object
+                        properties:
+                          status:
+                            type: string
+                          description:
+                            type: string
+                      redis:
+                        type: object
+                        properties:
+                          status:
+                            type: string
+                          description:
+                            type: string
+        '503':
+          description: Service not ready
+
+# ===== COMPONENTS =====
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token from Maliev Auth Service
+
+  parameters:
+    CountryId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: integer
+        format: int64
+        minimum: 1
+      example: 123
+
+    RegionFilter:
+      name: region
+      in: query
+      schema:
+        type: string
+        maxLength: 50
+      description: Filter by region (e.g., "Europe", "Asia")
+      example: Europe
+
+    SubregionFilter:
+      name: subregion
+      in: query
+      schema:
+        type: string
+        maxLength: 50
+      description: Filter by subregion (e.g., "Western Europe")
+      example: Western Europe
+
+    PageNumber:
+      name: page
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+      description: Page number (1-indexed)
+
+    PageSize:
+      name: pageSize
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+      description: Number of items per page (max 100)
+
+    SortBy:
+      name: sortBy
+      in: query
+      schema:
+        type: string
+        enum: [name, iso2, iso3, population, area]
+        default: name
+      description: Field to sort by
+
+    SortOrder:
+      name: sortOrder
+      in: query
+      schema:
+        type: string
+        enum: [asc, desc]
+        default: asc
+      description: Sort direction
+
+    IfMatch:
+      name: If-Match
+      in: header
+      required: true
+      schema:
+        type: string
+      description: ETag from previous GET request (required for optimistic concurrency)
+      example: '"abc123def456"'
+
+    IfNoneMatch:
+      name: If-None-Match
+      in: header
+      schema:
+        type: string
+      description: ETag from previous GET request (for conditional GET)
+      example: '"abc123def456"'
+
+  schemas:
+    CountryResponse:
+      type: object
+      required: [id, iso2, iso3, name, isActive, version, createdAtUtc, lastModifiedUtc]
+      properties:
+        id:
+          type: integer
+          format: int64
+          example: 123
+        iso2:
+          type: string
+          pattern: '^[A-Z]{2}$'
+          example: US
+        iso3:
+          type: string
+          pattern: '^[A-Z]{3}$'
+          example: USA
+        name:
+          type: string
+          maxLength: 100
+          example: United States
+        officialName:
+          type: string
+          maxLength: 200
+          nullable: true
+          example: United States of America
+        numericCode:
+          type: string
+          pattern: '^[0-9]{3}$'
+          nullable: true
+          example: "840"
+        capital:
+          type: string
+          maxLength: 100
+          nullable: true
+          example: Washington D.C.
+        region:
+          type: string
+          maxLength: 50
+          nullable: true
+          example: Americas
+        subregion:
+          type: string
+          maxLength: 50
+          nullable: true
+          example: Northern America
+        latitude:
+          type: number
+          format: double
+          minimum: -90
+          maximum: 90
+          nullable: true
+          example: 38.8951
+        longitude:
+          type: number
+          format: double
+          minimum: -180
+          maximum: 180
+          nullable: true
+          example: -77.0364
+        demonym:
+          type: string
+          maxLength: 50
+          nullable: true
+          example: American
+        areaKm2:
+          type: number
+          format: double
+          minimum: 0
+          nullable: true
+          example: 9833520
+        population:
+          type: integer
+          format: int64
+          minimum: 0
+          nullable: true
+          example: 331900000
+        giniCoefficient:
+          type: number
+          format: double
+          minimum: 0
+          maximum: 100
+          nullable: true
+          example: 41.4
+        timezones:
+          type: array
+          items:
+            type: string
+          example: ["UTC-10:00", "UTC-05:00", "UTC-04:00"]
+        borders:
+          type: array
+          items:
+            type: string
+            pattern: '^[A-Z]{3}$'
+          example: ["CAN", "MEX"]
+        callingCodes:
+          type: array
+          items:
+            type: string
+          example: ["+1"]
+        topLevelDomains:
+          type: array
+          items:
+            type: string
+          example: [".us"]
+        currencies:
+          type: object
+          additionalProperties:
+            type: object
+            properties:
+              name:
+                type: string
+              symbol:
+                type: string
+          example:
+            USD:
+              name: United States dollar
+              symbol: $
+        languages:
+          type: object
+          additionalProperties:
+            type: string
+          example:
+            eng: English
+        translations:
+          type: object
+          additionalProperties:
+            type: string
+          example:
+            spa: Estados Unidos
+            fra: États-Unis
+        flags:
+          type: object
+          properties:
+            svg:
+              type: string
+              format: uri
+            png:
+              type: string
+              format: uri
+        coatOfArms:
+          type: object
+          nullable: true
+          properties:
+            svg:
+              type: string
+              format: uri
+            png:
+              type: string
+              format: uri
+        independent:
+          type: boolean
+          example: true
+        unMember:
+          type: boolean
+          example: true
+        landlocked:
+          type: boolean
+          example: false
+        isActive:
+          type: boolean
+          example: true
+        version:
+          type: string
+          format: uuid
+          example: "123e4567-e89b-12d3-a456-426614174000"
+        createdAtUtc:
+          type: string
+          format: date-time
+          example: "2025-01-01T00:00:00Z"
+        lastModifiedUtc:
+          type: string
+          format: date-time
+          example: "2025-01-15T10:30:00Z"
+
+    CreateCountryRequest:
+      type: object
+      required: [iso2, iso3, name]
+      properties:
+        iso2:
+          type: string
+          pattern: '^[A-Z]{2}$'
+        iso3:
+          type: string
+          pattern: '^[A-Z]{3}$'
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        officialName:
+          type: string
+          maxLength: 200
+        numericCode:
+          type: string
+          pattern: '^[0-9]{3}$'
+        capital:
+          type: string
+          maxLength: 100
+        region:
+          type: string
+          maxLength: 50
+        subregion:
+          type: string
+          maxLength: 50
+        latitude:
+          type: number
+          minimum: -90
+          maximum: 90
+        longitude:
+          type: number
+          minimum: -180
+          maximum: 180
+        demonym:
+          type: string
+          maxLength: 50
+        areaKm2:
+          type: number
+          minimum: 0
+        population:
+          type: integer
+          format: int64
+          minimum: 0
+        giniCoefficient:
+          type: number
+          minimum: 0
+          maximum: 100
+        timezones:
+          type: array
+          items:
+            type: string
+        borders:
+          type: array
+          items:
+            type: string
+            pattern: '^[A-Z]{3}$'
+        callingCodes:
+          type: array
+          items:
+            type: string
+        topLevelDomains:
+          type: array
+          items:
+            type: string
+        currencies:
+          type: object
+        languages:
+          type: object
+        translations:
+          type: object
+        flags:
+          type: object
+        coatOfArms:
+          type: object
+        independent:
+          type: boolean
+        unMember:
+          type: boolean
+        landlocked:
+          type: boolean
+
+    UpdateCountryRequest:
+      allOf:
+        - $ref: '#/components/schemas/CreateCountryRequest'
+
+    PatchCountryRequest:
+      type: object
+      minProperties: 1
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        officialName:
+          type: string
+          maxLength: 200
+          nullable: true
+        capital:
+          type: string
+          maxLength: 100
+          nullable: true
+        region:
+          type: string
+          maxLength: 50
+          nullable: true
+        subregion:
+          type: string
+          maxLength: 50
+          nullable: true
+        population:
+          type: integer
+          format: int64
+          minimum: 0
+          nullable: true
+        # ... (other patchable fields)
+
+    BulkImportRequest:
+      type: object
+      required: [countries]
+      properties:
+        countries:
+          type: array
+          minItems: 1
+          maxItems: 1000
+          items:
+            $ref: '#/components/schemas/CreateCountryRequest'
+
+    BulkImportStatusResponse:
+      type: object
+      required: [jobId, status, totalRecords, processedRecords, createdAtUtc]
+      properties:
+        jobId:
+          type: integer
+          format: int64
+          example: 123
+        status:
+          type: string
+          enum: [Pending, Validating, Validated, ValidationFailed, Processing, Completed, Failed]
+          example: Completed
+        totalRecords:
+          type: integer
+          example: 250
+        processedRecords:
+          type: integer
+          example: 250
+        failedRecords:
+          type: integer
+          example: 0
+        errorMessage:
+          type: string
+          nullable: true
+        createdAtUtc:
+          type: string
+          format: date-time
+        startedAtUtc:
+          type: string
+          format: date-time
+          nullable: true
+        completedAtUtc:
+          type: string
+          format: date-time
+          nullable: true
+        durationMs:
+          type: integer
+          format: int64
+          nullable: true
+          example: 1543
+
+    BulkImportValidationErrorResponse:
+      type: object
+      required: [jobId, status, totalRecords, errors]
+      properties:
+        jobId:
+          type: integer
+          format: int64
+        status:
+          type: string
+          enum: [ValidationFailed]
+        totalRecords:
+          type: integer
+        errors:
+          type: array
+          items:
+            type: object
+            required: [rowNumber, field, message]
+            properties:
+              rowNumber:
+                type: integer
+                minimum: 1
+              field:
+                type: string
+              message:
+                type: string
+          example:
+            - rowNumber: 5
+              field: iso2
+              message: "Duplicate ISO2 code 'US' in batch"
+            - rowNumber: 47
+              field: name
+              message: "Country name cannot exceed 100 characters"
+
+    PaginatedCountryResponse:
+      type: object
+      required: [data, page, pageSize, totalCount, totalPages]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/CountryResponse'
+        page:
+          type: integer
+          minimum: 1
+        pageSize:
+          type: integer
+          minimum: 1
+        totalCount:
+          type: integer
+          minimum: 0
+        totalPages:
+          type: integer
+          minimum: 0
+        hasNextPage:
+          type: boolean
+        hasPreviousPage:
+          type: boolean
+
+    ErrorResponse:
+      type: object
+      required: [error, message]
+      properties:
+        error:
+          type: string
+          example: ValidationFailed
+        message:
+          type: string
+          example: One or more validation errors occurred
+        details:
+          type: object
+          nullable: true
+        correlationId:
+          type: string
+          format: uuid
+          nullable: true
+
+  responses:
+    BadRequest:
+      description: Bad Request - validation errors
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    Unauthorized:
+      description: Unauthorized - missing or invalid JWT token
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    Forbidden:
+      description: Forbidden - insufficient permissions
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    NotFound:
+      description: Not Found - resource does not exist
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    PreconditionFailed:
+      description: Precondition Failed - If-Match header doesn't match current ETag
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    TooManyRequests:
+      description: Too Many Requests - rate limit exceeded
+      headers:
+        Retry-After:
+          schema:
+            type: integer
+          description: Seconds until rate limit resets
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+  examples:
+    ListCountriesSuccess:
+      summary: Successful list response
+      value:
+        data:
+          - id: 1
+            iso2: US
+            iso3: USA
+            name: United States
+            region: Americas
+            subregion: Northern America
+            population: 331900000
+            isActive: true
+            version: "123e4567-e89b-12d3-a456-426614174000"
+            createdAtUtc: "2025-01-01T00:00:00Z"
+            lastModifiedUtc: "2025-01-01T00:00:00Z"
+        page: 1
+        pageSize: 20
+        totalCount: 250
+        totalPages: 13
+        hasNextPage: true
+        hasPreviousPage: false
+
+    CountryDetailSuccess:
+      summary: Complete country detail
+      value:
+        id: 1
+        iso2: US
+        iso3: USA
+        name: United States
+        officialName: United States of America
+        numericCode: "840"
+        capital: Washington D.C.
+        region: Americas
+        subregion: Northern America
+        latitude: 38.8951
+        longitude: -77.0364
+        demonym: American
+        areaKm2: 9833520
+        population: 331900000
+        giniCoefficient: 41.4
+        timezones: ["UTC-10:00", "UTC-05:00"]
+        borders: ["CAN", "MEX"]
+        callingCodes: ["+1"]
+        topLevelDomains: [".us"]
+        currencies:
+          USD:
+            name: United States dollar
+            symbol: $
+        languages:
+          eng: English
+        translations:
+          spa: Estados Unidos
+        flags:
+          svg: https://flagcdn.com/us.svg
+          png: https://flagcdn.com/w320/us.png
+        independent: true
+        unMember: true
+        landlocked: false
+        isActive: true
+        version: "123e4567-e89b-12d3-a456-426614174000"
+        createdAtUtc: "2025-01-01T00:00:00Z"
+        lastModifiedUtc: "2025-01-15T10:30:00Z"
+
+    CreateCountryMinimal:
+      summary: Minimal required fields
+      value:
+        iso2: XX
+        iso3: XXX
+        name: Example Country
+
+    CreateCountryFull:
+      summary: All fields provided
+      value:
+        iso2: XX
+        iso3: XXX
+        name: Example Country
+        officialName: The Official Example Country
+        numericCode: "999"
+        capital: Example City
+        region: Example Region
+        subregion: Example Subregion
+        latitude: 0.0
+        longitude: 0.0
+        demonym: Examplian
+        areaKm2: 100000
+        population: 1000000
+        giniCoefficient: 35.5
+        timezones: ["UTC+00:00"]
+        borders: []
+        callingCodes: ["+999"]
+        topLevelDomains: [".xx"]
+        currencies:
+          EXC:
+            name: Example Currency
+            symbol: ¤
+        languages:
+          exa: Example Language
+        translations:
+          eng: Example Country
+        flags:
+          svg: https://example.com/flag.svg
+          png: https://example.com/flag.png
+        independent: true
+        unMember: true
+        landlocked: false

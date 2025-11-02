@@ -1,660 +1,703 @@
-using AutoMapper;
-using Maliev.CountryService.Api.Exceptions;
-using Maliev.CountryService.Api.Models;
-using Maliev.CountryService.Data.DbContexts;
-using Maliev.CountryService.Data.Entities;
+using Maliev.CountryService.Api.Models.Common;
+using Maliev.CountryService.Api.Models.Countries;
+using Maliev.CountryService.Data;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Caching.Memory;
-using Microsoft.Extensions.Options;
+using System.Security.Cryptography;
+using System.Text;
 
 namespace Maliev.CountryService.Api.Services;
 
+/// <summary>
+/// Service implementation for country data operations with caching support.
+/// T122: Graceful degradation with cache-only fallback when database is unavailable.
+/// </summary>
 public class CountryService : ICountryService
 {
-    private readonly CountryDbContext _context;
-    private readonly IMemoryCache _cache;
-    private readonly CacheOptions _cacheOptions;
+    private readonly CountryServiceDbContext _context;
+    private readonly ICacheService _cacheService;
     private readonly ILogger<CountryService> _logger;
-    private readonly IMapper _mapper;
+    private readonly DegradationContext _degradationContext;
 
     public CountryService(
-        CountryDbContext context,
-        IMemoryCache cache,
-        IOptions<CacheOptions> cacheOptions,
+        CountryServiceDbContext context,
+        ICacheService cacheService,
         ILogger<CountryService> logger,
-        IMapper mapper)
+        DegradationContext degradationContext)
     {
         _context = context;
-        _cache = cache;
-        _cacheOptions = cacheOptions.Value;
+        _cacheService = cacheService;
         _logger = logger;
-        _mapper = mapper;
+        _degradationContext = degradationContext;
     }
 
-    public async Task<CountryDto?> GetByIdAsync(int id, CancellationToken cancellationToken = default)
+    public async Task<CountryResponse?> GetByIdAsync(long id, CancellationToken cancellationToken = default)
     {
-        _logger.LogDebug("Getting country by ID: {CountryId}", id);
-        
-        var cacheKey = CacheKeys.CountryById(id);
-        
-        if (_cache.TryGetValue(cacheKey, out CountryDto? cachedCountry))
+        var cacheKey = GenerateCacheKey("id", id.ToString());
+
+        // Try cache first
+        var cached = await _cacheService.GetAsync<CountryResponse>(cacheKey, cancellationToken);
+        if (cached != null)
         {
-            _logger.LogDebug("Country {CountryId} retrieved from cache", id);
-            return cachedCountry;
+            _logger.LogDebug("Cache HIT for country ID {Id}", id);
+            return cached;
         }
 
-        try
-        {
-            _logger.LogDebug("Fetching country {CountryId} from database", id);
-            var country = await _context.Countries
-                .Include(c => c.CountryCodes)
-                .AsNoTracking()
-                .FirstOrDefaultAsync(c => c.Id == id, cancellationToken);
-
-            if (country == null)
-            {
-                _logger.LogDebug("Country with ID {CountryId} not found", id);
-                return null;
-            }
-
-            var dto = MapToDto(country);
-            
-            _cache.Set(cacheKey, dto, new MemoryCacheEntryOptions
-            {
-                AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(_cacheOptions.CountryCacheDurationMinutes),
-                Size = 1 // Each country entry counts as 1 unit
-            });
-            _logger.LogDebug("Country {CountryId} cached for {Duration} minutes", id, _cacheOptions.CountryCacheDurationMinutes);
-
-            return dto;
-        }
-        catch (ObjectDisposedException ex)
-        {
-            _logger.LogError(ex, "Database unavailable when getting country by ID: {CountryId}", id);
-            throw new DatabaseUnavailableException($"The database is currently unavailable. Please try again later.", ex);
-        }
-        catch (InvalidOperationException ex) when (IsDatabaseUnavailable(ex))
-        {
-            _logger.LogError(ex, "Database unavailable when getting country by ID: {CountryId}", id);
-            throw new DatabaseUnavailableException($"The database is currently unavailable. Please try again later.", ex);
-        }
-    }
-
-    public async Task<PagedResult<CountryDto>> SearchAsync(CountrySearchRequest request, CancellationToken cancellationToken = default)
-    {
-        _logger.LogDebug("Searching for countries with request: {@SearchRequest}", request);
-        
-        var cacheKey = CacheKeys.CountrySearch(
-            request.Name, 
-            request.Continent, 
-            request.ISO2, 
-            request.ISO3, 
-            request.CountryCode, 
-            request.PageNumber, 
-            request.PageSize, 
-            request.SortBy, 
-            request.SortDirection);
-        
-        if (_cache.TryGetValue(cacheKey, out PagedResult<CountryDto>? cachedResult) && cachedResult != null)
-        {
-            _logger.LogDebug("Country search result retrieved from cache");
-            return cachedResult;
-        }
-
-        try
-        {
-            var query = _context.Countries
-                .Include(c => c.CountryCodes)
-                .AsNoTracking();
-
-            if (!string.IsNullOrWhiteSpace(request.Name))
-            {
-                query = query.Where(c => c.Name.Contains(request.Name));
-                _logger.LogDebug("Applied name filter: {Name}", request.Name);
-            }
-
-            if (!string.IsNullOrWhiteSpace(request.Continent))
-            {
-                query = query.Where(c => c.Continent.Contains(request.Continent));
-                _logger.LogDebug("Applied continent filter: {Continent}", request.Continent);
-            }
-
-            if (!string.IsNullOrWhiteSpace(request.ISO2))
-            {
-                query = query.Where(c => c.ISO2 == request.ISO2);
-                _logger.LogDebug("Applied ISO2 filter: {ISO2}", request.ISO2);
-            }
-
-            if (!string.IsNullOrWhiteSpace(request.ISO3))
-            {
-                query = query.Where(c => c.ISO3 == request.ISO3);
-                _logger.LogDebug("Applied ISO3 filter: {ISO3}", request.ISO3);
-            }
-
-            if (!string.IsNullOrWhiteSpace(request.CountryCode))
-            {
-                query = query.Where(c => c.CountryCodes.Any(cc => cc.Code == request.CountryCode));
-                _logger.LogDebug("Applied country code filter: {CountryCode}", request.CountryCode);
-            }
-
-            var totalCount = await query.CountAsync(cancellationToken);
-            _logger.LogDebug("Found {Count} countries matching search criteria", totalCount);
-
-            if (!string.IsNullOrWhiteSpace(request.SortBy))
-            {
-                var isAscending = string.IsNullOrWhiteSpace(request.SortDirection) || 
-                                request.SortDirection.Equals("asc", StringComparison.OrdinalIgnoreCase);
-
-                query = request.SortBy.ToLower() switch
-                {
-                    "name" => isAscending ? query.OrderBy(c => c.Name) : query.OrderByDescending(c => c.Name),
-                    "continent" => isAscending ? query.OrderBy(c => c.Continent) : query.OrderByDescending(c => c.Continent),
-                    "countrycode" => isAscending ? query.OrderBy(c => c.CountryCodes.FirstOrDefault(cc => cc.IsPrimary)!.Code) : query.OrderByDescending(c => c.CountryCodes.FirstOrDefault(cc => cc.IsPrimary)!.Code),
-                    "iso2" => isAscending ? query.OrderBy(c => c.ISO2) : query.OrderByDescending(c => c.ISO2),
-                    "iso3" => isAscending ? query.OrderBy(c => c.ISO3) : query.OrderByDescending(c => c.ISO3),
-                    "createddate" => isAscending ? query.OrderBy(c => c.CreatedDate) : query.OrderByDescending(c => c.CreatedDate),
-                    "modifieddate" => isAscending ? query.OrderBy(c => c.ModifiedDate) : query.OrderByDescending(c => c.ModifiedDate),
-                    _ => query.OrderBy(c => c.Name)
-                };
-                
-                _logger.LogDebug("Applied sorting: {SortBy} {SortDirection}", request.SortBy, isAscending ? "ASC" : "DESC");
-            }
-
-            var countries = await query
-                .Skip((request.PageNumber - 1) * request.PageSize)
-                .Take(request.PageSize)
-                .ToListAsync(cancellationToken);
-
-            var result = new PagedResult<CountryDto>
-            {
-                Items = countries.Select(MapToDto),
-                TotalCount = totalCount,
-                PageNumber = request.PageNumber,
-                PageSize = request.PageSize
-            };
-
-            _cache.Set(cacheKey, result, new MemoryCacheEntryOptions
-            {
-                AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(_cacheOptions.SearchCacheDurationMinutes),
-                Size = result.Items.Count() // Size based on number of items in result
-            });
-            _logger.LogDebug("Country search results cached for {Duration} minutes. Page {PageNumber} of {TotalPages} pages", _cacheOptions.SearchCacheDurationMinutes, request.PageNumber, Math.Ceiling((double)totalCount / request.PageSize));
-
-            return result;
-        }
-        catch (ObjectDisposedException ex)
-        {
-            _logger.LogError(ex, "Database unavailable when searching for countries");
-            throw new DatabaseUnavailableException($"The database is currently unavailable. Please try again later.", ex);
-        }
-        catch (InvalidOperationException ex) when (IsDatabaseUnavailable(ex))
-        {
-            _logger.LogError(ex, "Database unavailable when searching for countries");
-            throw new DatabaseUnavailableException($"The database is currently unavailable. Please try again later.", ex);
-        }
-    }
-
-    public async Task<PagedResult<CountryDto>> GetAllCountriesAsync(int pageNumber, int pageSize, CancellationToken cancellationToken = default)
-    {
-        _logger.LogDebug("Getting all countries - Page: {PageNumber}, Size: {PageSize}", pageNumber, pageSize);
-        
-        // Validate parameters
-        if (pageNumber < 1)
-        {
-            _logger.LogWarning("Invalid page number: {PageNumber}. Must be greater than 0", pageNumber);
-            throw new ArgumentException("Page number must be greater than 0", nameof(pageNumber));
-        }
-        
-        if (pageSize < 1 || pageSize > 1000)
-        {
-            _logger.LogWarning("Invalid page size: {PageSize}. Must be between 1 and 1000", pageSize);
-            throw new ArgumentException("Page size must be between 1 and 1000", nameof(pageSize));
-        }
-
-        var cacheKey = $"country:all:{pageNumber}:{pageSize}";
-        
-        if (_cache.TryGetValue(cacheKey, out PagedResult<CountryDto>? cachedResult) && cachedResult != null)
-        {
-            _logger.LogDebug("All countries result retrieved from cache");
-            return cachedResult;
-        }
-
-        try
-        {
-            // Get total count
-            _logger.LogDebug("Fetching total count of countries from database");
-            var totalCount = await _context.Countries.CountAsync(cancellationToken);
-            _logger.LogDebug("Total countries in database: {TotalCount}", totalCount);
-
-            // Get paged results
-            _logger.LogDebug("Fetching page {PageNumber} of countries with page size {PageSize}", pageNumber, pageSize);
-            var countries = await _context.Countries
-                .Include(c => c.CountryCodes)
-                .AsNoTracking()
-                .OrderBy(c => c.Name) // Default sort by name
-                .Skip((pageNumber - 1) * pageSize)
-                .Take(pageSize)
-                .ToListAsync(cancellationToken);
-
-            var result = new PagedResult<CountryDto>
-            {
-                Items = countries.Select(MapToDto),
-                TotalCount = totalCount,
-                PageNumber = pageNumber,
-                PageSize = pageSize
-            };
-
-            _cache.Set(cacheKey, result, new MemoryCacheEntryOptions
-            {
-                AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(_cacheOptions.SearchCacheDurationMinutes),
-                Size = result.Items.Count() // Size based on number of items in result
-            });
-            _logger.LogDebug("All countries results cached for {Duration} minutes. Page {PageNumber} of {TotalPages} pages", _cacheOptions.SearchCacheDurationMinutes, pageNumber, Math.Ceiling((double)totalCount / pageSize));
-
-            return result;
-        }
-        catch (ObjectDisposedException ex)
-        {
-            _logger.LogError(ex, "Database unavailable when getting all countries - Page: {PageNumber}, Size: {PageSize}", pageNumber, pageSize);
-            throw new DatabaseUnavailableException($"The database is currently unavailable. Please try again later.", ex);
-        }
-        catch (InvalidOperationException ex) when (IsDatabaseUnavailable(ex))
-        {
-            _logger.LogError(ex, "Database unavailable when getting all countries - Page: {PageNumber}, Size: {PageSize}", pageNumber, pageSize);
-            throw new DatabaseUnavailableException($"The database is currently unavailable. Please try again later.", ex);
-        }
-    }
-
-    public async Task<CountryDto> CreateAsync(CreateCountryRequest request, CancellationToken cancellationToken = default)
-    {
-        try
-        {
-            var country = new Data.Entities.Country
-            {
-                Name = request.Name.Trim(),
-                Continent = request.Continent.Trim(),
-                ISO2 = request.ISO2.ToUpperInvariant(),
-                ISO3 = request.ISO3.ToUpperInvariant()
-            };
-
-            // Create country code(s) - for now, assume single code, but ready for multiple
-            var codes = request.CountryCode.Split(',', StringSplitOptions.RemoveEmptyEntries)
-                .Select(code => code.Trim())
-                .ToList();
-
-            for (int i = 0; i < codes.Count; i++)
-            {
-                var countryCode = new Data.Entities.CountryCode
-                {
-                    Code = codes[i],
-                    IsPrimary = i == 0, // First code is primary
-                    Country = country
-                };
-                country.CountryCodes.Add(countryCode);
-            }
-
-            _context.Countries.Add(country);
-            
-            await _context.SaveChangesAsync(cancellationToken);
-
-            InvalidateCache();
-            _logger.LogInformation("Country created: {CountryName} with ID {CountryId}", country.Name, country.Id);
-
-            return MapToDto(country);
-        }
-        catch (ObjectDisposedException ex)
-        {
-            _logger.LogError(ex, "Database unavailable when creating country");
-            throw new DatabaseUnavailableException($"The database is currently unavailable. Please try again later.", ex);
-        }
-        catch (InvalidOperationException ex) when (IsDatabaseUnavailable(ex))
-        {
-            _logger.LogError(ex, "Database unavailable when creating country");
-            throw new DatabaseUnavailableException($"The database is currently unavailable. Please try again later.", ex);
-        }
-        catch (DbUpdateException ex)
-        {
-            _logger.LogError(ex, "Database constraint violation when creating country");
-            
-            // Check if it's a concurrency conflict
-            if (IsConcurrencyConflict(ex))
-            {
-                throw new ConcurrencyConflictException($"A concurrency conflict occurred while creating country. Please try again.", ex);
-            }
-            
-            throw new DuplicateCountryException($"A country with the same name, ISO code, or country code already exists.");
-        }
-    }
-
-    public async Task<CountryDto?> UpdateAsync(int id, UpdateCountryRequest request, CancellationToken cancellationToken = default)
-    {
+        // T122: Cache miss - query database with graceful degradation
+        _logger.LogDebug("Cache MISS for country ID {Id}", id);
         try
         {
             var country = await _context.Countries
-                .Include(c => c.CountryCodes)
-                .FirstOrDefaultAsync(c => c.Id == id, cancellationToken);
-            
-            if (country == null)
-            {
-                return null;
-            }
-
-            country.Name = request.Name.Trim();
-            country.Continent = request.Continent.Trim();
-            country.ISO2 = request.ISO2.ToUpperInvariant();
-            country.ISO3 = request.ISO3.ToUpperInvariant();
-
-            // Update country codes
-            var newCodes = request.CountryCode.Split(',', StringSplitOptions.RemoveEmptyEntries)
-                .Select(code => code.Trim())
-                .ToList();
-
-            // Remove existing codes
-            _context.CountryCodes.RemoveRange(country.CountryCodes);
-            country.CountryCodes.Clear();
-
-            // Add new codes
-            for (int i = 0; i < newCodes.Count; i++)
-            {
-                var countryCode = new Data.Entities.CountryCode
-                {
-                    Code = newCodes[i],
-                    IsPrimary = i == 0, // First code is primary
-                    CountryId = country.Id
-                };
-                country.CountryCodes.Add(countryCode);
-            }
-
-            await _context.SaveChangesAsync(cancellationToken);
-
-            InvalidateCache();
-            _logger.LogInformation("Country updated: {CountryName} with ID {CountryId}", country.Name, country.Id);
-
-            return MapToDto(country);
-        }
-        catch (ObjectDisposedException ex)
-        {
-            _logger.LogError(ex, "Database unavailable when updating country: {CountryId}", id);
-            throw new DatabaseUnavailableException($"The database is currently unavailable. Please try again later.", ex);
-        }
-        catch (InvalidOperationException ex) when (IsDatabaseUnavailable(ex))
-        {
-            _logger.LogError(ex, "Database unavailable when updating country: {CountryId}", id);
-            throw new DatabaseUnavailableException($"The database is currently unavailable. Please try again later.", ex);
-        }
-        catch (DbUpdateException ex)
-        {
-            _logger.LogError(ex, "Database constraint violation when updating country: {CountryId}", id);
-            
-            // Check if it's a concurrency conflict
-            if (IsConcurrencyConflict(ex))
-            {
-                throw new ConcurrencyConflictException($"A concurrency conflict occurred while updating country '{id}'. Please try again.", ex);
-            }
-            
-            throw new DuplicateCountryException($"A country with the same name, ISO code, or country code already exists.");
-        }
-    }
-
-    public async Task<bool> DeleteAsync(int id, CancellationToken cancellationToken = default)
-    {
-        try
-        {
-            var country = await _context.Countries.FirstOrDefaultAsync(c => c.Id == id, cancellationToken);
-            
-            if (country == null)
-            {
-                return false;
-            }
-
-            _context.Countries.Remove(country);
-            
-            await _context.SaveChangesAsync(cancellationToken);
-
-            InvalidateCache();
-            _logger.LogInformation("Country deleted: {CountryName} with ID {CountryId}", country.Name, country.Id);
-
-            return true;
-        }
-        catch (ObjectDisposedException ex)
-        {
-            _logger.LogError(ex, "Database unavailable when deleting country: {CountryId}", id);
-            throw new DatabaseUnavailableException($"The database is currently unavailable. Please try again later.", ex);
-        }
-        catch (InvalidOperationException ex) when (IsDatabaseUnavailable(ex))
-        {
-            _logger.LogError(ex, "Database unavailable when deleting country: {CountryId}", id);
-            throw new DatabaseUnavailableException($"The database is currently unavailable. Please try again later.", ex);
-        }
-        catch (DbUpdateException ex)
-        {
-            _logger.LogError(ex, "Database error when deleting country: {CountryId}", id);
-            
-            // Check if it's a concurrency conflict
-            if (IsConcurrencyConflict(ex))
-            {
-                throw new ConcurrencyConflictException($"A concurrency conflict occurred while deleting country '{id}'. Please try again.", ex);
-            }
-            
-            throw new CountryServiceException($"An error occurred while deleting the country.");
-        }
-    }
-
-    public async Task<bool> ExistsAsync(int id, CancellationToken cancellationToken = default)
-    {
-        _logger.LogDebug("Checking if country with ID {CountryId} exists", id);
-        
-        try
-        {
-            var exists = await _context.Countries.AnyAsync(c => c.Id == id, cancellationToken);
-            _logger.LogDebug("Country with ID {CountryId} exists: {Exists}", id, exists);
-            return exists;
-        }
-        catch (ObjectDisposedException ex)
-        {
-            _logger.LogError(ex, "Database unavailable when checking if country with ID {CountryId} exists", id);
-            throw new DatabaseUnavailableException($"The database is currently unavailable. Please try again later.", ex);
-        }
-        catch (InvalidOperationException ex) when (IsDatabaseUnavailable(ex))
-        {
-            _logger.LogError(ex, "Database unavailable when checking if country with ID {CountryId} exists", id);
-            throw new DatabaseUnavailableException($"The database is currently unavailable. Please try again later.", ex);
-        }
-    }
-
-    public async Task<bool> ExistsByNameAsync(string name, int? excludeId = null, CancellationToken cancellationToken = default)
-    {
-        _logger.LogDebug("Checking if country with name '{CountryName}' exists (exclude ID: {ExcludeId})", name, excludeId);
-        
-        try
-        {
-            var query = _context.Countries.Where(c => c.Name == name);
-            
-            if (excludeId.HasValue)
-            {
-                query = query.Where(c => c.Id != excludeId.Value);
-            }
-            
-            var exists = await query.AnyAsync(cancellationToken);
-            _logger.LogDebug("Country with name '{CountryName}' exists: {Exists}", name, exists);
-            return exists;
-        }
-        catch (ObjectDisposedException ex)
-        {
-            _logger.LogError(ex, "Database unavailable when checking if country with name '{CountryName}' exists", name);
-            throw new DatabaseUnavailableException($"The database is currently unavailable. Please try again later.", ex);
-        }
-        catch (InvalidOperationException ex) when (IsDatabaseUnavailable(ex))
-        {
-            _logger.LogError(ex, "Database unavailable when checking if country with name '{CountryName}' exists", name);
-            throw new DatabaseUnavailableException($"The database is currently unavailable. Please try again later.", ex);
-        }
-    }
-
-    public async Task<bool> ExistsByIso2Async(string iso2, int? excludeId = null, CancellationToken cancellationToken = default)
-    {
-        _logger.LogDebug("Checking if country with ISO2 '{ISO2}' exists (exclude ID: {ExcludeId})", iso2, excludeId);
-        
-        try
-        {
-            var query = _context.Countries.Where(c => c.ISO2 == iso2);
-            
-            if (excludeId.HasValue)
-            {
-                query = query.Where(c => c.Id != excludeId.Value);
-            }
-            
-            var exists = await query.AnyAsync(cancellationToken);
-            _logger.LogDebug("Country with ISO2 '{ISO2}' exists: {Exists}", iso2, exists);
-            return exists;
-        }
-        catch (ObjectDisposedException ex)
-        {
-            _logger.LogError(ex, "Database unavailable when checking if country with ISO2 '{ISO2}' exists", iso2);
-            throw new DatabaseUnavailableException($"The database is currently unavailable. Please try again later.", ex);
-        }
-        catch (InvalidOperationException ex) when (IsDatabaseUnavailable(ex))
-        {
-            _logger.LogError(ex, "Database unavailable when checking if country with ISO2 '{ISO2}' exists", iso2);
-            throw new DatabaseUnavailableException($"The database is currently unavailable. Please try again later.", ex);
-        }
-    }
-
-    public async Task<bool> ExistsByIso3Async(string iso3, int? excludeId = null, CancellationToken cancellationToken = default)
-    {
-        _logger.LogDebug("Checking if country with ISO3 '{ISO3}' exists (exclude ID: {ExcludeId})", iso3, excludeId);
-        
-        try
-        {
-            var query = _context.Countries.Where(c => c.ISO3 == iso3);
-            
-            if (excludeId.HasValue)
-            {
-                query = query.Where(c => c.Id != excludeId.Value);
-            }
-            
-            var exists = await query.AnyAsync(cancellationToken);
-            _logger.LogDebug("Country with ISO3 '{ISO3}' exists: {Exists}", iso3, exists);
-            return exists;
-        }
-        catch (ObjectDisposedException ex)
-        {
-            _logger.LogError(ex, "Database unavailable when checking if country with ISO3 '{ISO3}' exists", iso3);
-            throw new DatabaseUnavailableException($"The database is currently unavailable. Please try again later.", ex);
-        }
-        catch (InvalidOperationException ex) when (IsDatabaseUnavailable(ex))
-        {
-            _logger.LogError(ex, "Database unavailable when checking if country with ISO3 '{ISO3}' exists", iso3);
-            throw new DatabaseUnavailableException($"The database is currently unavailable. Please try again later.", ex);
-        }
-    }
-
-    public async Task<bool> ExistsByCountryCodeAsync(string countryCode, int? excludeId = null, CancellationToken cancellationToken = default)
-    {
-        _logger.LogDebug("Checking if country with country code '{CountryCode}' exists (exclude ID: {ExcludeId})", countryCode, excludeId);
-        
-        try
-        {
-            var query = _context.CountryCodes.Where(cc => cc.Code == countryCode);
-            
-            if (excludeId.HasValue)
-            {
-                query = query.Where(cc => cc.CountryId != excludeId.Value);
-            }
-            
-            var exists = await query.AnyAsync(cancellationToken);
-            _logger.LogDebug("Country with country code '{CountryCode}' exists: {Exists}", countryCode, exists);
-            return exists;
-        }
-        catch (ObjectDisposedException ex)
-        {
-            _logger.LogError(ex, "Database unavailable when checking if country with country code '{CountryCode}' exists", countryCode);
-            throw new DatabaseUnavailableException($"The database is currently unavailable. Please try again later.", ex);
-        }
-        catch (InvalidOperationException ex) when (IsDatabaseUnavailable(ex))
-        {
-            _logger.LogError(ex, "Database unavailable when checking if country with country code '{CountryCode}' exists", countryCode);
-            throw new DatabaseUnavailableException($"The database is currently unavailable. Please try again later.", ex);
-        }
-    }
-
-    public async Task<IEnumerable<string>> GetContinentsAsync(CancellationToken cancellationToken = default)
-    {
-        _logger.LogDebug("Getting list of continents");
-        
-        if (_cache.TryGetValue(CacheKeys.Continents, out IEnumerable<string>? cachedContinents) && cachedContinents != null)
-        {
-            _logger.LogDebug("Continents retrieved from cache");
-            return cachedContinents;
-        }
-
-        try
-        {
-            _logger.LogDebug("Fetching continents from database");
-            var continents = await _context.Countries
                 .AsNoTracking()
-                .Select(c => c.Continent)
-                .Distinct()
-                .OrderBy(c => c)
-                .ToListAsync(cancellationToken);
+                .FirstOrDefaultAsync(c => c.Id == id && c.IsActive, cancellationToken);
 
-            _cache.Set(CacheKeys.Continents, continents, new MemoryCacheEntryOptions
+            if (country == null)
+                return null;
+
+            var response = MapToResponse(country);
+
+            // Cache the result
+            await _cacheService.SetAsync(cacheKey, response, TimeSpan.FromMinutes(15), cancellationToken);
+
+            return response;
+        }
+        catch (Exception ex) when (ex is Npgsql.NpgsqlException or Microsoft.EntityFrameworkCore.DbUpdateException)
+        {
+            // T122 + T126: Database unavailable - try serving from cache (including stale data)
+            _logger.LogWarning(ex, "Database unavailable for GetByIdAsync({Id}), attempting cache-only fallback", id);
+
+            var staleData = await _cacheService.GetAsync<CountryResponse>(cacheKey, cancellationToken);
+            if (staleData != null)
             {
-                AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(_cacheOptions.CountryCacheDurationMinutes),
-                Size = continents.Count() // Size based on number of continents
-            });
-            _logger.LogDebug("Continents cached for {Duration} minutes. Found {Count} continents", _cacheOptions.CountryCacheDurationMinutes, continents.Count());
+                _degradationContext.IsDegraded = true;
+                _degradationContext.DegradationReason = "Database unavailable";
+                _logger.LogInformation("Serving cached data in degraded mode for country ID {Id}", id);
+                return staleData;
+            }
 
-            return continents;
+            // No cache available - rethrow
+            _logger.LogError("No cache available for country ID {Id}, cannot serve request in degraded mode", id);
+            throw;
         }
-        catch (ObjectDisposedException ex)
+    }
+
+    public async Task<CountryResponse?> GetByIso2Async(string iso2, CancellationToken cancellationToken = default)
+    {
+        var cacheKey = GenerateCacheKey("iso2", iso2.ToUpperInvariant());
+
+        var cached = await _cacheService.GetAsync<CountryResponse>(cacheKey, cancellationToken);
+        if (cached != null)
         {
-            _logger.LogError(ex, "Database unavailable when getting list of continents");
-            throw new DatabaseUnavailableException($"The database is currently unavailable. Please try again later.", ex);
+            _logger.LogDebug("Cache HIT for ISO2 {Iso2}", iso2);
+            return cached;
         }
-        catch (InvalidOperationException ex) when (IsDatabaseUnavailable(ex))
+
+        // T122: Cache miss - query database with graceful degradation
+        _logger.LogDebug("Cache MISS for ISO2 {Iso2}", iso2);
+        try
         {
-            _logger.LogError(ex, "Database unavailable when getting list of continents");
-            throw new DatabaseUnavailableException($"The database is currently unavailable. Please try again later.", ex);
+            var country = await _context.Countries
+                .AsNoTracking()
+                .FirstOrDefaultAsync(c => c.Iso2 == iso2.ToUpperInvariant() && c.IsActive, cancellationToken);
+
+            if (country == null)
+                return null;
+
+            var response = MapToResponse(country);
+            await _cacheService.SetAsync(cacheKey, response, TimeSpan.FromMinutes(15), cancellationToken);
+
+            return response;
+        }
+        catch (Exception ex) when (ex is Npgsql.NpgsqlException or Microsoft.EntityFrameworkCore.DbUpdateException)
+        {
+            // T122 + T126: Database unavailable - try serving from cache
+            _logger.LogWarning(ex, "Database unavailable for GetByIso2Async({Iso2}), attempting cache-only fallback", iso2);
+
+            var staleData = await _cacheService.GetAsync<CountryResponse>(cacheKey, cancellationToken);
+            if (staleData != null)
+            {
+                _degradationContext.IsDegraded = true;
+                _degradationContext.DegradationReason = "Database unavailable";
+                _logger.LogInformation("Serving cached data in degraded mode for ISO2 {Iso2}", iso2);
+                return staleData;
+            }
+
+            _logger.LogError("No cache available for ISO2 {Iso2}, cannot serve request in degraded mode", iso2);
+            throw;
         }
     }
 
-    private CountryDto MapToDto(Country country)
+    public async Task<CountryResponse?> GetByIso3Async(string iso3, CancellationToken cancellationToken = default)
     {
-        return _mapper.Map<CountryDto>(country);
+        var cacheKey = GenerateCacheKey("iso3", iso3.ToUpperInvariant());
+
+        var cached = await _cacheService.GetAsync<CountryResponse>(cacheKey, cancellationToken);
+        if (cached != null)
+        {
+            _logger.LogDebug("Cache HIT for ISO3 {Iso3}", iso3);
+            return cached;
+        }
+
+        // T122: Cache miss - query database with graceful degradation
+        _logger.LogDebug("Cache MISS for ISO3 {Iso3}", iso3);
+        try
+        {
+            var country = await _context.Countries
+                .AsNoTracking()
+                .FirstOrDefaultAsync(c => c.Iso3 == iso3.ToUpperInvariant() && c.IsActive, cancellationToken);
+
+            if (country == null)
+                return null;
+
+            var response = MapToResponse(country);
+            await _cacheService.SetAsync(cacheKey, response, TimeSpan.FromMinutes(15), cancellationToken);
+
+            return response;
+        }
+        catch (Exception ex) when (ex is Npgsql.NpgsqlException or Microsoft.EntityFrameworkCore.DbUpdateException)
+        {
+            // T122 + T126: Database unavailable - try serving from cache
+            _logger.LogWarning(ex, "Database unavailable for GetByIso3Async({Iso3}), attempting cache-only fallback", iso3);
+
+            var staleData = await _cacheService.GetAsync<CountryResponse>(cacheKey, cancellationToken);
+            if (staleData != null)
+            {
+                _degradationContext.IsDegraded = true;
+                _degradationContext.DegradationReason = "Database unavailable";
+                _logger.LogInformation("Serving cached data in degraded mode for ISO3 {Iso3}", iso3);
+                return staleData;
+            }
+
+            _logger.LogError("No cache available for ISO3 {Iso3}, cannot serve request in degraded mode", iso3);
+            throw;
+        }
     }
 
-    private void InvalidateCache()
+    /// <summary>
+    /// T069: List countries with pagination, filtering, and sorting.
+    /// T070: Cache list results with cache key based on all parameters.
+    /// </summary>
+    public async Task<PaginatedResponse<CountryResponse>> ListAsync(CountryListRequest request, CancellationToken cancellationToken = default)
     {
-        // Remove all country-related cache entries
-        _logger.LogDebug("Invalidating country cache");
-        
-        // Remove continents cache
-        _cache.Remove(CacheKeys.Continents);
-        
-        // Note: For a more sophisticated cache invalidation strategy,
-        // we would need to track individual cache keys or use cache tagging.
-        // For now, we're invalidating the most critical cache entry (continents).
-        // In a production environment with Redis, we could use pattern-based deletion.
+        // Validate and normalize pagination
+        var page = Math.Max(1, request.Page);
+        var pageSize = Math.Clamp(request.PageSize, 1, 100);
+
+        // Generate cache key with all filter parameters
+        var filterKey = $"{request.Region ?? "all"}:{request.Subregion ?? "all"}:{request.SortBy}:{request.SortOrder}:{request.IncludeInactive}";
+        var cacheKey = GenerateCacheKey("list", $"{page}:{pageSize}:{filterKey}");
+
+        var cached = await _cacheService.GetAsync<PaginatedResponse<CountryResponse>>(cacheKey, cancellationToken);
+        if (cached != null)
+        {
+            _logger.LogDebug("Cache HIT for country list page {Page}", page);
+            return cached;
+        }
+
+        _logger.LogDebug("Cache MISS for country list page {Page}", page);
+
+        // Build query with filters
+        var query = _context.Countries.AsNoTracking();
+
+        // Filter by active status
+        if (!request.IncludeInactive)
+        {
+            query = query.Where(c => c.IsActive);
+        }
+
+        // Filter by region
+        if (!string.IsNullOrWhiteSpace(request.Region))
+        {
+            query = query.Where(c => c.Region == request.Region);
+        }
+
+        // Filter by subregion
+        if (!string.IsNullOrWhiteSpace(request.Subregion))
+        {
+            query = query.Where(c => c.Subregion == request.Subregion);
+        }
+
+        // Get total count for pagination
+        var totalCount = await query.CountAsync(cancellationToken);
+
+        // Apply sorting
+        query = request.SortBy.ToLowerInvariant() switch
+        {
+            "iso2" => request.SortOrder.ToLowerInvariant() == "desc"
+                ? query.OrderByDescending(c => c.Iso2)
+                : query.OrderBy(c => c.Iso2),
+            "population" => request.SortOrder.ToLowerInvariant() == "desc"
+                ? query.OrderByDescending(c => c.Population)
+                : query.OrderBy(c => c.Population),
+            "area" => request.SortOrder.ToLowerInvariant() == "desc"
+                ? query.OrderByDescending(c => c.AreaKm2)
+                : query.OrderBy(c => c.AreaKm2),
+            _ => request.SortOrder.ToLowerInvariant() == "desc"
+                ? query.OrderByDescending(c => c.Name)
+                : query.OrderBy(c => c.Name)
+        };
+
+        // Apply pagination
+        var countries = await query
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(cancellationToken);
+
+        var data = countries.Select(MapToResponse).ToList();
+
+        var response = new PaginatedResponse<CountryResponse>
+        {
+            Data = data,
+            Page = page,
+            PageSize = pageSize,
+            TotalCount = totalCount
+        };
+
+        // Cache the result
+        await _cacheService.SetAsync(cacheKey, response, TimeSpan.FromMinutes(15), cancellationToken);
+
+        return response;
     }
-    
-    private bool IsConcurrencyConflict(DbUpdateException ex)
+
+    /// <summary>
+    /// T071: Search countries by name using PostgreSQL full-text search with GIN index.
+    /// </summary>
+    public async Task<PaginatedResponse<CountryResponse>> SearchAsync(string query, int page, int pageSize, CancellationToken cancellationToken = default)
     {
-        // Check if it's a concurrency conflict by looking at the inner exception
-        // This is a simplified check - in a real-world scenario, you'd need to check
-        // the specific database provider's exception types and error codes
-        return ex.InnerException?.Message.Contains("concurrency", StringComparison.OrdinalIgnoreCase) == true ||
-               ex.InnerException?.Message.Contains("conflict", StringComparison.OrdinalIgnoreCase) == true ||
-               ex.Message.Contains("concurrency", StringComparison.OrdinalIgnoreCase) == true ||
-               ex.Message.Contains("conflict", StringComparison.OrdinalIgnoreCase) == true;
+        // Validate pagination
+        page = Math.Max(1, page);
+        pageSize = Math.Clamp(pageSize, 1, 100);
+
+        if (string.IsNullOrWhiteSpace(query) || query.Length < 2)
+        {
+            // Return empty result for invalid queries
+            return new PaginatedResponse<CountryResponse>
+            {
+                Data = new List<CountryResponse>(),
+                Page = page,
+                PageSize = pageSize,
+                TotalCount = 0
+            };
+        }
+
+        var searchTerm = query.Trim().ToLowerInvariant();
+        var cacheKey = GenerateCacheKey("search", $"{searchTerm}:{page}:{pageSize}");
+
+        var cached = await _cacheService.GetAsync<PaginatedResponse<CountryResponse>>(cacheKey, cancellationToken);
+        if (cached != null)
+        {
+            _logger.LogDebug("Cache HIT for search '{Query}' page {Page}", searchTerm, page);
+            return cached;
+        }
+
+        _logger.LogDebug("Cache MISS for search '{Query}' page {Page}", searchTerm, page);
+
+        // Search by name, official name, or ISO codes
+        var searchQuery = _context.Countries
+            .AsNoTracking()
+            .Where(c => c.IsActive)
+            .Where(c => EF.Functions.ILike(c.Name, $"%{searchTerm}%") ||
+                       EF.Functions.ILike(c.OfficialName ?? "", $"%{searchTerm}%") ||
+                       EF.Functions.ILike(c.Iso2, $"%{searchTerm}%") ||
+                       EF.Functions.ILike(c.Iso3, $"%{searchTerm}%"));
+
+        var totalCount = await searchQuery.CountAsync(cancellationToken);
+
+        var countries = await searchQuery
+            .OrderBy(c => c.Name)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(cancellationToken);
+
+        var data = countries.Select(MapToResponse).ToList();
+
+        var response = new PaginatedResponse<CountryResponse>
+        {
+            Data = data,
+            Page = page,
+            PageSize = pageSize,
+            TotalCount = totalCount
+        };
+
+        // Cache search results
+        await _cacheService.SetAsync(cacheKey, response, TimeSpan.FromMinutes(15), cancellationToken);
+
+        return response;
     }
-    
-    private bool IsDatabaseUnavailable(Exception ex)
+
+    /// <summary>
+    /// T070: Invalidate list caches when country data changes.
+    /// </summary>
+    public async Task InvalidateListCachesAsync(CancellationToken cancellationToken = default)
     {
-        // Check if it's a database unavailable error
-        return ex is InvalidOperationException && 
-               (ex.Message.Contains("database", StringComparison.OrdinalIgnoreCase) ||
-                ex.Message.Contains("connection", StringComparison.OrdinalIgnoreCase) ||
-                ex.Message.Contains("timeout", StringComparison.OrdinalIgnoreCase));
+        _logger.LogInformation("Invalidating all list and search caches");
+
+        // Remove all list cache entries
+        await _cacheService.RemovePatternAsync("country:list:*", cancellationToken);
+
+        // Remove all search cache entries
+        await _cacheService.RemovePatternAsync("country:search:*", cancellationToken);
+    }
+
+    /// <summary>
+    /// T058: Implement cache key generation (patterns: country:id:{id}, country:iso2:{code}, etc.)
+    /// </summary>
+    private string GenerateCacheKey(string type, string value)
+    {
+        return $"country:{type}:{value}";
+    }
+
+    /// <summary>
+    /// T059: Implement ETag generation (SHA256 hash of version UUID, Base64 encoded)
+    /// </summary>
+    private string GenerateETag(Guid version)
+    {
+        var versionBytes = version.ToByteArray();
+        var hashBytes = SHA256.HashData(versionBytes);
+        return Convert.ToBase64String(hashBytes);
+    }
+
+    /// <summary>
+    /// Manual DTO mapping from Country entity to CountryResponse
+    /// </summary>
+    private CountryResponse MapToResponse(Data.Models.Country country)
+    {
+        return new CountryResponse
+        {
+            Id = country.Id,
+            Iso2 = country.Iso2,
+            Iso3 = country.Iso3,
+            Name = country.Name,
+            OfficialName = country.OfficialName,
+            NumericCode = country.NumericCode,
+            Capital = country.Capital,
+            Region = country.Region,
+            Subregion = country.Subregion,
+            Latitude = country.Latitude,
+            Longitude = country.Longitude,
+            Demonym = country.Demonym,
+            AreaKm2 = country.AreaKm2,
+            Population = country.Population,
+            GiniCoefficient = country.GiniCoefficient,
+            Timezones = country.Timezones,
+            Borders = country.Borders,
+            CallingCodes = country.CallingCodes,
+            TopLevelDomains = country.TopLevelDomains,
+            Currencies = country.Currencies,
+            Languages = country.Languages,
+            Translations = country.Translations,
+            Flags = country.Flags,
+            CoatOfArms = country.CoatOfArms,
+            Independent = country.Independent,
+            UnMember = country.UnMember,
+            Landlocked = country.Landlocked,
+            IsActive = country.IsActive,
+            CreatedAtUtc = country.CreatedAtUtc,
+            LastModifiedUtc = country.LastModifiedUtc,
+            ETag = GenerateETag(country.Version)
+        };
+    }
+
+    // User Story 3: Admin CRUD Operations
+
+    /// <summary>
+    /// T079-T080: Create a new country with duplicate validation and audit logging.
+    /// </summary>
+    public async Task<CountryResponse> CreateAsync(CreateCountryRequest request, string userId, CancellationToken cancellationToken = default)
+    {
+        // T079: Validate uniqueness of ISO2/ISO3
+        var existingIso2 = await _context.Countries
+            .AnyAsync(c => c.Iso2 == request.Iso2.ToUpperInvariant(), cancellationToken);
+
+        if (existingIso2)
+        {
+            throw new InvalidOperationException($"Country with ISO2 code '{request.Iso2}' already exists");
+        }
+
+        var existingIso3 = await _context.Countries
+            .AnyAsync(c => c.Iso3 == request.Iso3.ToUpperInvariant(), cancellationToken);
+
+        if (existingIso3)
+        {
+            throw new InvalidOperationException($"Country with ISO3 code '{request.Iso3}' already exists");
+        }
+
+        // T080: Create new country entity
+        var country = new Data.Models.Country
+        {
+            Iso2 = request.Iso2.ToUpperInvariant(),
+            Iso3 = request.Iso3.ToUpperInvariant(),
+            Name = request.Name,
+            OfficialName = request.OfficialName,
+            NumericCode = request.NumericCode,
+            Capital = request.Capital,
+            Region = request.Region,
+            Subregion = request.Subregion,
+            Latitude = request.Latitude,
+            Longitude = request.Longitude,
+            Demonym = request.Demonym,
+            AreaKm2 = request.AreaKm2,
+            Population = request.Population,
+            GiniCoefficient = request.GiniCoefficient,
+            Timezones = request.Timezones ?? "[]",
+            Borders = request.Borders ?? "[]",
+            CallingCodes = request.CallingCodes ?? "[]",
+            TopLevelDomains = request.TopLevelDomains ?? "[]",
+            Currencies = request.Currencies ?? "{}",
+            Languages = request.Languages ?? "{}",
+            Translations = request.Translations ?? "{}",
+            Flags = request.Flags ?? "{}",
+            CoatOfArms = request.CoatOfArms,
+            Independent = request.Independent ?? false,
+            UnMember = request.UnMember ?? false,
+            Landlocked = request.Landlocked ?? false,
+            IsActive = true,
+            Version = Guid.NewGuid(),
+            CreatedAtUtc = DateTime.UtcNow,
+            LastModifiedUtc = DateTime.UtcNow
+        };
+
+        _context.Countries.Add(country);
+        await _context.SaveChangesAsync(cancellationToken);
+
+        _logger.LogInformation("Country created: {Iso2} - {Name} by user {UserId}", country.Iso2, country.Name, userId);
+
+        // Invalidate list caches
+        await InvalidateListCachesAsync(cancellationToken);
+
+        return MapToResponse(country);
+    }
+
+    /// <summary>
+    /// T081-T082: Update existing country with optimistic concurrency check.
+    /// </summary>
+    public async Task<CountryResponse> UpdateAsync(long id, UpdateCountryRequest request, string ifMatch, string userId, CancellationToken cancellationToken = default)
+    {
+        // Load existing country with tracking
+        var country = await _context.Countries.FindAsync(new object[] { id }, cancellationToken);
+
+        if (country == null)
+        {
+            throw new KeyNotFoundException($"Country with ID {id} not found");
+        }
+
+        // T081: Validate If-Match header (ETag check)
+        var currentETag = GenerateETag(country.Version);
+        if (!string.IsNullOrEmpty(ifMatch) && ifMatch != currentETag)
+        {
+            throw new InvalidOperationException("Precondition failed: ETag mismatch (concurrent modification detected)");
+        }
+
+        // Check for ISO code conflicts (excluding current country)
+        var iso2Conflict = await _context.Countries
+            .AnyAsync(c => c.Id != id && c.Iso2 == request.Iso2.ToUpperInvariant(), cancellationToken);
+
+        if (iso2Conflict)
+        {
+            throw new InvalidOperationException($"Another country with ISO2 code '{request.Iso2}' already exists");
+        }
+
+        var iso3Conflict = await _context.Countries
+            .AnyAsync(c => c.Id != id && c.Iso3 == request.Iso3.ToUpperInvariant(), cancellationToken);
+
+        if (iso3Conflict)
+        {
+            throw new InvalidOperationException($"Another country with ISO3 code '{request.Iso3}' already exists");
+        }
+
+        // T082: Update all fields (full replacement)
+        country.Iso2 = request.Iso2.ToUpperInvariant();
+        country.Iso3 = request.Iso3.ToUpperInvariant();
+        country.Name = request.Name;
+        country.OfficialName = request.OfficialName;
+        country.NumericCode = request.NumericCode;
+        country.Capital = request.Capital;
+        country.Region = request.Region;
+        country.Subregion = request.Subregion;
+        country.Latitude = request.Latitude;
+        country.Longitude = request.Longitude;
+        country.Demonym = request.Demonym;
+        country.AreaKm2 = request.AreaKm2;
+        country.Population = request.Population;
+        country.GiniCoefficient = request.GiniCoefficient;
+        country.Timezones = request.Timezones ?? "[]";
+        country.Borders = request.Borders ?? "[]";
+        country.CallingCodes = request.CallingCodes ?? "[]";
+        country.TopLevelDomains = request.TopLevelDomains ?? "[]";
+        country.Currencies = request.Currencies ?? "{}";
+        country.Languages = request.Languages ?? "{}";
+        country.Translations = request.Translations ?? "{}";
+        country.Flags = request.Flags ?? "{}";
+        country.CoatOfArms = request.CoatOfArms;
+        country.Independent = request.Independent ?? false;
+        country.UnMember = request.UnMember ?? false;
+        country.Landlocked = request.Landlocked ?? false;
+        country.Version = Guid.NewGuid();
+        country.LastModifiedUtc = DateTime.UtcNow;
+
+        try
+        {
+            await _context.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateConcurrencyException ex)
+        {
+            // T101: Handle EF Core concurrency exception
+            _logger.LogWarning(ex, "Concurrency conflict detected for country ID {Id}", id);
+            throw new InvalidOperationException($"Concurrency conflict: Country ID {id} was modified by another user. Please refresh and try again.", ex);
+        }
+
+        _logger.LogInformation("Country updated: {Iso2} - {Name} by user {UserId}", country.Iso2, country.Name, userId);
+
+        // Invalidate caches
+        await InvalidateSingleCountryCacheAsync(country, cancellationToken);
+        await InvalidateListCachesAsync(cancellationToken);
+
+        return MapToResponse(country);
+    }
+
+    /// <summary>
+    /// T083-T084: Partially update country (only specified fields).
+    /// </summary>
+    public async Task<CountryResponse> PatchAsync(long id, PatchCountryRequest request, string ifMatch, string userId, CancellationToken cancellationToken = default)
+    {
+        var country = await _context.Countries.FindAsync(new object[] { id }, cancellationToken);
+
+        if (country == null)
+        {
+            throw new KeyNotFoundException($"Country with ID {id} not found");
+        }
+
+        // ETag check
+        var currentETag = GenerateETag(country.Version);
+        if (!string.IsNullOrEmpty(ifMatch) && ifMatch != currentETag)
+        {
+            throw new InvalidOperationException("Precondition failed: ETag mismatch (concurrent modification detected)");
+        }
+
+        // T083: Apply only non-null fields
+        if (request.Iso2 != null)
+        {
+            var conflict = await _context.Countries.AnyAsync(c => c.Id != id && c.Iso2 == request.Iso2.ToUpperInvariant(), cancellationToken);
+            if (conflict) throw new InvalidOperationException($"Another country with ISO2 code '{request.Iso2}' already exists");
+            country.Iso2 = request.Iso2.ToUpperInvariant();
+        }
+
+        if (request.Iso3 != null)
+        {
+            var conflict = await _context.Countries.AnyAsync(c => c.Id != id && c.Iso3 == request.Iso3.ToUpperInvariant(), cancellationToken);
+            if (conflict) throw new InvalidOperationException($"Another country with ISO3 code '{request.Iso3}' already exists");
+            country.Iso3 = request.Iso3.ToUpperInvariant();
+        }
+
+        if (request.Name != null) country.Name = request.Name;
+        if (request.OfficialName != null) country.OfficialName = request.OfficialName;
+        if (request.NumericCode != null) country.NumericCode = request.NumericCode;
+        if (request.Capital != null) country.Capital = request.Capital;
+        if (request.Region != null) country.Region = request.Region;
+        if (request.Subregion != null) country.Subregion = request.Subregion;
+        if (request.Latitude.HasValue) country.Latitude = request.Latitude;
+        if (request.Longitude.HasValue) country.Longitude = request.Longitude;
+        if (request.Demonym != null) country.Demonym = request.Demonym;
+        if (request.AreaKm2.HasValue) country.AreaKm2 = request.AreaKm2;
+        if (request.Population.HasValue) country.Population = request.Population;
+        if (request.GiniCoefficient.HasValue) country.GiniCoefficient = request.GiniCoefficient;
+        if (request.Timezones != null) country.Timezones = request.Timezones;
+        if (request.Borders != null) country.Borders = request.Borders;
+        if (request.CallingCodes != null) country.CallingCodes = request.CallingCodes;
+        if (request.TopLevelDomains != null) country.TopLevelDomains = request.TopLevelDomains;
+        if (request.Currencies != null) country.Currencies = request.Currencies;
+        if (request.Languages != null) country.Languages = request.Languages;
+        if (request.Translations != null) country.Translations = request.Translations;
+        if (request.Flags != null) country.Flags = request.Flags;
+        if (request.CoatOfArms != null) country.CoatOfArms = request.CoatOfArms;
+        if (request.Independent.HasValue) country.Independent = request.Independent.Value;
+        if (request.UnMember.HasValue) country.UnMember = request.UnMember.Value;
+        if (request.Landlocked.HasValue) country.Landlocked = request.Landlocked.Value;
+
+        country.Version = Guid.NewGuid();
+        country.LastModifiedUtc = DateTime.UtcNow;
+
+        try
+        {
+            await _context.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateConcurrencyException ex)
+        {
+            // T101: Handle EF Core concurrency exception
+            _logger.LogWarning(ex, "Concurrency conflict detected for country ID {Id}", id);
+            throw new InvalidOperationException($"Concurrency conflict: Country ID {id} was modified by another user. Please refresh and try again.", ex);
+        }
+
+        _logger.LogInformation("Country patched: {Iso2} - {Name} by user {UserId}", country.Iso2, country.Name, userId);
+
+        // Invalidate caches
+        await InvalidateSingleCountryCacheAsync(country, cancellationToken);
+        await InvalidateListCachesAsync(cancellationToken);
+
+        return MapToResponse(country);
+    }
+
+    /// <summary>
+    /// T085-T086: Soft delete country (set IsActive=false).
+    /// </summary>
+    public async Task SoftDeleteAsync(long id, string userId, CancellationToken cancellationToken = default)
+    {
+        var country = await _context.Countries.FindAsync(new object[] { id }, cancellationToken);
+
+        if (country == null)
+        {
+            throw new KeyNotFoundException($"Country with ID {id} not found");
+        }
+
+        if (!country.IsActive)
+        {
+            throw new InvalidOperationException($"Country {country.Iso2} is already inactive");
+        }
+
+        country.IsActive = false;
+        country.Version = Guid.NewGuid();
+        country.LastModifiedUtc = DateTime.UtcNow;
+
+        await _context.SaveChangesAsync(cancellationToken);
+
+        _logger.LogInformation("Country soft-deleted: {Iso2} - {Name} by user {UserId}", country.Iso2, country.Name, userId);
+
+        // Invalidate caches
+        await InvalidateSingleCountryCacheAsync(country, cancellationToken);
+        await InvalidateListCachesAsync(cancellationToken);
+    }
+
+    /// <summary>
+    /// T087-T088: Hard delete country (permanent deletion, SuperAdmin only).
+    /// </summary>
+    public async Task HardDeleteAsync(long id, string userId, CancellationToken cancellationToken = default)
+    {
+        var country = await _context.Countries.FindAsync(new object[] { id }, cancellationToken);
+
+        if (country == null)
+        {
+            throw new KeyNotFoundException($"Country with ID {id} not found");
+        }
+
+        var iso2 = country.Iso2;
+        var name = country.Name;
+
+        _context.Countries.Remove(country);
+        await _context.SaveChangesAsync(cancellationToken);
+
+        _logger.LogWarning("Country HARD-DELETED: {Iso2} - {Name} by user {UserId}", iso2, name, userId);
+
+        // Invalidate caches
+        await InvalidateSingleCountryCacheAsync(country, cancellationToken);
+        await InvalidateListCachesAsync(cancellationToken);
+    }
+
+    /// <summary>
+    /// Helper: Invalidate cache entries for a specific country.
+    /// </summary>
+    private async Task InvalidateSingleCountryCacheAsync(Data.Models.Country country, CancellationToken cancellationToken)
+    {
+        await _cacheService.RemoveAsync(GenerateCacheKey("id", country.Id.ToString()), cancellationToken);
+        await _cacheService.RemoveAsync(GenerateCacheKey("iso2", country.Iso2), cancellationToken);
+        await _cacheService.RemoveAsync(GenerateCacheKey("iso3", country.Iso3), cancellationToken);
     }
 }

@@ -1,364 +1,362 @@
-# Maliev.CountryService
+# Maliev Country Service
 
-A comprehensive CRUD API service for managing country data with advanced features including caching, rate limiting, and full-text search capabilities. Built with ASP.NET Core 9.0 and designed for high-performance, scalable operations.
+A high-performance, production-ready RESTful API service for managing country reference data with advanced caching, resilience patterns, and GitOps deployment.
 
-## 🌟 Features
+## Overview
 
-### Core Functionality
-- **Complete CRUD Operations**: Create, Read, Update, Delete countries with full validation
-- **Advanced Search & Filtering**: Search by name, continent, ISO codes, and country codes
-- **Paginated Results**: Efficient pagination with configurable page sizes
-- **Normalized Data Model**: Proper one-to-many relationship for multiple country codes per country
-- **Unique Constraints**: Enforced uniqueness for country names, ISO2, and ISO3 codes
+The Country Service provides comprehensive country information management with:
+- **Sub-50ms p95 read latency** through Redis distributed caching with in-memory fallback
+- **Graceful degradation** maintaining read availability during database outages
+- **Optimistic concurrency control** preventing data conflicts in concurrent updates
+- **Bulk import capabilities** for efficient dataset updates (up to 1,000 records per batch)
+- **GitOps deployment** with Kubernetes, ArgoCD, and Kustomize
 
-### Performance & Scalability
-- **Memory Caching**: Intelligent caching of country data with configurable TTL and automatic invalidation
-- **Rate Limiting**: Multi-tiered rate limiting (global and endpoint-specific)
-- **Optimized Queries**: Async/await patterns with efficient database queries
-- **Resource Optimization**: CPU and memory optimized for resource-constrained environments
+## Architecture
 
-### Security & Compliance
-- **JWT Authentication**: Bearer token authentication with configurable validation
-- **CORS Configuration**: Secure cross-origin resource sharing
-- **Input Validation**: Comprehensive request validation with detailed error responses
-- **Secrets Management**: Flexible configuration via environment variables, files, or cloud secrets
-
-### DevOps & Monitoring
-- **Health Checks**: Liveness and readiness probes for container orchestration
-- **Structured Logging**: Serilog with correlation IDs and contextual enrichment
-- **Containerization**: Multi-stage Docker builds with security best practices
-- **Observability**: Prometheus metrics and structured logging
-
-## 🏗️ Architecture
-
-### Project Structure
 ```
-Maliev.CountryService/
-├── Maliev.CountryService.Api/           # Web API layer
-│   ├── Controllers/                     # API controllers
-│   ├── Services/                        # Business logic services
-│   ├── Models/                          # DTOs and request models
-│   ├── Middleware/                      # Custom middleware
-│   ├── HealthChecks/                    # Health check implementations
-│   ├── Mapping/                         # AutoMapper profiles
-│   ├── Exceptions/                      # Custom exception types
-│   ├── Configurations/                  # Configuration models and options
-│   └── Properties/                      # Application properties
-├── Maliev.CountryService.Data/          # Data access layer
-│   ├── DbContexts/                      # Entity Framework contexts
-│   ├── Entities/                        # Database entities
-│   └── Migrations/                      # EF Core migrations
-├── Maliev.CountryService.Tests/         # Test suite
-│   ├── Unit/                            # Unit tests
-│   └── Integration/                     # Integration tests
-└── .github/workflows/                   # CI/CD pipelines
+┌─────────────────┐
+│   API Gateway   │
+│   (maliev.com)  │
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐      ┌──────────────┐
+│ Country Service │◄────►│ Redis Cache  │
+│   (2 replicas)  │      │ (Distributed)│
+└────────┬────────┘      └──────────────┘
+         │
+         ▼
+┌─────────────────┐
+│  PostgreSQL 18  │
+│  (Primary DB)   │
+└─────────────────┘
+
+Monitoring: Prometheus → Grafana
+Logging: Serilog (console JSON)
 ```
 
-### Technology Stack
-- **Framework**: ASP.NET Core 9.0
-- **Database**: PostgreSQL with Entity Framework Core 9.0
-- **Caching**: In-Memory caching with configurable policies and automatic invalidation
-- **Authentication**: JWT Bearer tokens
-- **API Documentation**: OpenAPI/Swagger with versioning
-- **Testing**: xUnit with FluentAssertions and Moq
-- **Containerization**: Docker with multi-stage builds
-- **CI/CD**: GitHub Actions
-- **Monitoring**: Prometheus metrics and Serilog structured logging
+### Key Technical Features
 
-## 🚀 Getting Started
+- **.NET 9.0** - Latest LTS runtime
+- **PostgreSQL 18** - Primary data store with retry-on-failure
+- **Redis 7** - Distributed cache with Polly circuit breaker
+- **Stale-while-revalidate** - 1-hour grace period for cache entries
+- **Prometheus metrics** - Custom business metrics + HTTP telemetry
+- **Health checks** - Liveness and readiness endpoints with degraded mode support
+- **JWT authentication** - Role-based authorization (CountryAdmin, SuperAdmin)
+- **Rate limiting** - Sliding window (100/min reads, 20/min admin operations)
+- **API versioning** - URL segment versioning (v1)
+
+## Quick Start
 
 ### Prerequisites
+
 - .NET 9.0 SDK
-- PostgreSQL 12+ or Docker
-- Visual Studio 2022 / VS Code (optional)
+- Docker Desktop (for local PostgreSQL and Redis)
+- Git
 
-### Local Development
+### Local Development Setup
 
-1. **Clone the repository**
+1. **Clone the repository**:
    ```bash
-   git clone <repository-url>
+   git clone https://github.com/MALIEV-Co-Ltd/Maliev.CountryService.git
    cd Maliev.CountryService
    ```
 
-2. **Configure database connection**
-   
-   **Option A: Using Docker PostgreSQL (Recommended for development)**
+2. **Start infrastructure services**:
    ```bash
-   # Start PostgreSQL in Docker
-   docker run -d --name postgres-db -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=CountryService -p 5432:5432 postgres:15
-   
-   # Set connection string
-   dotnet user-secrets set "ConnectionStrings:CountryDbContext" "Host=localhost;Port=5432;Database=CountryService;Username=postgres;Password=postgres"
-   ```
-   
-   **Option B: Using existing PostgreSQL instance**
-   ```bash
-   # Set connection string to your PostgreSQL instance
-   dotnet user-secrets set "ConnectionStrings:CountryDbContext" "Host=your-host;Port=5432;Database=your-database;Username=your-username;Password=your-password"
+   docker-compose -f docker-compose.test.yml up -d
    ```
 
-3. **Create and run database migrations**
+   This starts:
+   - PostgreSQL 18 on `localhost:5432`
+   - Redis 7 on `localhost:6379`
+
+3. **Apply database migrations**:
    ```bash
-   cd Maliev.CountryService.Data
-   dotnet ef database update --project ../Maliev.CountryService.Api
+   export ConnectionStrings__CountryServiceDbContext="Server=localhost;Port=5432;Database=country_service_db;User Id=postgres;Password=postgres_dev_password;"
+
+   dotnet ef database update --project Maliev.CountryService.Data
    ```
 
-4. **Run the application**
+4. **Run the service**:
    ```bash
-   cd ../Maliev.CountryService.Api
-   dotnet run
+   dotnet run --project Maliev.CountryService.Api
    ```
 
-5. **Access the API**
-   - Swagger UI: `http://localhost:5000/countries/swagger`
-   - API Base URL: `http://localhost:5000/countries/v1.0`
+   The service will start on `https://localhost:5001` (HTTPS) and `http://localhost:5000` (HTTP).
+
+5. **Access the API**:
+   - **OpenAPI documentation**: `http://localhost:5000/openapi/v1.json`
+   - **Health checks**:
+     - Liveness: `http://localhost:5000/countries/v1/liveness`
+     - Readiness: `http://localhost:5000/countries/v1/readiness`
+   - **Metrics**: `http://localhost:5000/metrics`
 
 ### Running Tests
+
 ```bash
 # Run all tests
-dotnet test
+dotnet test Maliev.CountryService.sln --verbosity normal
 
 # Run with coverage
-dotnet test --collect:"XPlat Code Coverage"
+dotnet test Maliev.CountryService.sln --collect:"XPlat Code Coverage"
 ```
 
-### Docker Deployment
+## API Endpoints
+
+### Public Read Endpoints (Rate limit: 100 req/min per IP)
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/countries/v1/countries/{id}` | Get country by ID |
+| `GET` | `/countries/v1/countries/iso2/{iso2}` | Get country by ISO2 code (e.g., "US") |
+| `GET` | `/countries/v1/countries/iso3/{iso3}` | Get country by ISO3 code (e.g., "USA") |
+| `GET` | `/countries/v1/countries` | List countries (paginated, filterable, sortable) |
+| `GET` | `/countries/v1/countries/search?q={query}` | Full-text search countries |
+
+### Admin Endpoints (Rate limit: 20 req/min per user, requires JWT)
+
+| Method | Endpoint | Description | Required Policy |
+|--------|----------|-------------|-----------------|
+| `POST` | `/countries/v1/admin/countries` | Create new country | CountryAdmin |
+| `PUT` | `/countries/v1/admin/countries/{id}` | Update country (requires If-Match) | CountryAdmin |
+| `PATCH` | `/countries/v1/admin/countries/{id}` | Partial update country (requires If-Match) | CountryAdmin |
+| `DELETE` | `/countries/v1/admin/countries/{id}?hard=false` | Soft delete country | CountryAdmin |
+| `DELETE` | `/countries/v1/admin/countries/{id}?hard=true` | Hard delete country | SuperAdmin |
+
+### Bulk Import Endpoints (CountryAdmin required)
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/countries/v1/admin/bulk-import` | Submit bulk import (max 1,000 countries) |
+| `GET` | `/countries/v1/admin/bulk-import/{jobId}` | Get import job status |
+| `POST` | `/countries/v1/admin/bulk-import/{jobId}/process` | Trigger processing of validated job |
+
+## API Examples
+
+See [specs/001-country-service/contracts/examples/](specs/001-country-service/contracts/examples/) for detailed curl examples.
+
+### Quick Examples
+
+**Get country by ISO2 code**:
 ```bash
-# Build container
-docker build -t maliev-country-service -f Maliev.CountryService.Api/Dockerfile .
-
-# Run container (requires PostgreSQL)
-docker run -p 8080:8080 -e "ConnectionStrings__CountryDbContext=Host=host.docker.internal;Port=5432;Database=CountryService;Username=postgres;Password=postgres" maliev-country-service
+curl http://localhost:5000/countries/v1/countries/iso2/US
 ```
 
-## 📚 API Documentation
-
-### Base URL
-- **Development**: `http://localhost:5000/countries/v1.0`
-- **Swagger UI**: `http://localhost:5000/countries/swagger`
-
-### Authentication
-All endpoints except liveness and readiness require JWT Bearer token authentication:
-```
-Authorization: Bearer <your-jwt-token>
+**List countries with pagination**:
+```bash
+curl "http://localhost:5000/countries/v1/countries?page=1&pageSize=20&sortBy=name&sortOrder=asc"
 ```
 
-### Core Endpoints
-
-#### Countries
-- `GET /countries/v1.0/{id}` - Get country by ID
-- `GET /countries/v1.0/search` - Search countries with filters
-- `GET /countries/v1.0` - Get all countries with pagination
-- `POST /countries/v1.0` - Create new country
-- `PUT /countries/v1.0/{id}` - Update existing country
-- `DELETE /countries/v1.0/{id}` - Delete country
-
-#### Utility
-- `GET /countries/v1.0/continents` - Get list of continents
-- `GET /countries/liveness` - Health check (liveness probe)
-- `GET /countries/readiness` - Health check (readiness probe)
-- `GET /countries/metrics` - Prometheus metrics
-
-### Example Requests
-
-#### Create Country
-```json
-POST /countries/v1.0
-{
-  "name": "Singapore",
-  "continent": "Asia",
-  "countryCode": "65",
-  "iso2": "SG",
-  "iso3": "SGP"
-}
+**Search countries**:
+```bash
+curl "http://localhost:5000/countries/v1/countries/search?q=united&page=1&pageSize=10"
 ```
 
-#### Search Countries
-```
-GET /countries/v1.0/search?continent=Asia&pageSize=10&pageNumber=1&sortBy=name&sortDirection=asc
-```
-
-#### Get All Countries (paginated)
-```
-GET /countries/v1.0?pageNumber=1&pageSize=50
-```
-
-### Response Format
-```json
-{
-  "id": 1,
-  "name": "Singapore",
-  "continent": "Asia",
-  "countryCodes": [
-    {
-      "id": 1,
-      "code": "65",
-      "isPrimary": true
-    }
-  ],
-  "iso2": "SG",
-  "iso3": "SGP",
-  "createdDate": "2024-01-01T00:00:00Z",
-  "modifiedDate": "2024-01-01T00:00:00Z"
-}
+**Create country (requires JWT)**:
+```bash
+curl -X POST http://localhost:5000/countries/v1/admin/countries \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "iso2": "XX",
+    "iso3": "XXX",
+    "name": "Example Country",
+    "region": "Europe",
+    "subregion": "Western Europe"
+  }'
 ```
 
-## ⚙️ Configuration
+## Configuration
 
-### Environment Variables
-- `ConnectionStrings__CountryDbContext` - Database connection string
-- `Jwt__Issuer` - JWT issuer (optional)
-- `Jwt__Audience` - JWT audience (optional)
-- `Jwt__SecurityKey` - JWT signing key (optional)
+### Environment Variables / Secrets
 
-### Configuration Sections
+The service uses Google Secret Manager in production. For local development, configure in `appsettings.Development.json`:
 
-#### Rate Limiting
-```json
-{
-  "RateLimit": {
-    "Global": {
-      "PermitLimit": 1000,
-      "Window": "00:01:00",
-      "QueueLimit": 100
-    },
-    "CountryEndpoint": {
-      "PermitLimit": 100,
-      "Window": "00:01:00",
-      "QueueLimit": 50
-    }
-  }
-}
+| Secret Name | Description | Example |
+|-------------|-------------|---------|
+| `ConnectionStrings__CountryServiceDbContext` | PostgreSQL connection string | `Server=localhost;Port=5432;Database=country_service_db;...` |
+| `ConnectionStrings__Redis` | Redis connection string | `localhost:6379` |
+| `JwtBearer__Issuer` | JWT token issuer | `https://auth.maliev.com` |
+| `JwtBearer__Audience` | JWT audience | `country-service` |
+| `JwtBearer__SecurityKey` | JWT signing key | (base64 encoded key) |
+
+### Key Metrics
+
+The service exposes Prometheus metrics at `/metrics`:
+
+| Metric | Type | Description |
+|--------|------|-------------|
+| `country_cache_hits_total` | Counter | Cache hits by type (redis/memory) |
+| `country_cache_misses_total` | Counter | Cache misses by type |
+| `country_request_duration_seconds` | Histogram | Request duration (p50, p95, p99) |
+| `country_circuit_breaker_state` | Gauge | Circuit breaker state (0=Closed, 1=Open, 2=Half-Open) |
+| `country_active_total` | Gauge | Total active countries |
+| `country_create_operations_total` | Counter | Country create operations |
+| `country_update_operations_total` | Counter | Country update operations |
+| `country_delete_operations_total` | Counter | Country delete operations |
+| `country_bulk_import_jobs_total` | Counter | Bulk import jobs by status |
+| `country_bulk_import_duration_seconds` | Histogram | Bulk import duration |
+
+## Deployment
+
+### GitOps Workflow
+
+The service uses GitOps for deployment with ArgoCD monitoring the `maliev-gitops` repository.
+
+```bash
+# Deployment triggered automatically by CI/CD
+# 1. Push to branch → GitHub Actions builds Docker image
+# 2. Image pushed to GCP Artifact Registry
+# 3. GitOps repository updated with new image tag
+# 4. ArgoCD syncs changes to Kubernetes cluster
 ```
 
-#### Caching
-```json
-{
-  "Cache": {
-    "CountryCacheDurationMinutes": 60,
-    "SearchCacheDurationMinutes": 30,
-    "MaxCacheSize": 1000
-  }
-}
+### Kubernetes Manifests
+
+Kubernetes manifests are in the `maliev-gitops` repository under `3-apps/country-service/`:
+
+- **Base**: Common configuration
+- **Overlays**: Environment-specific configs (development, staging, production)
+
+### Manual Deployment
+
+```bash
+# Build Docker image
+docker build -t country-service:latest .
+
+# Run container
+docker run -p 8080:8080 \
+  -e ConnectionStrings__CountryServiceDbContext="..." \
+  -e ConnectionStrings__Redis="..." \
+  country-service:latest
 ```
 
-## 🧪 Testing
+## Performance
 
-### Test Coverage
-- **Unit Tests**: Service layer business logic testing
-- **Integration Tests**: Full API endpoint testing with in-memory database
-- **Validation Tests**: Input validation and error handling
-- **Exception Handling Tests**: Specific exception scenarios
+### Latency Targets
 
-### Test Architecture
-- **In-Memory Database**: Isolated test database for each test
-- **Test Fixtures**: Reusable test data and configurations
-- **Mocking**: External dependencies mocked for unit tests
-- **Assertions**: FluentAssertions for readable test assertions
+- **Cached reads**: p95 < 50ms
+- **Uncached reads**: p95 < 200ms
+- **List operations**: p95 < 100ms (with cache)
+- **Admin operations**: p95 < 500ms
 
-## 🔒 Security
+### Load Testing
 
-### Authentication & Authorization
-- JWT Bearer token validation (optional - can be disabled for development)
-- Configurable token validation parameters
-- Rate limiting per IP address
-- CORS policy enforcement
+Run k6 load tests:
 
-### Data Protection
-- Input sanitization and validation
-- SQL injection prevention via Entity Framework
-- Secure secret management via environment variables or mounted volumes
-- Connection string and JWT secrets loaded from secure sources only
-
-### Container Security
-- Non-root user execution
-- Minimal attack surface
-- Health check implementation
-
-## 📊 Monitoring & Observability
-
-### Logging
-- Structured JSON logging with Serilog
-- Correlation ID tracking across requests
-- Contextual enrichment (machine, process, thread)
-- Configurable log levels and filtering
-
-### Health Checks
-- **Liveness**: Basic application health
-- **Readiness**: Database connectivity and dependencies
-- Kubernetes-native health check endpoints
-
-### Metrics
-- Prometheus metrics endpoint at `/countries/metrics`
-- Response time monitoring
-- Cache hit/miss rate tracking
-- Rate limiting metrics
-- Database query performance
-
-## 🚀 Deployment
-
-### Docker Compose (Simple Deployment)
-```yaml
-version: '3.8'
-services:
-  database:
-    image: postgres:15
-    environment:
-      POSTGRES_DB: CountryService
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-
-  api:
-    build: .
-    ports:
-      - "8080:8080"
-    environment:
-      - ConnectionStrings__CountryDbContext=Host=database;Port=5432;Database=CountryService;Username=postgres;Password=postgres
-    depends_on:
-      - database
-
-volumes:
-  postgres_data:
+```bash
+k6 run specs/001-country-service/loadtest.k6.js
 ```
 
-### Kubernetes Deployment
-The service is designed to run in Kubernetes with:
-- ConfigMaps for non-secret configuration
-- Secrets for sensitive data
-- Liveness and readiness probes
-- Resource limits and requests
-- Horizontal Pod Autoscaling
+Expected results:
+- 1,000 virtual users
+- 95th percentile < 50ms for cached reads
+- 99th percentile < 200ms for uncached reads
+- Zero errors under normal conditions
 
-## 🤝 Contributing
+## Resilience Features
 
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+### Graceful Degradation
 
-### Development Guidelines
-- Follow existing code patterns and architecture
-- Write comprehensive tests for new features
-- Update documentation for API changes
-- Ensure all tests pass and maintain code coverage
-- Use conventional commit messages
+The service maintains read availability during infrastructure failures:
 
-## 📝 License
+1. **Redis outage**: Automatic fallback to in-memory cache
+2. **Database outage**: Serve stale cache data with `X-Degraded-Mode: true` header
+3. **Circuit breaker**: Polly circuit breaker with 50% failure threshold, 60-second break
 
-This project is part of the Maliev Co. Ltd. microservices ecosystem. All rights reserved.
+### Health Check States
 
-## 🆘 Support
+- **Healthy**: All dependencies available
+- **Degraded**: One dependency unavailable but service functional (e.g., Redis down, database serving from cache)
+- **Unhealthy**: Critical dependencies unavailable (e.g., database and cache both down)
 
-For support and questions:
-- **API Issues**: Create GitHub issue with reproduction steps
-- **Infrastructure**: Contact DevOps team
-- **Business Logic**: Contact development team
+### Retry Guidance
 
----
+503 responses include `Retry-After: 60` header (circuit breaker duration).
 
-**Maliev Country Service** - Built with ❤️ for scalable, reliable country data management.
+## Development
+
+### Project Structure
+
+```
+Maliev.CountryService/
+├── Maliev.CountryService.Api/        # Web API project
+│   ├── Controllers/                  # API endpoints
+│   ├── Services/                     # Business logic
+│   ├── Models/                       # DTOs
+│   ├── Middleware/                   # HTTP middleware
+│   ├── HealthChecks/                 # Custom health checks
+│   ├── BackgroundServices/           # Hosted services
+│   └── Metrics/                      # Prometheus metrics
+├── Maliev.CountryService.Data/       # Data layer
+│   ├── Models/                       # EF Core entities
+│   ├── Migrations/                   # Database migrations
+│   └── CountryServiceDbContext.cs    # DbContext
+├── Maliev.CountryService.Tests/      # Unit & integration tests
+└── specs/001-country-service/        # Specification docs
+    ├── spec.md                       # Feature specification
+    ├── plan.md                       # Implementation plan
+    ├── tasks.md                      # Task breakdown
+    ├── data-model.md                 # Database schema
+    ├── contracts/                    # API contracts
+    └── quickstart.md                 # Setup guide
+```
+
+### Code Standards
+
+- **Zero warnings**: All projects have `TreatWarningsAsErrors` enabled
+- **No secrets in code**: Secrets via Google Secret Manager or appsettings
+- **Structured logging**: Serilog with correlation IDs
+- **Rate limiting**: All endpoints have rate limits
+- **Optimistic concurrency**: ETag-based for all updates
+
+## Troubleshooting
+
+### Database Connection Issues
+
+```bash
+# Check PostgreSQL is running
+docker ps | grep postgres
+
+# Test connection
+psql -h localhost -p 5432 -U postgres -d country_service_db
+```
+
+### Redis Connection Issues
+
+```bash
+# Check Redis is running
+docker ps | grep redis
+
+# Test connection
+redis-cli -h localhost -p 6379 ping
+```
+
+### Migration Issues
+
+```bash
+# Reset database (DEVELOPMENT ONLY)
+dotnet ef database drop --project Maliev.CountryService.Data
+dotnet ef database update --project Maliev.CountryService.Data
+```
+
+## Links
+
+- **Specification**: [specs/001-country-service/spec.md](specs/001-country-service/spec.md)
+- **Implementation Plan**: [specs/001-country-service/plan.md](specs/001-country-service/plan.md)
+- **API Contracts**: [specs/001-country-service/contracts/](specs/001-country-service/contracts/)
+- **Quick Start Guide**: [specs/001-country-service/quickstart.md](specs/001-country-service/quickstart.md)
+- **GitOps Repository**: https://github.com/MALIEV-Co-Ltd/maliev-gitops
+- **Grafana Dashboards**: (Access via `scripts/open-grafana.ps1` in maliev-gitops)
+
+## License
+
+Proprietary - Maliev Co. Ltd.
+
+## Support
+
+For issues or questions:
+- **GitHub Issues**: https://github.com/MALIEV-Co-Ltd/Maliev.CountryService/issues
+- **Internal Wiki**: (Company Confluence/Notion)
