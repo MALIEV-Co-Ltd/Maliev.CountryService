@@ -1,5 +1,6 @@
 using Asp.Versioning;
 using Asp.Versioning.ApiExplorer;
+using FluentValidation;
 using HealthChecks.UI.Client;
 using Maliev.CountryService.Api.BackgroundServices;
 using Maliev.CountryService.Api.HealthChecks;
@@ -43,6 +44,10 @@ try
 
     // Add services to the container
     builder.Services.AddControllers();
+
+    // Add FluentValidation
+    builder.Services.AddValidatorsFromAssemblyContaining<Program>();
+
     builder.Services.AddEndpointsApiExplorer();
 
     // T033: Configure API versioning (v1 as default)
