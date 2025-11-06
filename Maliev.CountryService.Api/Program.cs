@@ -69,7 +69,7 @@ try
     // T027: Configure DbContext with connection string from configuration, retry on failure
     builder.Services.AddDbContext<CountryServiceDbContext>(options =>
     {
-        var connectionString = builder.Configuration.GetConnectionString("CountryServiceDbContext");
+        var connectionString = builder.Configuration.GetConnectionString("CountryDbContext");
         options.UseNpgsql(connectionString, npgsqlOptions =>
         {
             npgsqlOptions.EnableRetryOnFailure(
