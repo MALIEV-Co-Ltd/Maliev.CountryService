@@ -11,7 +11,7 @@ Build a high-performance, read-optimized Country WebAPI Service serving as the c
 
 ## Technical Context
 
-**Language/Version**: .NET 9.0 (ASP.NET Core WebAPI)
+**Language/Version**: .NET 10.0 (ASP.NET Core WebAPI)
 **Primary Dependencies**:
 - Entity Framework Core 9.0.10 with Npgsql 9.0.4 (PostgreSQL provider)
 - Serilog 8.0.2 (structured logging to stdout)

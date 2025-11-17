@@ -13,6 +13,7 @@ using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Prometheus;
+using Scalar.AspNetCore;
 using Serilog;
 using StackExchange.Redis;
 using System.Text;
@@ -224,7 +225,7 @@ try
     builder.Services.Configure<ForwardedHeadersOptions>(options =>
     {
         options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
-        options.KnownNetworks.Clear();
+        options.KnownIPNetworks.Clear();
         options.KnownProxies.Clear();
     });
 
@@ -283,8 +284,22 @@ try
     // 4. Degradation header (T122)
     app.UseMiddleware<DegradationHeaderMiddleware>();
 
-    // T034: Configure Scalar UI (TODO: Fix Scalar API reference - using OpenAPI for now)
-    app.MapOpenApi();
+    // T034: Configure Scalar UI
+    if (!app.Environment.IsProduction())
+    {
+        app.MapOpenApi("/countries/openapi/{documentName}.json");
+        app.MapScalarApiReference(options =>
+        {
+            options
+                .WithTitle("Maliev Country Service API")
+                .WithTheme(Scalar.AspNetCore.ScalarTheme.Saturn)
+                .WithDefaultHttpClient(Scalar.AspNetCore.ScalarTarget.CSharp, Scalar.AspNetCore.ScalarClient.HttpClient)
+                .WithEndpointPrefix("/countries/scalar/{documentName}")
+                .WithOpenApiRoutePattern("/countries/openapi/{documentName}.json");
+        });
+
+        Log.Information("Scalar API documentation enabled at /countries/scalar/v1");
+    }
 
     // T032: Configure Prometheus metrics (UseHttpMetrics middleware)
     app.UseHttpMetrics();

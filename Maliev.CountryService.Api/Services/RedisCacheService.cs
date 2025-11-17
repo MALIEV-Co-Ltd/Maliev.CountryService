@@ -87,7 +87,7 @@ public class RedisCacheService : ICacheService
                 }
 
                 // T120: Deserialize as CacheEntry to check staleness
-                var cacheEntry = JsonSerializer.Deserialize<CacheEntry<T>>(value!);
+                var cacheEntry = JsonSerializer.Deserialize<CacheEntry<T>>((string)value!);
                 if (cacheEntry == null || cacheEntry.Value == null)
                 {
                     BusinessMetrics.CacheMisses.WithLabels("redis").Inc();
