@@ -267,6 +267,9 @@ try
     builder.Services.AddHostedService<CacheWarmingService>();
     builder.Services.AddHostedService<BulkImportWorkerService>();
 
+    // Add service defaults for .NET Aspire
+    builder.AddServiceDefaults();
+    
     var app = builder.Build();
 
     app.UseForwardedHeaders();

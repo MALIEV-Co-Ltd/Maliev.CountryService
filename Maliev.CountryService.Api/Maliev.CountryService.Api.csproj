@@ -41,7 +41,7 @@
     <!-- Caching & Resilience -->
     <PackageReference Include="StackExchange.Redis" Version="2.10.1" />
     <PackageReference Include="Polly" Version="8.5.0" />
-    <PackageReference Include="Microsoft.Extensions.Http.Resilience" Version="9.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Http.Resilience" Version="10.0.0" />
 
     <!-- Authentication & Security -->
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="9.0.8" />
@@ -61,6 +61,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Maliev.CountryService.Data\Maliev.CountryService.Data.csproj" />
+    <ProjectReference Include="..\..\Maliev.Aspire\Maliev.Aspire.ServiceDefaults\Maliev.Aspire.ServiceDefaults.csproj" />
   </ItemGroup>
 
 </Project>
