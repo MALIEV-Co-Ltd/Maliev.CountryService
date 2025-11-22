@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1.4
 # Multi-stage Dockerfile for Maliev Country Service
 # Build from repository root: docker build -t maliev-country-service .
 
@@ -8,7 +9,11 @@ WORKDIR /src
 # Copy csproj files and restore dependencies
 COPY ["Maliev.CountryService.Api/Maliev.CountryService.Api.csproj", "Maliev.CountryService.Api/"]
 COPY ["Maliev.CountryService.Data/Maliev.CountryService.Data.csproj", "Maliev.CountryService.Data/"]
-RUN dotnet restore "Maliev.CountryService.Api/Maliev.CountryService.Api.csproj"
+RUN --mount=type=secret,id=nuget_username \
+    --mount=type=secret,id=nuget_password \
+    NUGET_USERNAME=$(cat /run/secrets/nuget_username) \
+    NUGET_PASSWORD=$(cat /run/secrets/nuget_password) \
+    dotnet restore "Maliev.CountryService.Api/Maliev.CountryService.Api.csproj"
 
 # Copy source code and build
 COPY . .
