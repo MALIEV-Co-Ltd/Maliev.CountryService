@@ -84,11 +84,19 @@ try
     builder.Services.AddMemoryCache();
 
     // T031: Configure Redis connection with StackExchange.Redis
-    var redisConnectionString = builder.Configuration.GetConnectionString("Redis");
-    if (!string.IsNullOrEmpty(redisConnectionString))
+    var redisConnectionString = builder.Configuration["Redis:ConnectionString"];
+    var redisEnabled = bool.TryParse(builder.Configuration["Redis:Enabled"], out var isRedisEnabled) && isRedisEnabled;
+
+    if (redisEnabled && !string.IsNullOrEmpty(redisConnectionString) && !builder.Environment.IsEnvironment("Testing"))
     {
         try
         {
+            builder.Services.AddStackExchangeRedisCache(options =>
+            {
+                options.Configuration = redisConnectionString;
+                options.InstanceName = "Country:";
+            });
+
             var redis = ConnectionMultiplexer.Connect(redisConnectionString);
             builder.Services.AddSingleton<IConnectionMultiplexer>(redis);
             Log.Information("Redis connection established: {RedisEndpoint}", redisConnectionString);
@@ -101,7 +109,7 @@ try
     }
     else
     {
-        Log.Warning("Redis connection string not configured - using in-memory cache only");
+        Log.Warning("Redis connection string not configured or disabled - using in-memory cache only");
     }
 
     // T043: Configure rate limiting (read endpoints: 100/min per IP, admin endpoints: 20/min per JWT sub claim)
@@ -291,15 +299,18 @@ try
     if (!app.Environment.IsProduction())
     {
         app.MapOpenApi("/countries/openapi/{documentName}.json");
-        app.MapScalarApiReference(options =>
+        app.MapScalarApiReference("/countries/scalar/v1", options =>
         {
             options
                 .WithTitle("Maliev Country Service API")
-                .WithTheme(Scalar.AspNetCore.ScalarTheme.Saturn)
-                .WithDefaultHttpClient(Scalar.AspNetCore.ScalarTarget.CSharp, Scalar.AspNetCore.ScalarClient.HttpClient)
-                .WithEndpointPrefix("/countries/scalar/{documentName}")
+                .WithTheme(ScalarTheme.Saturn)
+                .WithDefaultHttpClient(ScalarTarget.CSharp, ScalarClient.HttpClient)
                 .WithOpenApiRoutePattern("/countries/openapi/{documentName}.json");
         });
+
+        // Redirect root to Scalar
+        app.MapGet("/", () => Results.Redirect("/countries/scalar/v1")).ExcludeFromDescription();
+        app.MapGet("/countries", () => Results.Redirect("/countries/scalar/v1")).ExcludeFromDescription();
 
         Log.Information("Scalar API documentation enabled at /countries/scalar/v1");
     }
