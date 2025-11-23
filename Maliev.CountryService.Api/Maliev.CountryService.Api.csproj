@@ -49,8 +49,11 @@
     <!-- Monitoring & Health -->
     <PackageReference Include="AspNetCore.HealthChecks.UI.Client" Version="9.0.0" />
     <PackageReference Include="AspNetCore.HealthChecks.NpgSql" Version="9.0.0" />
-    <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks.EntityFrameworkCore" Version="9.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks.EntityFrameworkCore" Version="10.0.0" />
     <PackageReference Include="prometheus-net.AspNetCore" Version="8.2.1" />
+
+    <!-- Messaging -->
+    <PackageReference Include="MassTransit.RabbitMQ" Version="8.5.5" />
 
     <!-- Configuration -->
     <PackageReference Include="NetEscapades.Configuration.Yaml" Version="3.1.0" />
