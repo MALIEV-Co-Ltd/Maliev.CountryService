@@ -21,12 +21,8 @@ var builder = WebApplication.CreateBuilder(args);
 
 try
 {
-    // T028: Google Secret Manager integration (/mnt/secrets path, optional for development)
-    var secretsPath = "/mnt/secrets";
-    if (Directory.Exists(secretsPath))
-    {
-        builder.Configuration.AddKeyPerFile(directoryPath: secretsPath, optional: true);
-    }
+    // T028: Google Secret Manager integration via ServiceDefaults
+    builder.AddGoogleSecretManagerVolume();
 
     // Add services to the container
     builder.Services.AddControllers();
@@ -160,7 +156,7 @@ try
     builder.Services.Configure<ForwardedHeadersOptions>(options =>
     {
         options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
-        options.KnownNetworks.Clear();
+        options.KnownIPNetworks.Clear();
         options.KnownProxies.Clear();
     });
 
