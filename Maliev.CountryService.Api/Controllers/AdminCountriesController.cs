@@ -22,26 +22,22 @@ public class AdminCountriesController : ControllerBase
 {
     private readonly ICountryService _countryService;
     private readonly ILogger<AdminCountriesController> _logger;
-    private readonly ICountryDataUpdateTrigger _updateTrigger;
-    private readonly BusinessMetrics _businessMetrics; // Added
+    private readonly BusinessMetrics _businessMetrics;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="AdminCountriesController"/> class.
     /// </summary>
     /// <param name="countryService">The country service instance.</param>
     /// <param name="logger">The logger instance.</param>
-    /// <param name="updateTrigger">The country data update trigger service.</param>
-    /// <param name="businessMetrics">The business metrics service.</param> // Added
+    /// <param name="businessMetrics">The business metrics service.</param>
     public AdminCountriesController(
-        ICountryService countryService, 
+        ICountryService countryService,
         ILogger<AdminCountriesController> logger,
-        ICountryDataUpdateTrigger updateTrigger,
-        BusinessMetrics businessMetrics) // Added
+        BusinessMetrics businessMetrics)
     {
         _countryService = countryService;
         _logger = logger;
-        _updateTrigger = updateTrigger;
-        _businessMetrics = businessMetrics; // Added
+        _businessMetrics = businessMetrics;
     }
 
     /// <summary>
@@ -315,87 +311,6 @@ public class AdminCountriesController : ControllerBase
             _logger.LogError(ex, "Country hard-delete failed for ID {Id} by user {UserId}", id, userId);
             _businessMetrics.RecordRequestDuration(stopwatch.Elapsed.TotalSeconds, "HardDelete", "DELETE", "500"); // Changed
             return StatusCode(500, new { error = "INTERNAL_ERROR", message = "An error occurred while hard-deleting the country" });
-        }
-    }
-
-    /// <summary>
-    /// Manually triggers an update of all country data from the external REST Countries API.
-    /// This fetches the latest country information, merges it with existing data, and reports detailed statistics.
-    /// Requires CountryAdmin role. Use this endpoint for immediate updates outside the regular schedule.
-    /// </summary>
-    /// <param name="cancellationToken">Cancellation token.</param>
-    /// <returns>Detailed update results including counts of created, updated, and failed records.</returns>
-    /// <response code="200">Update completed successfully with detailed statistics.</response>
-    /// <response code="500">Update failed due to external API error or database issue.</response>
-    [HttpPost("update-from-external")]
-    [ProducesResponseType(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    public async Task<IActionResult> TriggerDataUpdate(CancellationToken cancellationToken)
-    {
-        var stopwatch = System.Diagnostics.Stopwatch.StartNew();
-        var userId = GetUserId();
-
-        _logger.LogInformation("Manual country data update triggered by user {UserId} with correlationId {CorrelationId}",
-            userId, HttpContext.TraceIdentifier);
-
-        try
-        {
-            var result = await _updateTrigger.TriggerUpdateAsync(cancellationToken);
-
-            stopwatch.Stop();
-
-            if (result.Success)
-            {
-                _logger.LogInformation(
-                    "Manual country data update completed successfully. Created: {Created}, Updated: {Updated}, Errors: {Errors}, Duration: {Duration}s",
-                    result.CreatedCount, result.UpdatedCount, result.ErrorCount, stopwatch.Elapsed.TotalSeconds);
-
-                _businessMetrics.RecordRequestDuration(stopwatch.Elapsed.TotalSeconds, "TriggerDataUpdate", "POST", "200"); // Changed
-
-                return Ok(new
-                {
-                    success = true,
-                    message = "Country data updated successfully",
-                    statistics = new
-                    {
-                        totalProcessed = result.TotalProcessed,
-                        created = result.CreatedCount,
-                        updated = result.UpdatedCount,
-                        errors = result.ErrorCount,
-                        startedAt = result.StartedAt,
-                        completedAt = result.CompletedAt,
-                        durationSeconds = (result.CompletedAt - result.StartedAt).TotalSeconds
-                    }
-                });
-            }
-            else
-            {
-                _logger.LogError("Manual country data update failed: {ErrorMessage}", result.ErrorMessage);
-
-                _businessMetrics.RecordRequestDuration(stopwatch.Elapsed.TotalSeconds, "TriggerDataUpdate", "POST", "500"); // Changed
-
-                return StatusCode(500, new
-                {
-                    success = false,
-                    error = "UPDATE_FAILED",
-                    message = result.ErrorMessage,
-                    statistics = new
-                    {
-                        totalProcessed = result.TotalProcessed,
-                        created = result.CreatedCount,
-                        updated = result.UpdatedCount,
-                        errors = result.ErrorCount,
-                        startedAt = result.StartedAt,
-                        completedAt = result.CompletedAt
-                    }
-                });
-            }
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Critical error during manual country data update by user {UserId}", userId);
-            _businessMetrics.RecordRequestDuration(stopwatch.Elapsed.TotalSeconds, "TriggerDataUpdate", "POST", "500"); // Changed
-            return StatusCode(500, new { error = "INTERNAL_ERROR", message = "An unexpected error occurred while updating country data" });
         }
     }
 

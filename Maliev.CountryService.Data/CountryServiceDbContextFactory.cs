@@ -14,8 +14,8 @@ public class CountryServiceDbContextFactory : IDesignTimeDbContextFactory<Countr
         var optionsBuilder = new DbContextOptionsBuilder<CountryServiceDbContext>();
 
         // Read from environment variable for migration commands
-        var connectionString = Environment.GetEnvironmentVariable("CountryServiceDbContext")
-            ?? "Server=localhost;Port=5432;Database=country_service_app_db;User Id=postgres;Password=postgres;";
+        var connectionString = Environment.GetEnvironmentVariable("ConnectionStrings__CountryDbContext")
+            ?? "Server=localhost;Port=5432;Database=country_app_db;User Id=postgres;Password=postgres;";
 
         optionsBuilder.UseNpgsql(connectionString, npgsqlOptions =>
         {

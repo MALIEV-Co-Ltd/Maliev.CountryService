@@ -1,7 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using Maliev.CountryService.Api.Converters; // Add this line
 
 namespace Maliev.CountryService.Api.Models.Countries;
 
@@ -90,55 +89,46 @@ public class CountryResponse
     /// <summary>
     /// Gets or sets the list of IANA timezone identifiers as a JSON array.
     /// </summary>
-    [JsonConverter(typeof(JsonElementConverter))]
     public JsonElement Timezones { get; set; }
 
     /// <summary>
     /// Gets or sets the ISO 3166-1 alpha-3 codes of bordering countries as a JSON array.
     /// </summary>
-    [JsonConverter(typeof(JsonElementConverter))]
     public JsonElement Borders { get; set; }
 
     /// <summary>
     /// Gets or sets the list of international direct dialing codes as a JSON array.
     /// </summary>
-    [JsonConverter(typeof(JsonElementConverter))]
     public JsonElement CallingCodes { get; set; }
 
     /// <summary>
     /// Gets or sets the list of top-level domains as a JSON array.
     /// </summary>
-    [JsonConverter(typeof(JsonElementConverter))]
     public JsonElement TopLevelDomains { get; set; }
 
     /// <summary>
     /// Gets or sets the currencies used in the country as a JSON object.
     /// </summary>
-    [JsonConverter(typeof(JsonElementConverter))]
     public JsonElement Currencies { get; set; }
 
     /// <summary>
     /// Gets or sets the languages spoken in the country as a JSON object.
     /// </summary>
-    [JsonConverter(typeof(JsonElementConverter))]
     public JsonElement Languages { get; set; }
 
     /// <summary>
     /// Gets or sets the country name translations as a JSON object.
     /// </summary>
-    [JsonConverter(typeof(JsonElementConverter))]
     public JsonElement Translations { get; set; }
 
     /// <summary>
     /// Gets or sets the flag URLs (SVG and PNG) as a JSON object.
     /// </summary>
-    [JsonConverter(typeof(JsonElementConverter))]
     public JsonElement Flags { get; set; }
 
     /// <summary>
     /// Gets or sets the coat of arms URLs (SVG and PNG) as a JSON object.
     /// </summary>
-    [JsonConverter(typeof(JsonElementConverter))]
     public JsonElement? CoatOfArms { get; set; }
     
     /// <summary>

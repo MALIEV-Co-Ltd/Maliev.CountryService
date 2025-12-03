@@ -45,7 +45,7 @@ jobs:
       - name: Run tests
         run: dotnet test Maliev.CountryService.sln --no-build --configuration Release --verbosity normal
         env:
-          CountryServiceDbContext: "Server=localhost;Port=5432;Database=country_service_test_db;User Id=postgres;Password=postgres;"
+          ConnectionStrings__CountryDbContext: "Server=localhost;Port=5432;Database=country_test_db;User Id=postgres;Password=postgres;"
 
       - name: Check for warnings
         run: |

@@ -11,34 +11,21 @@ using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
-using Prometheus;
-using Serilog;
 using StackExchange.Redis;
 using System.Text;
 using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// T026: Configure Serilog (console only, structured JSON logging)
-Log.Logger = new LoggerConfiguration()
-    .ReadFrom.Configuration(builder.Configuration)
-    .Enrich.FromLogContext()
-    .WriteTo.Console(outputTemplate:
-        "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] {CorrelationId} {Message:lj}{NewLine}{Exception}")
-    .CreateLogger();
-
-builder.Host.UseSerilog();
+// T026: Logging configured via ServiceDefaults (OpenTelemetry)
 
 try
 {
-    Log.Information("Starting Maliev Country Service");
-
     // T028: Google Secret Manager integration (/mnt/secrets path, optional for development)
     var secretsPath = "/mnt/secrets";
     if (Directory.Exists(secretsPath))
     {
         builder.Configuration.AddKeyPerFile(directoryPath: secretsPath, optional: true);
-        Log.Information("Loaded secrets from {SecretPath}", secretsPath);
     }
 
     // Add services to the container
@@ -61,18 +48,9 @@ try
     // OpenAPI/Swagger for Scalar
     builder.Services.AddOpenApi();
 
-    // T027: Configure DbContext with connection string from configuration, retry on failure
-    builder.Services.AddDbContext<CountryServiceDbContext>(options =>
-    {
-        var connectionString = builder.Configuration.GetConnectionString("CountryServiceDbContext");
-        options.UseNpgsql(connectionString, npgsqlOptions =>
-        {
-            npgsqlOptions.EnableRetryOnFailure(
-                maxRetryCount: 3,
-                maxRetryDelay: TimeSpan.FromSeconds(5),
-                errorCodesToAdd: null);
-        });
-    });
+    // T027: Configure DbContext with connection string from ServiceDefaults
+    // Connection string name: "CountryDbContext" (not "CountryServiceDbContext")
+    builder.AddPostgresDbContext<CountryServiceDbContext>("CountryDbContext");
 
     // T030: Configure memory cache (simple AddMemoryCache without SizeLimit - CRITICAL per CLAUDE.md)
     builder.Services.AddMemoryCache();
@@ -85,17 +63,11 @@ try
         {
             var redis = ConnectionMultiplexer.Connect(redisConnectionString);
             builder.Services.AddSingleton<IConnectionMultiplexer>(redis);
-            Log.Information("Redis connection established: {RedisEndpoint}", redisConnectionString);
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            Log.Warning(ex, "Redis connection failed - will use in-memory cache fallback");
             // Don't register Redis - services will handle fallback
         }
-    }
-    else
-    {
-        Log.Warning("Redis connection string not configured - using in-memory cache only");
     }
 
     // T043: Configure rate limiting (read endpoints: 100/min per IP, admin endpoints: 20/min per JWT sub claim)
@@ -161,38 +133,17 @@ try
         });
     });
 
-    // T042: Configure JWT authentication (JwtBearer with validation)
+    // T042: Configure JWT authentication using ServiceDefaults (RSA PublicKey)
+    // Reads from Jwt:PublicKey, Jwt:Issuer, Jwt:Audience
     if (!builder.Environment.IsEnvironment("Testing"))
     {
-        var jwtIssuer = builder.Configuration["JwtBearer:Issuer"];
-        var jwtAudience = builder.Configuration["JwtBearer:Audience"];
-        var jwtSecurityKey = builder.Configuration["JwtBearer:SecurityKey"];
-
-        if (!string.IsNullOrEmpty(jwtIssuer) && !string.IsNullOrEmpty(jwtSecurityKey))
+        try
         {
-            builder.Services.AddAuthentication(options =>
-            {
-                options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-                options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-            }).AddJwtBearer(options =>
-            {
-                options.TokenValidationParameters = new TokenValidationParameters
-                {
-                    ValidateIssuer = true,
-                    ValidateAudience = true,
-                    ValidateLifetime = true,
-                    ValidateIssuerSigningKey = true,
-                    ValidIssuer = jwtIssuer,
-                    ValidAudience = jwtAudience,
-                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecurityKey))
-                };
-            });
-
-            Log.Information("JWT authentication configured for issuer: {Issuer}", jwtIssuer);
+            builder.AddJwtAuthentication();
         }
-        else
+        catch (Exception)
         {
-            Log.Warning("JWT configuration not found - API will start but authentication will not work");
+            // JWT configuration not found - API will start but authentication will not work
         }
     }
 
@@ -213,16 +164,9 @@ try
         options.KnownProxies.Clear();
     });
 
-    // T029: Add health checks (database EF Core check with "readiness" tag, Redis health check)
-    var healthChecksBuilder = builder.Services.AddHealthChecks()
-        .AddDbContextCheck<CountryServiceDbContext>("database", tags: new[] { "readiness" })
+    // T029: Add health checks (database health check with "readiness" tag)
+    builder.Services.AddHealthChecks()
         .AddCheck<DatabaseHealthCheck>("database-connection", tags: new[] { "readiness" });
-
-    // Add Redis health check if Redis is configured
-    if (builder.Services.Any(s => s.ServiceType == typeof(IConnectionMultiplexer)))
-    {
-        healthChecksBuilder.AddCheck<RedisHealthCheck>("redis", tags: new[] { "readiness" });
-    }
 
     // User Story 1: Register application services for fast country lookup
     // Register MemoryCacheService as fallback cache
@@ -271,9 +215,6 @@ try
     // T034: Configure Scalar UI (TODO: Fix Scalar API reference - using OpenAPI for now)
     app.MapOpenApi();
 
-    // T032: Configure Prometheus metrics (UseHttpMetrics middleware)
-    app.UseHttpMetrics();
-
     app.UseHttpsRedirection();
     app.UseRateLimiter();
     app.UseCors();
@@ -285,33 +226,17 @@ try
         app.UseAuthorization();
     }
 
-    // Health check endpoints (allow anonymous access for monitoring)
-    app.MapGet("/countries/v1/liveness", () => Results.Ok(new { status = "Healthy", timestamp = DateTime.UtcNow }))
-        .AllowAnonymous()
-        .WithTags("Health");
-
-    app.MapHealthChecks("/countries/v1/readiness", new HealthCheckOptions
-    {
-        Predicate = healthCheck => healthCheck.Tags.Contains("readiness"),
-        ResponseWriter = UIResponseWriter.WriteHealthCheckUIResponse
-    }).AllowAnonymous();
-
-    // Metrics endpoint
-    app.MapMetrics("/metrics").AllowAnonymous();
+    // Map health check and metrics endpoints via ServiceDefaults
+    app.MapDefaultEndpoints("countries");
 
     app.MapControllers();
 
-    Log.Information("Maliev Country Service started successfully");
     app.Run();
 }
 catch (Exception ex)
 {
-    Log.Fatal(ex, "Application terminated unexpectedly");
+    Console.WriteLine($"Application terminated unexpectedly: {ex}");
     throw;
-}
-finally
-{
-    Log.CloseAndFlush();
 }
 
 // Make Program class accessible for integration tests
