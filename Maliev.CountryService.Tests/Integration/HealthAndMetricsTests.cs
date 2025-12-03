@@ -57,6 +57,10 @@ public class HealthAndMetricsTests : IntegrationTestBase
     [Fact]
     public async Task Metrics_ContainsCustomMetrics()
     {
+        // Arrange - Trigger some operations to generate custom metrics
+        // Make a request to trigger metrics recording
+        await _client.GetAsync("/countries/v1/countries?page=1&pageSize=10");
+
         // Act
         var response = await _client.GetAsync("/countries/metrics");
 
@@ -66,7 +70,7 @@ public class HealthAndMetricsTests : IntegrationTestBase
         var content = await response.Content.ReadAsStringAsync();
 
         // Verify custom business metrics are present
-        // Note: Metrics may not have values yet, but declarations should be present
+        // After triggering an operation, custom metrics should be in the output
         Assert.Contains("country", content.ToLower());
     }
 
