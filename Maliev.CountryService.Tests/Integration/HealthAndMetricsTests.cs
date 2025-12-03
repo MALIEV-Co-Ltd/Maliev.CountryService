@@ -145,22 +145,6 @@ public class HealthAndMetricsTests : IntegrationTestBase
     }
 
     [Fact]
-    public async Task RootPath_RedirectsToScalar()
-    {
-        // Act
-        var response = await _client.GetAsync("/", HttpCompletionOption.ResponseHeadersRead);
-
-        // Assert
-        // Should either redirect or be OK if already at Scalar
-        Assert.True(
-            response.StatusCode == HttpStatusCode.Redirect ||
-            response.StatusCode == HttpStatusCode.Moved ||
-            response.StatusCode == HttpStatusCode.OK ||
-            response.StatusCode == HttpStatusCode.MovedPermanently,
-            $"Expected redirect or OK, got {response.StatusCode}");
-    }
-
-    [Fact]
     public async Task HealthCheck_WithDatabase_IncludesDbStatus()
     {
         // Act

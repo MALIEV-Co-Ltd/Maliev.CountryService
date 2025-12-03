@@ -235,9 +235,6 @@ try
 
     app.MapControllers();
 
-    // Redirect root to OpenAPI documentation
-    app.MapGet("/", () => Results.Redirect("/openapi/v1.json")).ExcludeFromDescription();
-
     app.Run();
 }
 catch (Exception ex)
