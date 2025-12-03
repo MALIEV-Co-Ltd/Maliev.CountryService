@@ -1,6 +1,4 @@
 using Maliev.CountryService.Api.Metrics;
-using Polly;
-using Polly.CircuitBreaker;
 using StackExchange.Redis;
 using System.Text.Json;
 
@@ -18,53 +16,55 @@ public class RedisCacheService : ICacheService
     /// </summary>
     private class CacheEntry<T>
     {
+        /// <summary>
+        /// Gets or sets the cached value.
+        /// </summary>
         public T Value { get; set; } = default!;
+
+        /// <summary>
+        /// Gets or sets the timestamp when the value was cached.
+        /// </summary>
         public DateTime CachedAtUtc { get; set; }
+
+        /// <summary>
+        /// Gets or sets the original time-to-live duration.
+        /// </summary>
         public TimeSpan OriginalTtl { get; set; }
     }
     private readonly IConnectionMultiplexer? _redis;
-    private readonly ICacheService _fallbackCache;
+    private readonly MemoryCacheService _fallbackCache;
     private readonly ILogger<RedisCacheService> _logger;
-    private readonly AsyncCircuitBreakerPolicy _circuitBreaker;
+    private readonly BusinessMetrics? _businessMetrics; // Changed to nullable
 
     // T120: Stale-while-revalidate grace period (FR-032)
     private static readonly TimeSpan StaleGracePeriod = TimeSpan.FromHours(1);
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="RedisCacheService"/> class.
+    /// </summary>
+    /// <param name="logger">The logger.</param>
+    /// <param name="fallbackCache">The fallback memory cache service.</param>
+    /// <param name="redis">The Redis connection multiplexer (optional, may be null if Redis is unavailable).</param>
+    /// <param name="businessMetrics">The business metrics service.</param>
     public RedisCacheService(
         ILogger<RedisCacheService> logger,
-        ICacheService fallbackCache,
-        IConnectionMultiplexer? redis = null)
+        MemoryCacheService fallbackCache,
+        IConnectionMultiplexer? redis = null,
+        BusinessMetrics? businessMetrics = null) // Made nullable to avoid breaking tests that may not provide it
     {
         _redis = redis;
         _fallbackCache = fallbackCache;
         _logger = logger;
-
-        // T057: Configure Polly circuit breaker
-        _circuitBreaker = Policy
-            .Handle<RedisConnectionException>()
-            .Or<RedisTimeoutException>()
-            .AdvancedCircuitBreakerAsync(
-                failureThreshold: 0.5,        // 50% failure rate
-                samplingDuration: TimeSpan.FromSeconds(30),
-                minimumThroughput: 10,
-                durationOfBreak: TimeSpan.FromSeconds(60),
-                onBreak: (exception, duration) =>
-                {
-                    _logger.LogWarning(exception, "Redis circuit breaker OPEN for {Duration}", duration);
-                    BusinessMetrics.CircuitBreakerState.WithLabels("redis").Set(1); // Open
-                },
-                onReset: () =>
-                {
-                    _logger.LogInformation("Redis circuit breaker CLOSED");
-                    BusinessMetrics.CircuitBreakerState.WithLabels("redis").Set(0); // Closed
-                },
-                onHalfOpen: () =>
-                {
-                    _logger.LogInformation("Redis circuit breaker HALF-OPEN");
-                    BusinessMetrics.CircuitBreakerState.WithLabels("redis").Set(2); // Half-Open
-                });
+        _businessMetrics = businessMetrics;
     }
 
+    /// <summary>
+    /// Retrieves a cached value from Redis by key, with stale-while-revalidate support and fallback to memory cache.
+    /// </summary>
+    /// <typeparam name="T">The type of the cached value.</typeparam>
+    /// <param name="key">The cache key.</param>
+    /// <param name="cancellationToken">Token to cancel the operation.</param>
+    /// <returns>The cached value, or null if not found.</returns>
     public async Task<T?> GetAsync<T>(string key, CancellationToken cancellationToken = default) where T : class
     {
         if (_redis == null || !_redis.IsConnected)
@@ -75,59 +75,51 @@ public class RedisCacheService : ICacheService
 
         try
         {
-            return await _circuitBreaker.ExecuteAsync(async () =>
+            var db = _redis.GetDatabase();
+            var value = await db.StringGetAsync(key);
+
+            if (value.IsNullOrEmpty)
             {
-                var db = _redis.GetDatabase();
-                var value = await db.StringGetAsync(key);
+                _businessMetrics?.RecordCacheMiss("redis"); // Added null conditional operator
+                return null;
+            }
 
-                if (value.IsNullOrEmpty)
+            // T120: Deserialize as CacheEntry to check staleness
+            var cacheEntry = JsonSerializer.Deserialize<CacheEntry<T>>((string)value!);
+            if (cacheEntry == null || cacheEntry.Value == null)
+            {
+                _businessMetrics?.RecordCacheMiss("redis"); // Added null conditional operator
+                return null;
+            }
+
+            var now = DateTime.UtcNow;
+            var freshnessExpiry = cacheEntry.CachedAtUtc + cacheEntry.OriginalTtl;
+            var staleExpiry = freshnessExpiry + StaleGracePeriod;
+
+            // T120: Check if data is stale but within grace period
+            if (now > freshnessExpiry && now < staleExpiry)
+            {
+                _logger.LogInformation("Serving stale cache entry for key {Key}, age {Age}s, triggering refresh",
+                    key, (now - cacheEntry.CachedAtUtc).TotalSeconds);
+
+                // Trigger background refresh (fire-and-forget)
+                _ = Task.Run(() =>
                 {
-                    BusinessMetrics.CacheMisses.WithLabels("redis").Inc();
-                    return null;
-                }
-
-                // T120: Deserialize as CacheEntry to check staleness
-                var cacheEntry = JsonSerializer.Deserialize<CacheEntry<T>>(value!);
-                if (cacheEntry == null || cacheEntry.Value == null)
-                {
-                    BusinessMetrics.CacheMisses.WithLabels("redis").Inc();
-                    return null;
-                }
-
-                var now = DateTime.UtcNow;
-                var freshnessExpiry = cacheEntry.CachedAtUtc + cacheEntry.OriginalTtl;
-                var staleExpiry = freshnessExpiry + StaleGracePeriod;
-
-                // T120: Check if data is stale but within grace period
-                if (now > freshnessExpiry && now < staleExpiry)
-                {
-                    _logger.LogInformation("Serving stale cache entry for key {Key}, age {Age}s, triggering refresh",
-                        key, (now - cacheEntry.CachedAtUtc).TotalSeconds);
-
-                    // Trigger background refresh (fire-and-forget)
-                    _ = Task.Run(() =>
+                    try
                     {
-                        try
-                        {
-                            _logger.LogDebug("Background refresh triggered for stale key {Key}", key);
-                            // Note: Actual refresh would require callback to data source
-                            // For now, we just log the intent. The consumer (CountryService) would need to handle this.
-                        }
-                        catch (Exception ex)
-                        {
-                            _logger.LogError(ex, "Background refresh failed for key {Key}", key);
-                        }
-                    });
-                }
+                        _logger.LogDebug("Background refresh triggered for stale key {Key}", key);
+                        // Note: Actual refresh would require callback to data source
+                        // For now, we just log the intent. The consumer (CountryService) would need to handle this.
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Background refresh failed for key {Key}", ex);
+                    }
+                });
+            }
 
-                BusinessMetrics.CacheHits.WithLabels("redis").Inc();
-                return cacheEntry.Value;
-            });
-        }
-        catch (BrokenCircuitException)
-        {
-            _logger.LogWarning("Redis circuit breaker is OPEN, using fallback for key {Key}", key);
-            return await _fallbackCache.GetAsync<T>(key, cancellationToken);
+            _businessMetrics?.RecordCacheHit("redis"); // Added null conditional operator
+            return cacheEntry.Value;
         }
         catch (Exception ex)
         {
@@ -136,50 +128,59 @@ public class RedisCacheService : ICacheService
         }
     }
 
-    public async Task SetAsync<T>(string key, T value, TimeSpan ttl, CancellationToken cancellationToken = default) where T : class
+    /// <summary>
+    /// Stores a value in Redis cache with extended TTL for stale-while-revalidate support, with fallback to memory cache.
+    /// </summary>
+    /// <typeparam name="T">The type of the value to cache.</typeparam>
+    /// <param name="key">The cache key.</param>
+    /// <param name="value">The value to cache.</param>
+    /// <param name="expiration">The time-to-live duration for the cached value.</param>
+    /// <param name="cancellationToken">Token to cancel the operation.</param>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    public async Task SetAsync<T>(string key, T value, TimeSpan? expiration = null, CancellationToken cancellationToken = default) where T : class
     {
         if (_redis == null || !_redis.IsConnected)
         {
-            await _fallbackCache.SetAsync(key, value, ttl, cancellationToken);
+            await _fallbackCache.SetAsync(key, value, expiration, cancellationToken);
             return;
         }
 
         try
         {
-            await _circuitBreaker.ExecuteAsync(async () =>
+            var db = _redis.GetDatabase();
+
+            var actualExpiration = expiration ?? TimeSpan.FromMinutes(15);
+
+            // T120: Wrap value with metadata for stale-while-revalidate
+            var cacheEntry = new CacheEntry<T>
             {
-                var db = _redis.GetDatabase();
+                Value = value,
+                CachedAtUtc = DateTime.UtcNow,
+                OriginalTtl = actualExpiration
+            };
 
-                // T120: Wrap value with metadata for stale-while-revalidate
-                var cacheEntry = new CacheEntry<T>
-                {
-                    Value = value,
-                    CachedAtUtc = DateTime.UtcNow,
-                    OriginalTtl = ttl
-                };
+            var json = JsonSerializer.Serialize(cacheEntry);
 
-                var json = JsonSerializer.Serialize(cacheEntry);
+            // T120: Store with extended TTL (original + grace period)
+            var extendedTtl = actualExpiration + StaleGracePeriod;
+            await db.StringSetAsync(key, json, extendedTtl);
 
-                // T120: Store with extended TTL (original + grace period)
-                var extendedTtl = ttl + StaleGracePeriod;
-                await db.StringSetAsync(key, json, extendedTtl);
-
-                // Also set in fallback cache for faster local access
-                await _fallbackCache.SetAsync(key, value, ttl, cancellationToken);
-            });
-        }
-        catch (BrokenCircuitException)
-        {
-            _logger.LogWarning("Redis circuit breaker is OPEN, using fallback for SET key {Key}", key);
-            await _fallbackCache.SetAsync(key, value, ttl, cancellationToken);
+            // Also set in fallback cache for faster local access
+            await _fallbackCache.SetAsync(key, value, expiration, cancellationToken);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Redis SET failed for key {Key}, using fallback", key);
-            await _fallbackCache.SetAsync(key, value, ttl, cancellationToken);
+            await _fallbackCache.SetAsync(key, value, expiration, cancellationToken);
         }
     }
 
+    /// <summary>
+    /// Removes a cached value from Redis and fallback cache by key.
+    /// </summary>
+    /// <param name="key">The cache key to remove.</param>
+    /// <param name="cancellationToken">Token to cancel the operation.</param>
+    /// <returns>A task representing the asynchronous operation.</returns>
     public async Task RemoveAsync(string key, CancellationToken cancellationToken = default)
     {
         if (_redis == null || !_redis.IsConnected)
@@ -190,12 +191,9 @@ public class RedisCacheService : ICacheService
 
         try
         {
-            await _circuitBreaker.ExecuteAsync(async () =>
-            {
-                var db = _redis.GetDatabase();
-                await db.KeyDeleteAsync(key);
-                await _fallbackCache.RemoveAsync(key, cancellationToken);
-            });
+            var db = _redis.GetDatabase();
+            await db.KeyDeleteAsync(key);
+            await _fallbackCache.RemoveAsync(key, cancellationToken);
         }
         catch (Exception ex)
         {
@@ -204,6 +202,12 @@ public class RedisCacheService : ICacheService
         }
     }
 
+    /// <summary>
+    /// Removes all cached values matching a pattern from Redis and fallback cache.
+    /// </summary>
+    /// <param name="pattern">The pattern to match cache keys (e.g., "country:*").</param>
+    /// <param name="cancellationToken">Token to cancel the operation.</param>
+    /// <returns>A task representing the asynchronous operation.</returns>
     public async Task RemovePatternAsync(string pattern, CancellationToken cancellationToken = default)
     {
         if (_redis == null || !_redis.IsConnected)
@@ -214,23 +218,20 @@ public class RedisCacheService : ICacheService
 
         try
         {
-            await _circuitBreaker.ExecuteAsync(async () =>
+            var endpoints = _redis.GetEndPoints();
+            foreach (var endpoint in endpoints)
             {
-                var endpoints = _redis.GetEndPoints();
-                foreach (var endpoint in endpoints)
-                {
-                    var server = _redis.GetServer(endpoint);
-                    var keys = server.Keys(pattern: pattern);
-                    var db = _redis.GetDatabase();
-                    
-                    foreach (var key in keys)
-                    {
-                        await db.KeyDeleteAsync(key);
-                    }
-                }
+                var server = _redis.GetServer(endpoint);
+                var keys = server.Keys(pattern: pattern);
+                var db = _redis.GetDatabase();
                 
-                await _fallbackCache.RemovePatternAsync(pattern, cancellationToken);
-            });
+                foreach (var key in keys)
+                {
+                    await db.KeyDeleteAsync(key);
+                }
+            }
+            
+            await _fallbackCache.RemovePatternAsync(pattern, cancellationToken);
         }
         catch (Exception ex)
         {

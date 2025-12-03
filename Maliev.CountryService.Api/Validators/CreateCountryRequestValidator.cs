@@ -3,8 +3,14 @@ using Maliev.CountryService.Api.Models.Countries;
 
 namespace Maliev.CountryService.Api.Validators;
 
+/// <summary>
+/// Validator for create country requests.
+/// </summary>
 public class CreateCountryRequestValidator : AbstractValidator<CreateCountryRequest>
 {
+    /// <summary>
+    /// Initializes a new instance of the <see cref="CreateCountryRequestValidator"/> class.
+    /// </summary>
     public CreateCountryRequestValidator()
     {
         RuleFor(x => x.Iso2)

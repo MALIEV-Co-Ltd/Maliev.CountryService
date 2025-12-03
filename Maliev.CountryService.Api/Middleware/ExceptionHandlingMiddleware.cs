@@ -5,17 +5,30 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Maliev.CountryService.Api.Middleware;
 
+/// <summary>
+/// Middleware that catches and handles unhandled exceptions, converting them to appropriate HTTP responses.
+/// </summary>
 public class ExceptionHandlingMiddleware
 {
     private readonly RequestDelegate _next;
     private readonly ILogger<ExceptionHandlingMiddleware> _logger;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ExceptionHandlingMiddleware"/> class.
+    /// </summary>
+    /// <param name="next">The next delegate in the pipeline.</param>
+    /// <param name="logger">The logger.</param>
     public ExceptionHandlingMiddleware(RequestDelegate next, ILogger<ExceptionHandlingMiddleware> logger)
     {
         _next = next;
         _logger = logger;
     }
 
+    /// <summary>
+    /// Invokes the middleware to catch and handle exceptions during request processing.
+    /// </summary>
+    /// <param name="context">The HTTP context.</param>
+    /// <returns>A task representing the asynchronous operation.</returns>
     public async Task InvokeAsync(HttpContext context)
     {
         try
@@ -29,6 +42,12 @@ public class ExceptionHandlingMiddleware
         }
     }
 
+    /// <summary>
+    /// Handles an exception by converting it to an appropriate HTTP error response.
+    /// </summary>
+    /// <param name="context">The HTTP context.</param>
+    /// <param name="exception">The exception to handle.</param>
+    /// <returns>A task representing the asynchronous operation.</returns>
     private static async Task HandleExceptionAsync(HttpContext context, Exception exception)
     {
         context.Response.ContentType = "application/json";

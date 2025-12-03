@@ -3,14 +3,18 @@ using Maliev.CountryService.Api.Metrics;
 using Maliev.CountryService.Api.Models.BulkImport;
 using Maliev.CountryService.Api.Services;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http; // Added
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
+using System.Text.Json; // Added
+using System.IO; // Added
 
 namespace Maliev.CountryService.Api.Controllers;
 
 /// <summary>
-/// T115: Bulk import controller for administrative country data imports.
-/// Supports two-phase validation: validate first, then process.
+/// Administrative endpoints for bulk importing country data.
+/// Implements a two-phase approach: validation phase (returns validation errors immediately) followed by processing phase (executed asynchronously).
+/// Maximum 1000 countries per batch. All operations logged with full audit trail.
 /// </summary>
 [ApiController]
 [ApiVersion("1.0")]
@@ -21,19 +25,36 @@ public class BulkImportController : ControllerBase
 {
     private readonly IBulkImportService _bulkImportService;
     private readonly ILogger<BulkImportController> _logger;
-
-    public BulkImportController(IBulkImportService bulkImportService, ILogger<BulkImportController> logger)
+    private readonly BusinessMetrics _businessMetrics; // Added
+    
+    /// <summary>
+    /// Initializes a new instance of the <see cref="BulkImportController"/> class.
+    /// </summary>
+    /// <param name="bulkImportService">The bulk import service instance.</param>
+    /// <param name="logger">The logger instance.</param>
+    /// <param name="businessMetrics">The business metrics service.</param> // Added
+    public BulkImportController(
+        IBulkImportService bulkImportService, 
+        ILogger<BulkImportController> logger,
+        BusinessMetrics businessMetrics) // Added
     {
         _bulkImportService = bulkImportService;
         _logger = logger;
+        _businessMetrics = businessMetrics; // Added
     }
 
     /// <summary>
-    /// T116: POST /admin/bulk-import - Submit bulk import request for validation.
-    /// Returns 202 with Location header if validation passes.
-    /// Returns 400 with validation errors if validation fails.
-    /// T119: Returns 413 if payload exceeds 1000 countries.
+    /// Submits a bulk import request for validation.
+    /// The system validates all country data (ISO codes, required fields, format checks) and returns validation errors immediately.
+    /// If validation passes, you must call the process endpoint separately to apply the changes.
+    /// Maximum 1000 countries per batch.
     /// </summary>
+    /// <param name="request">Bulk import request containing array of countries to import/update.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>Job status with validation results. Location header points to job status endpoint.</returns>
+    /// <response code="202">Validation successful - job created. Use the Location header to check status or call the process endpoint.</response>
+    /// <response code="400">Validation failed - returns detailed validation errors for each country.</response>
+    /// <response code="413">Payload too large - exceeds 1000 country limit.</response>
     [HttpPost]
     [ProducesResponseType(StatusCodes.Status202Accepted)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -49,7 +70,7 @@ public class BulkImportController : ControllerBase
             _logger.LogWarning("Bulk import rejected: {Count} countries exceeds limit of 1000 by user {UserId}",
                 request.Countries.Count, userId);
 
-            BusinessMetrics.RequestDuration.WithLabels("BulkImportSubmit", "POST", "413").Observe(stopwatch.Elapsed.TotalSeconds);
+            _businessMetrics.RecordRequestDuration(stopwatch.Elapsed.TotalSeconds, "BulkImportSubmit", "POST", "413"); // Changed
             return StatusCode(413, new
             {
                 error = "PAYLOAD_TOO_LARGE",
@@ -61,7 +82,7 @@ public class BulkImportController : ControllerBase
 
         if (request.Countries.Count == 0)
         {
-            BusinessMetrics.RequestDuration.WithLabels("BulkImportSubmit", "POST", "400").Observe(stopwatch.Elapsed.TotalSeconds);
+            _businessMetrics.RecordRequestDuration(stopwatch.Elapsed.TotalSeconds, "BulkImportSubmit", "POST", "400"); // Changed
             return BadRequest(new { error = "EMPTY_REQUEST", message = "At least one country is required" });
         }
 
@@ -79,7 +100,7 @@ public class BulkImportController : ControllerBase
                 _logger.LogWarning("Bulk import validation failed: JobId {JobId}, Errors {ErrorCount}",
                     result.JobId, result.ValidationErrors.Count);
 
-                BusinessMetrics.RequestDuration.WithLabels("BulkImportSubmit", "POST", "400").Observe(stopwatch.Elapsed.TotalSeconds);
+                _businessMetrics.RecordRequestDuration(stopwatch.Elapsed.TotalSeconds, "BulkImportSubmit", "POST", "400"); // Changed
                 return BadRequest(new
                 {
                     error = "VALIDATION_FAILED",
@@ -92,21 +113,26 @@ public class BulkImportController : ControllerBase
             // T116: Return 202 with Location header
             Response.Headers["Location"] = $"/countries/v1/admin/bulk-import/{result.JobId}";
 
-            BusinessMetrics.RequestDuration.WithLabels("BulkImportSubmit", "POST", "202").Observe(stopwatch.Elapsed.TotalSeconds);
+            _businessMetrics.RecordRequestDuration(stopwatch.Elapsed.TotalSeconds, "BulkImportSubmit", "POST", "202"); // Changed
             return AcceptedAtAction(nameof(GetJobStatus), new { jobId = result.JobId }, result);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Bulk import submission failed for user {UserId}", userId);
-            BusinessMetrics.RequestDuration.WithLabels("BulkImportSubmit", "POST", "500").Observe(stopwatch.Elapsed.TotalSeconds);
+            _businessMetrics.RecordRequestDuration(stopwatch.Elapsed.TotalSeconds, "BulkImportSubmit", "POST", "500"); // Changed
             return StatusCode(500, new { error = "INTERNAL_ERROR", message = "An error occurred while processing the bulk import" });
         }
     }
 
     /// <summary>
-    /// T117: GET /admin/bulk-import/{jobId} - Get bulk import job status.
-    /// Returns job status, validation errors, and progress.
+    /// Retrieves the current status and progress of a bulk import job.
+    /// Returns validation errors, processing progress, and final results.
     /// </summary>
+    /// <param name="jobId">The unique identifier of the bulk import job.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>Job status including validation errors, progress, and processing results.</returns>
+    /// <response code="200">Returns job status with detailed information.</response>
+    /// <response code="404">Job not found.</response>
     [HttpGet("{jobId:guid}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -120,26 +146,32 @@ public class BulkImportController : ControllerBase
 
             if (result == null)
             {
-                BusinessMetrics.RequestDuration.WithLabels("GetJobStatus", "GET", "404").Observe(stopwatch.Elapsed.TotalSeconds);
+                _businessMetrics.RecordRequestDuration(stopwatch.Elapsed.TotalSeconds, "GetJobStatus", "GET", "404"); // Changed
                 return NotFound(new { error = "JOB_NOT_FOUND", message = $"Bulk import job {jobId} not found" });
             }
 
-            BusinessMetrics.RequestDuration.WithLabels("GetJobStatus", "GET", "200").Observe(stopwatch.Elapsed.TotalSeconds);
+            _businessMetrics.RecordRequestDuration(stopwatch.Elapsed.TotalSeconds, "GetJobStatus", "GET", "200"); // Changed
             return Ok(result);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error retrieving job status for {JobId}", jobId);
-            BusinessMetrics.RequestDuration.WithLabels("GetJobStatus", "GET", "500").Observe(stopwatch.Elapsed.TotalSeconds);
+            _businessMetrics.RecordRequestDuration(stopwatch.Elapsed.TotalSeconds, "GetJobStatus", "GET", "500"); // Changed
             return StatusCode(500, new { error = "INTERNAL_ERROR", message = "An error occurred while retrieving job status" });
         }
     }
 
     /// <summary>
-    /// T118: POST /admin/bulk-import/{jobId}/process - Trigger processing of validated job.
-    /// Returns 202 if processing started.
-    /// Returns 400 if job is not in Validated status.
+    /// Triggers asynchronous processing of a validated bulk import job.
+    /// Only jobs in 'Validated' status can be processed. Processing happens asynchronously in the background.
+    /// Use the job status endpoint to monitor progress.
     /// </summary>
+    /// <param name="jobId">The unique identifier of the validated bulk import job.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>Accepted status with link to job status endpoint.</returns>
+    /// <response code="202">Processing started - job is being processed asynchronously.</response>
+    /// <response code="400">Invalid job status - job must be in 'Validated' status.</response>
+    /// <response code="404">Job not found.</response>
     [HttpPost("{jobId:guid}/process")]
     [ProducesResponseType(StatusCodes.Status202Accepted)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -156,7 +188,7 @@ public class BulkImportController : ControllerBase
 
             if (jobStatus == null)
             {
-                BusinessMetrics.RequestDuration.WithLabels("ProcessJob", "POST", "404").Observe(stopwatch.Elapsed.TotalSeconds);
+                _businessMetrics.RecordRequestDuration(stopwatch.Elapsed.TotalSeconds, "ProcessJob", "POST", "404"); // Changed
                 return NotFound(new { error = "JOB_NOT_FOUND", message = $"Bulk import job {jobId} not found" });
             }
 
@@ -165,7 +197,7 @@ public class BulkImportController : ControllerBase
                 _logger.LogWarning("Attempt to process job {JobId} in status {Status} by user {UserId}",
                     jobId, jobStatus.Status, userId);
 
-                BusinessMetrics.RequestDuration.WithLabels("ProcessJob", "POST", "400").Observe(stopwatch.Elapsed.TotalSeconds);
+                _businessMetrics.RecordRequestDuration(stopwatch.Elapsed.TotalSeconds, "ProcessJob", "POST", "400"); // Changed
                 return BadRequest(new
                 {
                     error = "INVALID_JOB_STATUS",
@@ -180,23 +212,23 @@ public class BulkImportController : ControllerBase
 
             _logger.LogInformation("Bulk import processing triggered: JobId {JobId} by user {UserId}", jobId, userId);
 
-            BusinessMetrics.RequestDuration.WithLabels("ProcessJob", "POST", "202").Observe(stopwatch.Elapsed.TotalSeconds);
+            _businessMetrics.RecordRequestDuration(stopwatch.Elapsed.TotalSeconds, "ProcessJob", "POST", "202"); // Changed
             return AcceptedAtAction(nameof(GetJobStatus), new { jobId }, result);
         }
         catch (KeyNotFoundException ex)
         {
-            BusinessMetrics.RequestDuration.WithLabels("ProcessJob", "POST", "404").Observe(stopwatch.Elapsed.TotalSeconds);
+            _businessMetrics.RecordRequestDuration(stopwatch.Elapsed.TotalSeconds, "ProcessJob", "POST", "404"); // Changed
             return NotFound(new { error = "JOB_NOT_FOUND", message = ex.Message });
         }
         catch (InvalidOperationException ex)
         {
-            BusinessMetrics.RequestDuration.WithLabels("ProcessJob", "POST", "400").Observe(stopwatch.Elapsed.TotalSeconds);
+            _businessMetrics.RecordRequestDuration(stopwatch.Elapsed.TotalSeconds, "ProcessJob", "POST", "400"); // Changed
             return BadRequest(new { error = "INVALID_OPERATION", message = ex.Message });
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error processing job {JobId}", jobId);
-            BusinessMetrics.RequestDuration.WithLabels("ProcessJob", "POST", "500").Observe(stopwatch.Elapsed.TotalSeconds);
+            _businessMetrics.RecordRequestDuration(stopwatch.Elapsed.TotalSeconds, "ProcessJob", "POST", "500"); // Changed
             return StatusCode(500, new { error = "INTERNAL_ERROR", message = "An error occurred while processing the job" });
         }
     }

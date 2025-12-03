@@ -1,10 +1,10 @@
-using FluentValidation;
 using Maliev.CountryService.Api.Models.BulkImport;
 using Maliev.CountryService.Api.Models.Countries;
 using Maliev.CountryService.Data;
-using Maliev.CountryService.Data.Models;
+using Maliev.CountryService.Data.Entities;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 
 namespace Maliev.CountryService.Api.Services;
 
@@ -14,20 +14,69 @@ namespace Maliev.CountryService.Api.Services;
 public class BulkImportService : IBulkImportService
 {
     private readonly CountryServiceDbContext _context;
-    private readonly IValidator<CreateCountryRequest> _countryValidator;
     private readonly ICountryService _countryService;
     private readonly ILogger<BulkImportService> _logger;
 
     public BulkImportService(
         CountryServiceDbContext context,
-        IValidator<CreateCountryRequest> countryValidator,
         ICountryService countryService,
         ILogger<BulkImportService> logger)
     {
         _context = context;
-        _countryValidator = countryValidator;
         _countryService = countryService;
         _logger = logger;
+    }
+
+    private List<string> ValidateCountryRequest(CreateCountryRequest country)
+    {
+        var errors = new List<string>();
+
+        // ISO2 validation
+        if (string.IsNullOrWhiteSpace(country.Iso2))
+            errors.Add("ISO2 code is required");
+        else if (country.Iso2.Length != 2)
+            errors.Add("ISO2 code must be exactly 2 characters");
+        else if (!Regex.IsMatch(country.Iso2, "^[A-Z]{2}$"))
+            errors.Add("ISO2 code must be uppercase letters only");
+
+        // ISO3 validation
+        if (string.IsNullOrWhiteSpace(country.Iso3))
+            errors.Add("ISO3 code is required");
+        else if (country.Iso3.Length != 3)
+            errors.Add("ISO3 code must be exactly 3 characters");
+        else if (!Regex.IsMatch(country.Iso3, "^[A-Z]{3}$"))
+            errors.Add("ISO3 code must be uppercase letters only");
+
+        // Name validation
+        if (string.IsNullOrWhiteSpace(country.Name))
+            errors.Add("Country name is required");
+        else if (country.Name.Length > 100)
+            errors.Add("Country name must not exceed 100 characters");
+
+        // Optional field validations
+        if (!string.IsNullOrWhiteSpace(country.OfficialName) && country.OfficialName.Length > 200)
+            errors.Add("Official name must not exceed 200 characters");
+
+        if (!string.IsNullOrWhiteSpace(country.NumericCode) &&
+            (country.NumericCode.Length != 3 || !Regex.IsMatch(country.NumericCode, "^[0-9]{3}$")))
+            errors.Add("Numeric code must be exactly 3 digits");
+
+        if (country.Latitude.HasValue && (country.Latitude.Value < -90 || country.Latitude.Value > 90))
+            errors.Add("Latitude must be between -90 and 90");
+
+        if (country.Longitude.HasValue && (country.Longitude.Value < -180 || country.Longitude.Value > 180))
+            errors.Add("Longitude must be between -180 and 180");
+
+        if (country.AreaKm2.HasValue && country.AreaKm2.Value <= 0)
+            errors.Add("Area must be greater than 0");
+
+        if (country.Population.HasValue && country.Population.Value < 0)
+            errors.Add("Population cannot be negative");
+
+        if (country.GiniCoefficient.HasValue && (country.GiniCoefficient.Value < 0 || country.GiniCoefficient.Value > 100))
+            errors.Add("Gini coefficient must be between 0 and 100");
+
+        return errors;
     }
 
     /// <summary>
@@ -42,9 +91,10 @@ public class BulkImportService : IBulkImportService
             Status = "Validating",
             TotalRecords = request.Countries.Count,
             ProcessedRecords = 0,
-            UserId = userId,
+            CreatedBy = userId,
             CreatedAtUtc = DateTime.UtcNow,
-            StartedAtUtc = DateTime.UtcNow
+            StartedAtUtc = DateTime.UtcNow,
+            ValidationErrors = "[]"
         };
 
         _context.BulkImportJobs.Add(job);
@@ -74,17 +124,17 @@ public class BulkImportService : IBulkImportService
             var country = request.Countries[i];
             var rowNumber = i + 1;
 
-            // FluentValidation check
-            var validationResult = await _countryValidator.ValidateAsync(country, cancellationToken);
-            if (!validationResult.IsValid)
+            // Manual validation check
+            var validationErrors = ValidateCountryRequest(country);
+            if (validationErrors.Any())
             {
-                foreach (var error in validationResult.Errors)
+                foreach (var error in validationErrors)
                 {
                     errors.Add(new ValidationErrorResponse
                     {
                         RowNumber = rowNumber,
-                        Field = error.PropertyName,
-                        Message = error.ErrorMessage
+                        Field = "Request",
+                        Message = error
                     });
                 }
                 continue; // Skip duplicate checks if basic validation failed
@@ -171,8 +221,9 @@ public class BulkImportService : IBulkImportService
     /// </summary>
     public async Task<BulkImportStatusResponse> ProcessImportAsync(Guid jobId, CancellationToken cancellationToken = default)
     {
+        var longId = GetLongIdFromGuid(jobId);
         var job = await _context.BulkImportJobs
-            .FirstOrDefaultAsync(j => j.Id == (long)jobId.GetHashCode(), cancellationToken);
+            .FirstOrDefaultAsync(j => j.Id == longId, cancellationToken);
 
         if (job == null)
         {
@@ -228,7 +279,6 @@ public class BulkImportService : IBulkImportService
             _logger.LogError(ex, "Bulk import processing failed: JobId {JobId}", job.Id);
 
             job.Status = "Failed";
-            job.ErrorMessage = ex.Message;
             job.CompletedAtUtc = DateTime.UtcNow;
             await _context.SaveChangesAsync(cancellationToken);
 
@@ -243,8 +293,9 @@ public class BulkImportService : IBulkImportService
     /// </summary>
     public async Task<BulkImportStatusResponse?> GetJobStatusAsync(Guid jobId, CancellationToken cancellationToken = default)
     {
+        var longId = GetLongIdFromGuid(jobId);
         var job = await _context.BulkImportJobs
-            .FirstOrDefaultAsync(j => j.Id == (long)jobId.GetHashCode(), cancellationToken);
+            .FirstOrDefaultAsync(j => j.Id == longId, cancellationToken);
 
         if (job == null)
         {
@@ -260,9 +311,16 @@ public class BulkImportService : IBulkImportService
 
     private BulkImportStatusResponse MapToStatusResponse(BulkImportJob job, List<ValidationErrorResponse> errors)
     {
+        // Calculate duration if both timestamps are available
+        long? durationMs = null;
+        if (job.CompletedAtUtc.HasValue && job.StartedAtUtc.HasValue)
+        {
+            durationMs = (long)(job.CompletedAtUtc.Value - job.StartedAtUtc.Value).TotalMilliseconds;
+        }
+
         return new BulkImportStatusResponse
         {
-            JobId = Guid.NewGuid(), // Simplified - in production would use actual GUID
+            JobId = CreateGuidFromLongId(job.Id),
             Status = job.Status,
             TotalRecords = job.TotalRecords,
             ProcessedRecords = job.ProcessedRecords,
@@ -270,7 +328,23 @@ public class BulkImportService : IBulkImportService
             CreatedAtUtc = job.CreatedAtUtc,
             StartedAtUtc = job.StartedAtUtc,
             CompletedAtUtc = job.CompletedAtUtc,
-            DurationMs = job.DurationMs
+            DurationMs = durationMs
         };
+    }
+
+    private Guid CreateGuidFromLongId(long id)
+    {
+        // Create deterministic GUID from long ID
+        byte[] bytes = new byte[16];
+        byte[] idBytes = BitConverter.GetBytes(id);
+        Array.Copy(idBytes, 0, bytes, 0, idBytes.Length);
+        return new Guid(bytes);
+    }
+
+    private long GetLongIdFromGuid(Guid guid)
+    {
+        // Extract long ID from GUID
+        byte[] bytes = guid.ToByteArray();
+        return BitConverter.ToInt64(bytes, 0);
     }
 }

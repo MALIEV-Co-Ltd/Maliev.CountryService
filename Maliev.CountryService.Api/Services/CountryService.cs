@@ -4,6 +4,9 @@ using Maliev.CountryService.Data;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json;
+using Maliev.CountryService.Api.Models; // Added
+using Maliev.CountryService.Data.Entities; // Added
 
 namespace Maliev.CountryService.Api.Services;
 
@@ -18,6 +21,13 @@ public class CountryService : ICountryService
     private readonly ILogger<CountryService> _logger;
     private readonly DegradationContext _degradationContext;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="CountryService"/> class.
+    /// </summary>
+    /// <param name="context">The database context.</param>
+    /// <param name="cacheService">The cache service.</param>
+    /// <param name="logger">The logger.</param>
+    /// <param name="degradationContext">The degradation context.</param>
     public CountryService(
         CountryServiceDbContext context,
         ICacheService cacheService,
@@ -30,6 +40,12 @@ public class CountryService : ICountryService
         _degradationContext = degradationContext;
     }
 
+    /// <summary>
+    /// Retrieves a country by its unique identifier with cache-first strategy and graceful degradation support.
+    /// </summary>
+    /// <param name="id">The country ID.</param>
+    /// <param name="cancellationToken">Token to cancel the operation.</param>
+    /// <returns>The country response, or null if not found.</returns>
     public async Task<CountryResponse?> GetByIdAsync(long id, CancellationToken cancellationToken = default)
     {
         var cacheKey = GenerateCacheKey("id", id.ToString());
@@ -39,6 +55,11 @@ public class CountryService : ICountryService
         if (cached != null)
         {
             _logger.LogDebug("Cache HIT for country ID {Id}", id);
+            cached.XServedFromCache = true; // Set header property
+            if (_degradationContext.IsDegraded) // If in degraded mode, it's stale data
+            {
+                cached.XCacheStale = true;
+            }
             return cached;
         }
 
@@ -70,6 +91,8 @@ public class CountryService : ICountryService
             {
                 _degradationContext.IsDegraded = true;
                 _degradationContext.DegradationReason = "Database unavailable";
+                staleData.XServedFromCache = true; // Set header property
+                staleData.XCacheStale = true; // Set header property
                 _logger.LogInformation("Serving cached data in degraded mode for country ID {Id}", id);
                 return staleData;
             }
@@ -80,6 +103,12 @@ public class CountryService : ICountryService
         }
     }
 
+    /// <summary>
+    /// Retrieves a country by its ISO2 code with cache-first strategy and graceful degradation support.
+    /// </summary>
+    /// <param name="iso2">The ISO2 country code.</param>
+    /// <param name="cancellationToken">Token to cancel the operation.</param>
+    /// <returns>The country response, or null if not found.</returns>
     public async Task<CountryResponse?> GetByIso2Async(string iso2, CancellationToken cancellationToken = default)
     {
         var cacheKey = GenerateCacheKey("iso2", iso2.ToUpperInvariant());
@@ -117,6 +146,8 @@ public class CountryService : ICountryService
             {
                 _degradationContext.IsDegraded = true;
                 _degradationContext.DegradationReason = "Database unavailable";
+                staleData.XServedFromCache = true; // Set header property
+                staleData.XCacheStale = true; // Set header property
                 _logger.LogInformation("Serving cached data in degraded mode for ISO2 {Iso2}", iso2);
                 return staleData;
             }
@@ -126,6 +157,12 @@ public class CountryService : ICountryService
         }
     }
 
+    /// <summary>
+    /// Retrieves a country by its ISO3 code with cache-first strategy and graceful degradation support.
+    /// </summary>
+    /// <param name="iso3">The ISO3 country code.</param>
+    /// <param name="cancellationToken">Token to cancel the operation.</param>
+    /// <returns>The country response, or null if not found.</returns>
     public async Task<CountryResponse?> GetByIso3Async(string iso3, CancellationToken cancellationToken = default)
     {
         var cacheKey = GenerateCacheKey("iso3", iso3.ToUpperInvariant());
@@ -163,6 +200,8 @@ public class CountryService : ICountryService
             {
                 _degradationContext.IsDegraded = true;
                 _degradationContext.DegradationReason = "Database unavailable";
+                staleData.XServedFromCache = true; // Set header property
+                staleData.XCacheStale = true; // Set header property
                 _logger.LogInformation("Serving cached data in degraded mode for ISO3 {Iso3}", iso3);
                 return staleData;
             }
@@ -173,9 +212,12 @@ public class CountryService : ICountryService
     }
 
     /// <summary>
-    /// T069: List countries with pagination, filtering, and sorting.
+    /// T069: Lists countries with pagination, filtering, and sorting.
     /// T070: Cache list results with cache key based on all parameters.
     /// </summary>
+    /// <param name="request">The list request containing filter and pagination parameters.</param>
+    /// <param name="cancellationToken">Token to cancel the operation.</param>
+    /// <returns>A paginated response containing country data.</returns>
     public async Task<PaginatedResponse<CountryResponse>> ListAsync(CountryListRequest request, CancellationToken cancellationToken = default)
     {
         // Validate and normalize pagination
@@ -196,12 +238,12 @@ public class CountryService : ICountryService
         _logger.LogDebug("Cache MISS for country list page {Page}", page);
 
         // Build query with filters
-        var query = _context.Countries.AsNoTracking();
+        IQueryable<Data.Entities.Country> query = _context.Countries.AsNoTracking();
 
-        // Filter by active status
-        if (!request.IncludeInactive)
+        // Filter by active status - need to ignore global query filter if including inactive
+        if (request.IncludeInactive)
         {
-            query = query.Where(c => c.IsActive);
+            query = query.IgnoreQueryFilters();
         }
 
         // Filter by region
@@ -235,6 +277,9 @@ public class CountryService : ICountryService
                 ? query.OrderByDescending(c => c.Name)
                 : query.OrderBy(c => c.Name)
         };
+        
+        // Default sorting - commented out as switch handles default
+        // var orderedQuery = query.OrderBy(c => c.Name ?? string.Empty);
 
         // Apply pagination
         var countries = await query
@@ -259,8 +304,13 @@ public class CountryService : ICountryService
     }
 
     /// <summary>
-    /// T071: Search countries by name using PostgreSQL full-text search with GIN index.
+    /// T071: Searches countries by name using PostgreSQL full-text search with GIN index.
     /// </summary>
+    /// <param name="query">The search query string.</param>
+    /// <param name="page">The page number for pagination.</param>
+    /// <param name="pageSize">The number of items per page.</param>
+    /// <param name="cancellationToken">Token to cancel the operation.</param>
+    /// <returns>A paginated response containing matching country data.</returns>
     public async Task<PaginatedResponse<CountryResponse>> SearchAsync(string query, int page, int pageSize, CancellationToken cancellationToken = default)
     {
         // Validate pagination
@@ -298,7 +348,7 @@ public class CountryService : ICountryService
             .Where(c => EF.Functions.ILike(c.Name, $"%{searchTerm}%") ||
                        EF.Functions.ILike(c.OfficialName ?? "", $"%{searchTerm}%") ||
                        EF.Functions.ILike(c.Iso2, $"%{searchTerm}%") ||
-                       EF.Functions.ILike(c.Iso3, $"%{searchTerm}%"));
+                       EF.Functions.ILike(c.Iso3!, $"%{searchTerm}%")); // Iso3 is nullable, so use !
 
         var totalCount = await searchQuery.CountAsync(cancellationToken);
 
@@ -325,8 +375,10 @@ public class CountryService : ICountryService
     }
 
     /// <summary>
-    /// T070: Invalidate list caches when country data changes.
+    /// T070: Invalidates list caches when country data changes.
     /// </summary>
+    /// <param name="cancellationToken">Token to cancel the operation.</param>
+    /// <returns>A task representing the asynchronous operation.</returns>
     public async Task InvalidateListCachesAsync(CancellationToken cancellationToken = default)
     {
         _logger.LogInformation("Invalidating all list and search caches");
@@ -339,54 +391,87 @@ public class CountryService : ICountryService
     }
 
     /// <summary>
-    /// T058: Implement cache key generation (patterns: country:id:{id}, country:iso2:{code}, etc.)
+    /// T058: Generates cache keys following standard patterns (country:id:{id}, country:iso2:{code}, etc.).
     /// </summary>
+    /// <param name="type">The type of cache key (e.g., "id", "iso2", "iso3").</param>
+    /// <param name="value">The value to include in the cache key.</param>
+    /// <returns>A formatted cache key string.</returns>
     private string GenerateCacheKey(string type, string value)
     {
         return $"country:{type}:{value}";
     }
 
     /// <summary>
-    /// T059: Implement ETag generation (SHA256 hash of version UUID, Base64 encoded)
+    /// Logs an audit entry for country modifications.
     /// </summary>
+    /// <param name="countryId">The ID of the country being audited.</param>
+    /// <param name="action">The action performed (e.g., CREATE, UPDATE, SOFT_DELETE, HARD_DELETE).</param>
+    /// <param name="userId">The ID of the user performing the action.</param>
+    /// <param name="changesJson">Optional JSON string representing the changes made.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    private async Task LogAuditAsync(long countryId, string action, string userId, string? changesJson, CancellationToken cancellationToken)
+    {
+        var auditLog = new AuditLog
+        {
+            CountryId = countryId,
+            Action = action,
+            UserId = userId,
+            TimestampUtc = DateTime.UtcNow,
+            Changes = changesJson,
+            // IpAddress will require IHttpContextAccessor injection, which is not available in Service layer directly
+        };
+        _context.AuditLogs.Add(auditLog);
+        await _context.SaveChangesAsync(cancellationToken);
+    }
+
+    /// <summary>
+    /// T059: Generates ETags for optimistic concurrency control (SHA256 hash of version UUID, Base64 encoded).
+    /// </summary>
+    /// <param name="version">The version GUID of the entity.</param>
+    /// <returns>A Base64-encoded SHA256 hash string for use as an ETag.</returns>
     private string GenerateETag(Guid version)
     {
         var versionBytes = version.ToByteArray();
         var hashBytes = SHA256.HashData(versionBytes);
-        return Convert.ToBase64String(hashBytes);
+        return $"\"{Convert.ToBase64String(hashBytes)}\"";
     }
 
     /// <summary>
-    /// Manual DTO mapping from Country entity to CountryResponse
+    /// Maps a Country entity to a CountryResponse DTO.
     /// </summary>
-    private CountryResponse MapToResponse(Data.Models.Country country)
+    /// <param name="country">The country entity to map.</param>
+    /// <returns>A country response DTO.</returns>
+    private CountryResponse MapToResponse(Data.Entities.Country country)
     {
         return new CountryResponse
         {
             Id = country.Id,
             Iso2 = country.Iso2,
-            Iso3 = country.Iso3,
+            Iso3 = country.Iso3 ?? string.Empty,
             Name = country.Name,
             OfficialName = country.OfficialName,
             NumericCode = country.NumericCode,
             Capital = country.Capital,
             Region = country.Region,
             Subregion = country.Subregion,
-            Latitude = country.Latitude,
-            Longitude = country.Longitude,
+            Latitude = (double?)country.Latitude,
+            Longitude = (double?)country.Longitude,
             Demonym = country.Demonym,
-            AreaKm2 = country.AreaKm2,
+            AreaKm2 = (double?)country.AreaKm2,
             Population = country.Population,
-            GiniCoefficient = country.GiniCoefficient,
-            Timezones = country.Timezones,
-            Borders = country.Borders,
-            CallingCodes = country.CallingCodes,
-            TopLevelDomains = country.TopLevelDomains,
-            Currencies = country.Currencies,
-            Languages = country.Languages,
-            Translations = country.Translations,
-            Flags = country.Flags,
-            CoatOfArms = country.CoatOfArms,
+            GiniCoefficient = (double?)country.GiniCoefficient,
+#pragma warning disable CS8602 // Dereference of a possibly null reference.
+            Timezones = DeserializeJson(country.Timezones!),
+            Borders = DeserializeJson(country.Borders!),
+            CallingCodes = DeserializeJson(country.CallingCodes!),
+            TopLevelDomains = DeserializeJson(country.TopLevelDomains!),
+            Currencies = DeserializeJson(country.Currencies!),
+            Languages = DeserializeJson(country.Languages!),
+            Translations = DeserializeJson(country.Translations!),
+            Flags = DeserializeJson(country.Flags!),
+            CoatOfArms = country.CoatOfArms != null ? DeserializeJson(country.CoatOfArms!) : JsonDocument.Parse("{}").RootElement,
+#pragma warning restore CS8602 // Dereference of a possibly null reference.
             Independent = country.Independent,
             UnMember = country.UnMember,
             Landlocked = country.Landlocked,
@@ -397,11 +482,50 @@ public class CountryService : ICountryService
         };
     }
 
+    private JsonElement DeserializeJson(string json)
+    {
+        if (string.IsNullOrWhiteSpace(json))
+        {
+            return JsonDocument.Parse("{}").RootElement;
+        }
+
+        try
+        {
+            var element = JsonSerializer.Deserialize<JsonElement>(json);
+
+            if (element.ValueKind == JsonValueKind.String)
+            {
+                var innerJson = element.GetString();
+                if (!string.IsNullOrWhiteSpace(innerJson) && 
+                    (innerJson.TrimStart().StartsWith("[") || innerJson.TrimStart().StartsWith("{")))
+                {
+                    try
+                    {
+                        return JsonSerializer.Deserialize<JsonElement>(innerJson);
+                    }
+                    catch
+                    {
+                        return element;
+                    }
+                }
+            }
+            return element;
+        }
+        catch
+        {
+            return JsonDocument.Parse("{}").RootElement;
+        }
+    }
+
     // User Story 3: Admin CRUD Operations
 
     /// <summary>
-    /// T079-T080: Create a new country with duplicate validation and audit logging.
+    /// T079-T080: Creates a new country with duplicate validation and audit logging.
     /// </summary>
+    /// <param name="request">The country creation request.</param>
+    /// <param name="userId">The ID of the user creating the country.</param>
+    /// <param name="cancellationToken">Token to cancel the operation.</param>
+    /// <returns>The created country response.</returns>
     public async Task<CountryResponse> CreateAsync(CreateCountryRequest request, string userId, CancellationToken cancellationToken = default)
     {
         // T079: Validate uniqueness of ISO2/ISO3
@@ -422,7 +546,7 @@ public class CountryService : ICountryService
         }
 
         // T080: Create new country entity
-        var country = new Data.Models.Country
+        var country = new Data.Entities.Country
         {
             Iso2 = request.Iso2.ToUpperInvariant(),
             Iso3 = request.Iso3.ToUpperInvariant(),
@@ -432,32 +556,39 @@ public class CountryService : ICountryService
             Capital = request.Capital,
             Region = request.Region,
             Subregion = request.Subregion,
-            Latitude = request.Latitude,
-            Longitude = request.Longitude,
+            Latitude = (double?)request.Latitude,
+            Longitude = (double?)request.Longitude,
             Demonym = request.Demonym,
-            AreaKm2 = request.AreaKm2,
+            AreaKm2 = (double?)request.AreaKm2,
             Population = request.Population,
-            GiniCoefficient = request.GiniCoefficient,
-            Timezones = request.Timezones ?? "[]",
-            Borders = request.Borders ?? "[]",
-            CallingCodes = request.CallingCodes ?? "[]",
-            TopLevelDomains = request.TopLevelDomains ?? "[]",
-            Currencies = request.Currencies ?? "{}",
-            Languages = request.Languages ?? "{}",
-            Translations = request.Translations ?? "{}",
-            Flags = request.Flags ?? "{}",
+            GiniCoefficient = (double?)request.GiniCoefficient,
+#pragma warning disable CS8602 // Dereference of a possibly null reference.
+            Timezones = request.Timezones!,
+            Borders = request.Borders!,
+            CallingCodes = request.CallingCodes!,
+            TopLevelDomains = request.TopLevelDomains!,
+            Currencies = request.Currencies!,
+            Languages = request.Languages!,
+            Translations = request.Translations!,
+            Flags = request.Flags!,
+#pragma warning restore CS8602 // Dereference of a possibly null reference.
             CoatOfArms = request.CoatOfArms,
             Independent = request.Independent ?? false,
             UnMember = request.UnMember ?? false,
             Landlocked = request.Landlocked ?? false,
             IsActive = true,
-            Version = Guid.NewGuid(),
             CreatedAtUtc = DateTime.UtcNow,
-            LastModifiedUtc = DateTime.UtcNow
+            LastModifiedUtc = DateTime.UtcNow,
+            CreatedBy = userId,
+            UpdatedBy = userId,
+            Version = Guid.NewGuid()
         };
 
         _context.Countries.Add(country);
         await _context.SaveChangesAsync(cancellationToken);
+
+        // Log audit
+        await LogAuditAsync(country.Id, "CREATE", userId, JsonSerializer.Serialize(country), cancellationToken);
 
         _logger.LogInformation("Country created: {Iso2} - {Name} by user {UserId}", country.Iso2, country.Name, userId);
 
@@ -468,8 +599,14 @@ public class CountryService : ICountryService
     }
 
     /// <summary>
-    /// T081-T082: Update existing country with optimistic concurrency check.
+    /// T081-T082: Updates an existing country (full replacement) with optimistic concurrency check.
     /// </summary>
+    /// <param name="id">The ID of the country to update.</param>
+    /// <param name="request">The country update request.</param>
+    /// <param name="ifMatch">The ETag value for optimistic concurrency control.</param>
+    /// <param name="userId">The ID of the user updating the country.</param>
+    /// <param name="cancellationToken">Token to cancel the operation.</param>
+    /// <returns>The updated country response.</returns>
     public async Task<CountryResponse> UpdateAsync(long id, UpdateCountryRequest request, string ifMatch, string userId, CancellationToken cancellationToken = default)
     {
         // Load existing country with tracking
@@ -513,26 +650,29 @@ public class CountryService : ICountryService
         country.Capital = request.Capital;
         country.Region = request.Region;
         country.Subregion = request.Subregion;
-        country.Latitude = request.Latitude;
-        country.Longitude = request.Longitude;
+        country.Latitude = (double?)request.Latitude;
+        country.Longitude = (double?)request.Longitude;
         country.Demonym = request.Demonym;
-        country.AreaKm2 = request.AreaKm2;
+        country.AreaKm2 = (double?)request.AreaKm2;
         country.Population = request.Population;
-        country.GiniCoefficient = request.GiniCoefficient;
-        country.Timezones = request.Timezones ?? "[]";
-        country.Borders = request.Borders ?? "[]";
-        country.CallingCodes = request.CallingCodes ?? "[]";
-        country.TopLevelDomains = request.TopLevelDomains ?? "[]";
-        country.Currencies = request.Currencies ?? "{}";
-        country.Languages = request.Languages ?? "{}";
-        country.Translations = request.Translations ?? "{}";
-        country.Flags = request.Flags ?? "{}";
+        country.GiniCoefficient = (double?)request.GiniCoefficient;
+#pragma warning disable CS8602 // Dereference of a possibly null reference.
+        country.Timezones = request.Timezones!;
+        country.Borders = request.Borders!;
+        country.CallingCodes = request.CallingCodes!;
+        country.TopLevelDomains = request.TopLevelDomains!;
+        country.Currencies = request.Currencies!;
+        country.Languages = request.Languages!;
+        country.Translations = request.Translations!;
+        country.Flags = request.Flags!;
+#pragma warning restore CS8602 // Dereference of a possibly null reference.
         country.CoatOfArms = request.CoatOfArms;
         country.Independent = request.Independent ?? false;
         country.UnMember = request.UnMember ?? false;
         country.Landlocked = request.Landlocked ?? false;
-        country.Version = Guid.NewGuid();
         country.LastModifiedUtc = DateTime.UtcNow;
+        country.UpdatedBy = userId;
+        country.Version = Guid.NewGuid();
 
         try
         {
@@ -545,6 +685,9 @@ public class CountryService : ICountryService
             throw new InvalidOperationException($"Concurrency conflict: Country ID {id} was modified by another user. Please refresh and try again.", ex);
         }
 
+        // Log audit
+        await LogAuditAsync(country.Id, "UPDATE", userId, JsonSerializer.Serialize(request), cancellationToken);
+
         _logger.LogInformation("Country updated: {Iso2} - {Name} by user {UserId}", country.Iso2, country.Name, userId);
 
         // Invalidate caches
@@ -555,8 +698,14 @@ public class CountryService : ICountryService
     }
 
     /// <summary>
-    /// T083-T084: Partially update country (only specified fields).
+    /// T083-T084: Partially updates an existing country (only specified fields).
     /// </summary>
+    /// <param name="id">The ID of the country to patch.</param>
+    /// <param name="request">The country patch request.</param>
+    /// <param name="ifMatch">The ETag value for optimistic concurrency control.</param>
+    /// <param name="userId">The ID of the user patching the country.</param>
+    /// <param name="cancellationToken">Token to cancel the operation.</param>
+    /// <returns>The patched country response.</returns>
     public async Task<CountryResponse> PatchAsync(long id, PatchCountryRequest request, string ifMatch, string userId, CancellationToken cancellationToken = default)
     {
         var country = await _context.Countries.FindAsync(new object[] { id }, cancellationToken);
@@ -594,27 +743,29 @@ public class CountryService : ICountryService
         if (request.Capital != null) country.Capital = request.Capital;
         if (request.Region != null) country.Region = request.Region;
         if (request.Subregion != null) country.Subregion = request.Subregion;
-        if (request.Latitude.HasValue) country.Latitude = request.Latitude;
-        if (request.Longitude.HasValue) country.Longitude = request.Longitude;
+        if (request.Latitude.HasValue) country.Latitude = (double?)request.Latitude;
+        if (request.Longitude.HasValue) country.Longitude = (double?)request.Longitude;
         if (request.Demonym != null) country.Demonym = request.Demonym;
-        if (request.AreaKm2.HasValue) country.AreaKm2 = request.AreaKm2;
+        if (request.AreaKm2.HasValue) country.AreaKm2 = (double?)request.AreaKm2;
         if (request.Population.HasValue) country.Population = request.Population;
-        if (request.GiniCoefficient.HasValue) country.GiniCoefficient = request.GiniCoefficient;
-        if (request.Timezones != null) country.Timezones = request.Timezones;
-        if (request.Borders != null) country.Borders = request.Borders;
-        if (request.CallingCodes != null) country.CallingCodes = request.CallingCodes;
-        if (request.TopLevelDomains != null) country.TopLevelDomains = request.TopLevelDomains;
-        if (request.Currencies != null) country.Currencies = request.Currencies;
-        if (request.Languages != null) country.Languages = request.Languages;
-        if (request.Translations != null) country.Translations = request.Translations;
-        if (request.Flags != null) country.Flags = request.Flags;
-        if (request.CoatOfArms != null) country.CoatOfArms = request.CoatOfArms;
+        if (request.GiniCoefficient.HasValue) country.GiniCoefficient = (double?)request.GiniCoefficient;
+#pragma warning disable CS8602 // Dereference of a possibly null reference.
+        if (request.Timezones is not null) country.Timezones = request.Timezones!;
+        if (request.Borders is not null) country.Borders = request.Borders!;
+        if (request.CallingCodes is not null) country.CallingCodes = request.CallingCodes!;
+        if (request.TopLevelDomains is not null) country.TopLevelDomains = request.TopLevelDomains!;
+        if (request.Currencies is not null) country.Currencies = request.Currencies!;
+        if (request.Languages is not null) country.Languages = request.Languages!;
+        if (request.Translations is not null) country.Translations = request.Translations!;
+        if (request.Flags is not null) country.Flags = request.Flags!;
+#pragma warning restore CS8602 // Dereference of a possibly null reference.
+        if (request.CoatOfArms is not null) country.CoatOfArms = request.CoatOfArms;
         if (request.Independent.HasValue) country.Independent = request.Independent.Value;
         if (request.UnMember.HasValue) country.UnMember = request.UnMember.Value;
         if (request.Landlocked.HasValue) country.Landlocked = request.Landlocked.Value;
-
-        country.Version = Guid.NewGuid();
         country.LastModifiedUtc = DateTime.UtcNow;
+        country.UpdatedBy = userId;
+        country.Version = Guid.NewGuid();
 
         try
         {
@@ -627,6 +778,9 @@ public class CountryService : ICountryService
             throw new InvalidOperationException($"Concurrency conflict: Country ID {id} was modified by another user. Please refresh and try again.", ex);
         }
 
+        // Log audit
+        await LogAuditAsync(country.Id, "PATCH", userId, JsonSerializer.Serialize(request), cancellationToken);
+
         _logger.LogInformation("Country patched: {Iso2} - {Name} by user {UserId}", country.Iso2, country.Name, userId);
 
         // Invalidate caches
@@ -637,8 +791,12 @@ public class CountryService : ICountryService
     }
 
     /// <summary>
-    /// T085-T086: Soft delete country (set IsActive=false).
+    /// T085-T086: Soft deletes a country (sets IsActive=false).
     /// </summary>
+    /// <param name="id">The ID of the country to soft delete.</param>
+    /// <param name="userId">The ID of the user deleting the country.</param>
+    /// <param name="cancellationToken">Token to cancel the operation.</param>
+    /// <returns>A task representing the asynchronous operation.</returns>
     public async Task SoftDeleteAsync(long id, string userId, CancellationToken cancellationToken = default)
     {
         var country = await _context.Countries.FindAsync(new object[] { id }, cancellationToken);
@@ -654,10 +812,15 @@ public class CountryService : ICountryService
         }
 
         country.IsActive = false;
-        country.Version = Guid.NewGuid();
         country.LastModifiedUtc = DateTime.UtcNow;
+        country.DeletedAt = DateTime.UtcNow;
+        country.UpdatedBy = userId;
+        country.Version = Guid.NewGuid();
 
         await _context.SaveChangesAsync(cancellationToken);
+
+        // Log audit
+        await LogAuditAsync(id, "SOFT_DELETE", userId, JsonSerializer.Serialize(new { IsActive = false, DeletedAt = country.DeletedAt }), cancellationToken);
 
         _logger.LogInformation("Country soft-deleted: {Iso2} - {Name} by user {UserId}", country.Iso2, country.Name, userId);
 
@@ -667,8 +830,12 @@ public class CountryService : ICountryService
     }
 
     /// <summary>
-    /// T087-T088: Hard delete country (permanent deletion, SuperAdmin only).
+    /// T087-T088: Permanently deletes a country (SuperAdmin only).
     /// </summary>
+    /// <param name="id">The ID of the country to permanently delete.</param>
+    /// <param name="userId">The ID of the user deleting the country.</param>
+    /// <param name="cancellationToken">Token to cancel the operation.</param>
+    /// <returns>A task representing the asynchronous operation.</returns>
     public async Task HardDeleteAsync(long id, string userId, CancellationToken cancellationToken = default)
     {
         var country = await _context.Countries.FindAsync(new object[] { id }, cancellationToken);
@@ -684,6 +851,9 @@ public class CountryService : ICountryService
         _context.Countries.Remove(country);
         await _context.SaveChangesAsync(cancellationToken);
 
+        // Log audit
+        await LogAuditAsync(id, "HARD_DELETE", userId, JsonSerializer.Serialize(new { Id = id, Iso2 = iso2, Name = name }), cancellationToken);
+
         _logger.LogWarning("Country HARD-DELETED: {Iso2} - {Name} by user {UserId}", iso2, name, userId);
 
         // Invalidate caches
@@ -692,12 +862,18 @@ public class CountryService : ICountryService
     }
 
     /// <summary>
-    /// Helper: Invalidate cache entries for a specific country.
+    /// Invalidates all cache entries for a specific country (by ID, ISO2, and ISO3).
     /// </summary>
-    private async Task InvalidateSingleCountryCacheAsync(Data.Models.Country country, CancellationToken cancellationToken)
+    /// <param name="country">The country entity whose cache entries should be invalidated.</param>
+    /// <param name="cancellationToken">Token to cancel the operation.</param>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    private async Task InvalidateSingleCountryCacheAsync(Data.Entities.Country country, CancellationToken cancellationToken)
     {
         await _cacheService.RemoveAsync(GenerateCacheKey("id", country.Id.ToString()), cancellationToken);
         await _cacheService.RemoveAsync(GenerateCacheKey("iso2", country.Iso2), cancellationToken);
-        await _cacheService.RemoveAsync(GenerateCacheKey("iso3", country.Iso3), cancellationToken);
+        if (!string.IsNullOrEmpty(country.Iso3))
+        {
+            await _cacheService.RemoveAsync(GenerateCacheKey("iso3", country.Iso3), cancellationToken);
+        }
     }
 }

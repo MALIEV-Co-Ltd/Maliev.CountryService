@@ -1,14 +1,19 @@
+# syntax=docker/dockerfile:1.4
 # Multi-stage Dockerfile for Maliev Country Service
 # Build from repository root: docker build -t maliev-country-service .
 
 # Build stage
-FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
 
 # Copy csproj files and restore dependencies
 COPY ["Maliev.CountryService.Api/Maliev.CountryService.Api.csproj", "Maliev.CountryService.Api/"]
 COPY ["Maliev.CountryService.Data/Maliev.CountryService.Data.csproj", "Maliev.CountryService.Data/"]
-RUN dotnet restore "Maliev.CountryService.Api/Maliev.CountryService.Api.csproj"
+RUN --mount=type=secret,id=nuget_username \
+  --mount=type=secret,id=nuget_password \
+  NUGET_USERNAME=$(cat /run/secrets/nuget_username) \
+  NUGET_PASSWORD=$(cat /run/secrets/nuget_password) \
+  dotnet restore "Maliev.CountryService.Api/Maliev.CountryService.Api.csproj"
 
 # Copy source code and build
 COPY . .
@@ -20,19 +25,19 @@ FROM build AS publish
 RUN dotnet publish "Maliev.CountryService.Api.csproj" -c Release -o /app/publish /p:UseAppHost=false
 
 # Runtime stage
-FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS final
+FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
 WORKDIR /app
 
 # Create non-root user (security best practice)
-RUN adduser --disabled-password --gecos "" --uid 10001 appuser && \
-    mkdir -p /app/logs && \
-    chown -R appuser:appuser /app
+RUN adduser --disabled-password --gecos "" --uid 10001 app && \
+  mkdir -p /app/logs && \
+  chown -R app:app /app
 
 # Copy published application
 COPY --from=publish /app/publish .
 
 # Switch to non-root user
-USER appuser
+USER app
 
 # Expose application port
 EXPOSE 8080

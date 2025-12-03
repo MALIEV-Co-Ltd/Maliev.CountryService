@@ -16,10 +16,13 @@ jobs:
       - name: Set up .NET
         uses: actions/setup-dotnet@v5
         with:
-          dotnet-version: "9.x"
+          dotnet-version: "10.x"
 
       - name: Restore dependencies
         run: dotnet restore Maliev.CountryService.sln
+        env:
+          NUGET_USERNAME: ${{ github.actor }}
+          NUGET_PASSWORD: ${{ secrets.GITOPS_PAT }}
 
       - name: Build
         run: dotnet build Maliev.CountryService.sln --no-restore
@@ -38,10 +41,19 @@ jobs:
         with:
           project_id: maliev-website
 
+      - name: Switch to PackageReference for deployment
+        run: |
+          # Replace ProjectReference with PackageReference in all service csproj files
+          find . -name "*.csproj" -type f -exec sed -i 's|<ProjectReference Include=".*Maliev.Aspire.ServiceDefaults.*.csproj" />|<PackageReference Include="Maliev.Aspire.ServiceDefaults" Version="1.0.*" />|g' {} ;
+          echo "Switched to PackageReference for ServiceDefaults"
+
       - name: Build and push Docker image
         run: |
           gcloud auth configure-docker asia-southeast1-docker.pkg.dev
-          docker build -t asia-southeast1-docker.pkg.dev/maliev-website/maliev-website-artifact-prod/maliev-country-service:${{ github.sha }} -f Maliev.CountryService.Api/Dockerfile .
+          NUGET_USERNAME=${{ github.actor }} NUGET_PASSWORD=${{ secrets.GITOPS_PAT }} docker build \
+            --secret id=nuget_username,env=NUGET_USERNAME \
+            --secret id=nuget_password,env=NUGET_PASSWORD \
+            -t asia-southeast1-docker.pkg.dev/maliev-website/maliev-website-artifact-prod/maliev-country-service:${{ github.sha }} -f Maliev.CountryService.Api/Dockerfile .
           docker push asia-southeast1-docker.pkg.dev/maliev-website/maliev-website-artifact-prod/maliev-country-service:${{ github.sha }}
 
       - name: Checkout maliev-gitops repository

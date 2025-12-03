@@ -1,58 +1,57 @@
+using Maliev.CountryService.Api.Services;
 using Microsoft.Extensions.Caching.Memory;
 using System.Text.Json;
 
 namespace Maliev.CountryService.Api.Services;
 
-/// <summary>
-/// In-memory cache service using IMemoryCache as fallback when Redis is unavailable.
-/// </summary>
 public class MemoryCacheService : ICacheService
 {
-    private readonly IMemoryCache _cache;
+    private readonly IMemoryCache _memoryCache;
     private readonly ILogger<MemoryCacheService> _logger;
 
-    public MemoryCacheService(IMemoryCache cache, ILogger<MemoryCacheService> logger)
+    public MemoryCacheService(IMemoryCache memoryCache, ILogger<MemoryCacheService> logger)
     {
-        _cache = cache;
+        _memoryCache = memoryCache;
         _logger = logger;
     }
 
-    public Task<T?> GetAsync<T>(string key, CancellationToken cancellationToken = default) where T : class
+    public async Task<T?> GetAsync<T>(string key, CancellationToken cancellationToken = default) where T : class
     {
-        if (_cache.TryGetValue(key, out T? value))
+        if (_memoryCache.TryGetValue(key, out T? value))
         {
             _logger.LogDebug("Memory cache HIT for key {Key}", key);
-            return Task.FromResult(value);
+            return value;
         }
 
         _logger.LogDebug("Memory cache MISS for key {Key}", key);
-        return Task.FromResult<T?>(null);
+        return null;
     }
 
-    public Task SetAsync<T>(string key, T value, TimeSpan ttl, CancellationToken cancellationToken = default) where T : class
+    public async Task SetAsync<T>(string key, T value, TimeSpan? expiration = null, CancellationToken cancellationToken = default) where T : class
     {
         var options = new MemoryCacheEntryOptions
         {
-            AbsoluteExpirationRelativeToNow = ttl
+            AbsoluteExpirationRelativeToNow = expiration ?? TimeSpan.FromMinutes(15) // Default 15 minutes
         };
-
-        _cache.Set(key, value, options);
-        _logger.LogDebug("Memory cache SET for key {Key} with TTL {Ttl}", key, ttl);
-        
-        return Task.CompletedTask;
+        _memoryCache.Set(key, value, options);
+        _logger.LogDebug("Memory cache SET for key {Key} with expiration {Expiration}", key, options.AbsoluteExpirationRelativeToNow);
+        await Task.CompletedTask;
     }
 
-    public Task RemoveAsync(string key, CancellationToken cancellationToken = default)
+    public async Task RemoveAsync(string key, CancellationToken cancellationToken = default)
     {
-        _cache.Remove(key);
-        _logger.LogDebug("Memory cache REMOVE for key {Key}", key);
-        return Task.CompletedTask;
+        _memoryCache.Remove(key);
+        _logger.LogDebug("Memory cache REMOVED key {Key}", key);
+        await Task.CompletedTask;
     }
 
     public Task RemovePatternAsync(string pattern, CancellationToken cancellationToken = default)
     {
-        // MemoryCache doesn't support pattern matching - would need to track keys separately
-        _logger.LogWarning("Pattern removal not supported in MemoryCache: {Pattern}", pattern);
+        _logger.LogWarning("RemovePatternAsync is not fully supported by IMemoryCache. Clearing all or using a workaround.");
+        // IMemoryCache does not support pattern-based removal directly.
+        // A common workaround involves storing keys in a separate collection, or simply clearing the entire cache.
+        // For simplicity in this example, we'll log a warning and do nothing.
+        // In a real scenario, this would require a custom IMemoryCache implementation or a different strategy.
         return Task.CompletedTask;
     }
 }

@@ -207,7 +207,7 @@ function New-AgentFile {
         [datetime]$Date
     )
     if (-not (Test-Path $TEMPLATE_FILE)) { Write-Err "Template not found at $TEMPLATE_FILE"; return $false }
-    $temp = New-TemporaryFile
+    $temp = [System.IO.Path]::GetTempFileName()
     Copy-Item -LiteralPath $TEMPLATE_FILE -Destination $temp -Force
 
     $projectStructure = Get-ProjectStructure -ProjectType $NEW_PROJECT_TYPE

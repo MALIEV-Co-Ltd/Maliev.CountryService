@@ -1,42 +1,23 @@
-# Build stage
-FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
-
-# Copy csproj and restore as distinct layers
+COPY nuget.config ./
 COPY ["Maliev.CountryService.Api/Maliev.CountryService.Api.csproj", "Maliev.CountryService.Api/"]
 COPY ["Maliev.CountryService.Data/Maliev.CountryService.Data.csproj", "Maliev.CountryService.Data/"]
-RUN dotnet restore "Maliev.CountryService.Api/Maliev.CountryService.Api.csproj"
-
-# Copy everything and build
+RUN --mount=type=secret,id=nuget_username \
+    --mount=type=secret,id=nuget_password \
+    NUGET_USERNAME=$(cat /run/secrets/nuget_username) \
+    NUGET_PASSWORD=$(cat /run/secrets/nuget_password) \
+    dotnet restore "Maliev.CountryService.Api/Maliev.CountryService.Api.csproj"
 COPY . .
 WORKDIR "/src/Maliev.CountryService.Api"
-RUN dotnet build "Maliev.CountryService.Api.csproj" -c Release -o /app/build
+RUN dotnet publish -c Release -o /app/publish
 
-# Publish stage  
-FROM build AS publish
-RUN dotnet publish "Maliev.CountryService.Api.csproj" -c Release -o /app/publish /p:UseAppHost=false
-
-# Final stage/image
-FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS final
+FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
 WORKDIR /app
-
-# Create non-root user for security
-RUN adduser --disabled-password --gecos "" --uid 10001 appuser
-
-# Create logs directory and set permissions
-RUN mkdir -p /app/logs && chown -R appuser:appuser /app
-
-# Copy published app
-COPY --from=publish /app/publish .
-
-# Switch to non-root user
-USER appuser
-
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
-  CMD curl -f http://localhost:8080/countries/liveness || exit 1
-
-# Expose port
+RUN chown -R app:app /app
+USER app
+COPY --from=build /app/publish .
 EXPOSE 8080
-
+ENV ASPNETCORE_URLS=http://+:8080
+HEALTHCHECK CMD curl -f http://localhost:8080/countries/liveness || exit 1
 ENTRYPOINT ["dotnet", "Maliev.CountryService.Api.dll"]

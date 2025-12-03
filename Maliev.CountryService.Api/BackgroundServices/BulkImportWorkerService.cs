@@ -15,7 +15,11 @@ public class BulkImportWorkerService : BackgroundService
     private readonly TimeSpan _pollInterval = TimeSpan.FromSeconds(10);
     private readonly int _maxConcurrentJobs = 2; // T114: Configurable batch processing limits
     private readonly TimeSpan _processingTimeout = TimeSpan.FromMinutes(30); // T114: Processing timeout
-
+    /// <summary>
+    /// Initializes a new instance of the <see cref="BulkImportWorkerService"/> class.
+    /// </summary>
+    /// <param name="scopeFactory">The service scope factory.</param>
+    /// <param name="logger">The logger instance.</param>
     public BulkImportWorkerService(
         IServiceScopeFactory scopeFactory,
         ILogger<BulkImportWorkerService> logger)
@@ -24,6 +28,11 @@ public class BulkImportWorkerService : BackgroundService
         _logger = logger;
     }
 
+    /// <summary>
+    /// Executes the background service to process bulk import jobs.
+    /// </summary>
+    /// <param name="stoppingToken">Token to monitor for cancellation requests.</param>
+    /// <returns>A task representing the asynchronous operation.</returns>
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         _logger.LogInformation("Bulk Import Worker Service starting");
@@ -93,7 +102,7 @@ public class BulkImportWorkerService : BackgroundService
 
                 // Mark job as failed due to timeout
                 job.Status = "Failed";
-                job.ErrorMessage = $"Processing timed out after {_processingTimeout.TotalMinutes} minutes";
+                job.ValidationErrors = System.Text.Json.JsonSerializer.Serialize(new[] { new { message = $"Processing timed out after {_processingTimeout.TotalMinutes} minutes" } });
                 job.CompletedAtUtc = DateTime.UtcNow;
                 await context.SaveChangesAsync(cancellationToken);
             }
