@@ -3,8 +3,14 @@ using Maliev.CountryService.Api.Models.BulkImport;
 
 namespace Maliev.CountryService.Api.Validators;
 
+/// <summary>
+/// Validator for bulk import requests.
+/// </summary>
 public class BulkImportRequestValidator : AbstractValidator<BulkImportRequest>
 {
+    /// <summary>
+    /// Initializes a new instance of the <see cref="BulkImportRequestValidator"/> class.
+    /// </summary>
     public BulkImportRequestValidator()
     {
         RuleFor(x => x.Countries)

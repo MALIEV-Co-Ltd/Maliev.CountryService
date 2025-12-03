@@ -3,8 +3,14 @@ using Maliev.CountryService.Api.Models.Countries;
 
 namespace Maliev.CountryService.Api.Validators;
 
+/// <summary>
+/// Validator for patch country requests (partial updates).
+/// </summary>
 public class PatchCountryRequestValidator : AbstractValidator<PatchCountryRequest>
 {
+    /// <summary>
+    /// Initializes a new instance of the <see cref="PatchCountryRequestValidator"/> class.
+    /// </summary>
     public PatchCountryRequestValidator()
     {
         // At least one field must be provided for partial update

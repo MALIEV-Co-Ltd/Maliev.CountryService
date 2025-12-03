@@ -3,8 +3,14 @@ using Maliev.CountryService.Api.Models.Countries;
 
 namespace Maliev.CountryService.Api.Validators;
 
+/// <summary>
+/// Validator for update country requests (full replacement).
+/// </summary>
 public class UpdateCountryRequestValidator : AbstractValidator<UpdateCountryRequest>
 {
+    /// <summary>
+    /// Initializes a new instance of the <see cref="UpdateCountryRequestValidator"/> class.
+    /// </summary>
     public UpdateCountryRequestValidator()
     {
         // Same rules as CreateCountryRequestValidator since Update is full replacement

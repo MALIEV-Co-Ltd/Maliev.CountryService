@@ -1,6 +1,5 @@
 using Asp.Versioning;
 using Asp.Versioning.ApiExplorer;
-using FluentValidation;
 using HealthChecks.UI.Client;
 using Maliev.CountryService.Api.BackgroundServices;
 using Maliev.CountryService.Api.HealthChecks;
@@ -12,43 +11,26 @@ using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
-using Prometheus;
-using Scalar.AspNetCore;
-using Serilog;
 using StackExchange.Redis;
 using System.Text;
 using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// T026: Configure Serilog (console only, structured JSON logging)
-Log.Logger = new LoggerConfiguration()
-    .ReadFrom.Configuration(builder.Configuration)
-    .Enrich.FromLogContext()
-    .WriteTo.Console(outputTemplate:
-        "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] {CorrelationId} {Message:lj}{NewLine}{Exception}")
-    .CreateLogger();
+// T026: Add ServiceDefaults for OpenTelemetry, health checks, and service discovery
+builder.AddServiceDefaults();
 
-builder.Host.UseSerilog();
+// Add custom business metrics to OpenTelemetry
+builder.Services.AddOpenTelemetry()
+    .WithMetrics(metrics => metrics.AddMeter("country-service"));
 
 try
 {
-    Log.Information("Starting Maliev Country Service");
-
-    // T028: Google Secret Manager integration (/mnt/secrets path, optional for development)
-    var secretsPath = "/mnt/secrets";
-    if (Directory.Exists(secretsPath))
-    {
-        builder.Configuration.AddKeyPerFile(directoryPath: secretsPath, optional: true);
-        Log.Information("Loaded secrets from {SecretPath}", secretsPath);
-    }
+    // T028: Google Secret Manager integration via ServiceDefaults
+    builder.AddGoogleSecretManagerVolume();
 
     // Add services to the container
     builder.Services.AddControllers();
-
-    // Add FluentValidation
-    builder.Services.AddValidatorsFromAssemblyContaining<Program>();
-
     builder.Services.AddEndpointsApiExplorer();
 
     // T033: Configure API versioning (v1 as default)
@@ -67,49 +49,26 @@ try
     // OpenAPI/Swagger for Scalar
     builder.Services.AddOpenApi();
 
-    // T027: Configure DbContext with connection string from configuration, retry on failure
-    builder.Services.AddDbContext<CountryServiceDbContext>(options =>
-    {
-        var connectionString = builder.Configuration.GetConnectionString("CountryDbContext");
-        options.UseNpgsql(connectionString, npgsqlOptions =>
-        {
-            npgsqlOptions.EnableRetryOnFailure(
-                maxRetryCount: 3,
-                maxRetryDelay: TimeSpan.FromSeconds(5),
-                errorCodesToAdd: null);
-        });
-    });
+    // T027: Configure DbContext with connection string from ServiceDefaults
+    // Connection string name: "CountryDbContext" (not "CountryServiceDbContext")
+    builder.AddPostgresDbContext<CountryServiceDbContext>("CountryDbContext");
 
     // T030: Configure memory cache (simple AddMemoryCache without SizeLimit - CRITICAL per CLAUDE.md)
     builder.Services.AddMemoryCache();
 
     // T031: Configure Redis connection with StackExchange.Redis
-    var redisConnectionString = builder.Configuration["Redis:ConnectionString"];
-    var redisEnabled = bool.TryParse(builder.Configuration["Redis:Enabled"], out var isRedisEnabled) && isRedisEnabled;
-
-    if (redisEnabled && !string.IsNullOrEmpty(redisConnectionString) && !builder.Environment.IsEnvironment("Testing"))
+    var redisConnectionString = builder.Configuration.GetConnectionString("Redis");
+    if (!string.IsNullOrEmpty(redisConnectionString))
     {
         try
         {
-            builder.Services.AddStackExchangeRedisCache(options =>
-            {
-                options.Configuration = redisConnectionString;
-                options.InstanceName = "Country:";
-            });
-
             var redis = ConnectionMultiplexer.Connect(redisConnectionString);
             builder.Services.AddSingleton<IConnectionMultiplexer>(redis);
-            Log.Information("Redis connection established: {RedisEndpoint}", redisConnectionString);
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            Log.Warning(ex, "Redis connection failed - will use in-memory cache fallback");
             // Don't register Redis - services will handle fallback
         }
-    }
-    else
-    {
-        Log.Warning("Redis connection string not configured or disabled - using in-memory cache only");
     }
 
     // T043: Configure rate limiting (read endpoints: 100/min per IP, admin endpoints: 20/min per JWT sub claim)
@@ -175,48 +134,17 @@ try
         });
     });
 
-    // T042: Configure JWT Authentication with RSA public key validation (skip in Testing environment)
+    // T042: Configure JWT authentication using ServiceDefaults (RSA PublicKey)
+    // Reads from Jwt:PublicKey, Jwt:Issuer, Jwt:Audience
     if (!builder.Environment.IsEnvironment("Testing"))
     {
-        var jwtSection = builder.Configuration.GetSection(JwtOptions.SectionName);
-        if (jwtSection.Exists())
+        try
         {
-            builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-                .AddJwtBearer(options =>
-                {
-                    var jwtOptions = new JwtOptions
-                    {
-                        Issuer = "default-issuer",
-                        Audience = "default-audience",
-                        PublicKey = "default-key"
-                    };
-                    jwtSection.Bind(jwtOptions);
-
-                    // Use RSA public key validation from shared config (maliev-shared-secrets)
-                    var publicKeyBytes = Convert.FromBase64String(jwtOptions.PublicKey);
-                    var publicKeyPem = Encoding.UTF8.GetString(publicKeyBytes);
-
-                    // Import RSA public key from PEM format
-                    var rsa = System.Security.Cryptography.RSA.Create();
-                    rsa.ImportFromPem(publicKeyPem);
-
-                    options.TokenValidationParameters = new TokenValidationParameters
-                    {
-                        ValidateIssuer = true,
-                        ValidateAudience = true,
-                        ValidateLifetime = true,
-                        ValidateIssuerSigningKey = true,
-                        ValidIssuer = jwtOptions.Issuer,
-                        ValidAudience = jwtOptions.Audience,
-                        IssuerSigningKey = new RsaSecurityKey(rsa)
-                    };
-                });
-
-            Log.Information("JWT Authentication configured with RSA public key validation");
+            builder.AddJwtAuthentication();
         }
-        else
+        catch (Exception)
         {
-            Log.Warning("JWT configuration not found - API will start but authentication will not work. Configure JWT secrets for full functionality.");
+            // JWT configuration not found - API will start but authentication will not work
         }
     }
 
@@ -237,16 +165,9 @@ try
         options.KnownProxies.Clear();
     });
 
-    // T029: Add health checks (database EF Core check with "readiness" tag, Redis health check)
-    var healthChecksBuilder = builder.Services.AddHealthChecks()
-        .AddDbContextCheck<CountryServiceDbContext>("database", tags: new[] { "readiness" })
+    // T029: Add health checks (database health check with "readiness" tag)
+    builder.Services.AddHealthChecks()
         .AddCheck<DatabaseHealthCheck>("database-connection", tags: new[] { "readiness" });
-
-    // Add Redis health check if Redis is configured
-    if (builder.Services.Any(s => s.ServiceType == typeof(IConnectionMultiplexer)))
-    {
-        healthChecksBuilder.AddCheck<RedisHealthCheck>("redis", tags: new[] { "readiness" });
-    }
 
     // User Story 1: Register application services for fast country lookup
     // Register MemoryCacheService as fallback cache
@@ -262,6 +183,9 @@ try
         return new RedisCacheService(logger, memoryCache, redis);
     });
 
+    // Register business metrics
+    builder.Services.AddSingleton<Maliev.CountryService.Api.Metrics.BusinessMetrics>();
+
     // User Story 6: Register degradation tracking
     builder.Services.AddScoped<DegradationContext>();
 
@@ -275,9 +199,6 @@ try
     builder.Services.AddHostedService<CacheWarmingService>();
     builder.Services.AddHostedService<BulkImportWorkerService>();
 
-    // Add service defaults for .NET Aspire
-    builder.AddServiceDefaults();
-    
     var app = builder.Build();
 
     app.UseForwardedHeaders();
@@ -295,28 +216,8 @@ try
     // 4. Degradation header (T122)
     app.UseMiddleware<DegradationHeaderMiddleware>();
 
-    // T034: Configure Scalar UI
-    if (!app.Environment.IsProduction())
-    {
-        app.MapOpenApi("/countries/openapi/{documentName}.json");
-        app.MapScalarApiReference("/countries/scalar/v1", options =>
-        {
-            options
-                .WithTitle("Maliev Country Service API")
-                .WithTheme(ScalarTheme.Saturn)
-                .WithDefaultHttpClient(ScalarTarget.CSharp, ScalarClient.HttpClient)
-                .WithOpenApiRoutePattern("/countries/openapi/{documentName}.json");
-        });
-
-        // Redirect root to Scalar
-        app.MapGet("/", () => Results.Redirect("/countries/scalar/v1")).ExcludeFromDescription();
-        app.MapGet("/countries", () => Results.Redirect("/countries/scalar/v1")).ExcludeFromDescription();
-
-        Log.Information("Scalar API documentation enabled at /countries/scalar/v1");
-    }
-
-    // T032: Configure Prometheus metrics (UseHttpMetrics middleware)
-    app.UseHttpMetrics();
+    // T034: Configure Scalar UI (TODO: Fix Scalar API reference - using OpenAPI for now)
+    app.MapOpenApi();
 
     app.UseHttpsRedirection();
     app.UseRateLimiter();
@@ -329,43 +230,21 @@ try
         app.UseAuthorization();
     }
 
-    // Health check endpoints (allow anonymous access for monitoring)
-    app.MapGet("/countries/v1/liveness", () => Results.Ok(new { status = "Healthy", timestamp = DateTime.UtcNow }))
-        .AllowAnonymous()
-        .WithTags("Health");
-
-    app.MapHealthChecks("/countries/v1/readiness", new HealthCheckOptions
-    {
-        Predicate = healthCheck => healthCheck.Tags.Contains("readiness"),
-        ResponseWriter = UIResponseWriter.WriteHealthCheckUIResponse
-    }).AllowAnonymous();
-
-    // Metrics endpoint
-    app.MapMetrics("/metrics").AllowAnonymous();
+    // Map health check and metrics endpoints via ServiceDefaults
+    app.MapDefaultEndpoints("countries");
 
     app.MapControllers();
 
-    Log.Information("Maliev Country Service started successfully");
     app.Run();
 }
 catch (Exception ex)
 {
-    Log.Fatal(ex, "Application terminated unexpectedly");
+    Console.WriteLine($"Application terminated unexpectedly: {ex}");
     throw;
-}
-finally
-{
-    Log.CloseAndFlush();
-}
-
-public class JwtOptions
-{
-    public const string SectionName = "Jwt";
-
-    public required string Issuer { get; set; }
-    public required string Audience { get; set; }
-    public required string PublicKey { get; set; } // Base64-encoded RSA public key from shared config
 }
 
 // Make Program class accessible for integration tests
+/// <summary>
+/// Entry point for the application.
+/// </summary>
 public partial class Program { }

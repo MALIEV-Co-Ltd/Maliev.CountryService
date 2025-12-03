@@ -15,6 +15,12 @@ public class DatabaseHealthCheck : IHealthCheck
     private readonly ICacheService _cacheService;
     private readonly ILogger<DatabaseHealthCheck> _logger;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="DatabaseHealthCheck"/> class.
+    /// </summary>
+    /// <param name="context">The database context.</param>
+    /// <param name="cacheService">The cache service.</param>
+    /// <param name="logger">The logger.</param>
     public DatabaseHealthCheck(
         CountryServiceDbContext context,
         ICacheService cacheService,
@@ -25,6 +31,12 @@ public class DatabaseHealthCheck : IHealthCheck
         _logger = logger;
     }
 
+    /// <summary>
+    /// Checks the health of the database connection and returns Degraded if cache is available as fallback.
+    /// </summary>
+    /// <param name="context">The health check context.</param>
+    /// <param name="cancellationToken">Token to cancel the operation.</param>
+    /// <returns>A health check result indicating Healthy, Degraded, or Unhealthy status.</returns>
     public async Task<HealthCheckResult> CheckHealthAsync(
         HealthCheckContext context,
         CancellationToken cancellationToken = default)

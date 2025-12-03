@@ -16,27 +16,55 @@ public class RedisCacheService : ICacheService
     /// </summary>
     private class CacheEntry<T>
     {
+        /// <summary>
+        /// Gets or sets the cached value.
+        /// </summary>
         public T Value { get; set; } = default!;
+
+        /// <summary>
+        /// Gets or sets the timestamp when the value was cached.
+        /// </summary>
         public DateTime CachedAtUtc { get; set; }
+
+        /// <summary>
+        /// Gets or sets the original time-to-live duration.
+        /// </summary>
         public TimeSpan OriginalTtl { get; set; }
     }
     private readonly IConnectionMultiplexer? _redis;
-    private readonly ICacheService _fallbackCache;
+    private readonly MemoryCacheService _fallbackCache;
     private readonly ILogger<RedisCacheService> _logger;
+    private readonly BusinessMetrics? _businessMetrics; // Changed to nullable
 
     // T120: Stale-while-revalidate grace period (FR-032)
     private static readonly TimeSpan StaleGracePeriod = TimeSpan.FromHours(1);
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="RedisCacheService"/> class.
+    /// </summary>
+    /// <param name="logger">The logger.</param>
+    /// <param name="fallbackCache">The fallback memory cache service.</param>
+    /// <param name="redis">The Redis connection multiplexer (optional, may be null if Redis is unavailable).</param>
+    /// <param name="businessMetrics">The business metrics service.</param>
     public RedisCacheService(
         ILogger<RedisCacheService> logger,
-        ICacheService fallbackCache,
-        IConnectionMultiplexer? redis = null)
+        MemoryCacheService fallbackCache,
+        IConnectionMultiplexer? redis = null,
+        BusinessMetrics? businessMetrics = null) // Made nullable to avoid breaking tests that may not provide it
     {
         _redis = redis;
         _fallbackCache = fallbackCache;
         _logger = logger;
+        _businessMetrics = businessMetrics;
     }
 
+    /// <summary>
+    /// Retrieves a cached value from Redis by key, with stale-while-revalidate support and fallback to memory cache.
+    /// </summary>
+    /// <typeparam name="T">The type of the cached value.</typeparam>
+    /// <param name="key">The cache key.</param>
+    /// <param name="cancellationToken">Token to cancel the operation.</param>
+    /// <returns>The cached value, or null if not found.</returns>
     public async Task<T?> GetAsync<T>(string key, CancellationToken cancellationToken = default) where T : class
     {
         if (_redis == null || !_redis.IsConnected)
@@ -52,7 +80,7 @@ public class RedisCacheService : ICacheService
 
             if (value.IsNullOrEmpty)
             {
-                BusinessMetrics.CacheMisses.WithLabels("redis").Inc();
+                _businessMetrics?.RecordCacheMiss("redis"); // Added null conditional operator
                 return null;
             }
 
@@ -60,7 +88,7 @@ public class RedisCacheService : ICacheService
             var cacheEntry = JsonSerializer.Deserialize<CacheEntry<T>>((string)value!);
             if (cacheEntry == null || cacheEntry.Value == null)
             {
-                BusinessMetrics.CacheMisses.WithLabels("redis").Inc();
+                _businessMetrics?.RecordCacheMiss("redis"); // Added null conditional operator
                 return null;
             }
 
@@ -85,12 +113,12 @@ public class RedisCacheService : ICacheService
                     }
                     catch (Exception ex)
                     {
-                        _logger.LogError(ex, "Background refresh failed for key {Key}", key);
+                        _logger.LogError(ex, "Background refresh failed for key {Key}", ex);
                     }
                 });
             }
 
-            BusinessMetrics.CacheHits.WithLabels("redis").Inc();
+            _businessMetrics?.RecordCacheHit("redis"); // Added null conditional operator
             return cacheEntry.Value;
         }
         catch (Exception ex)
@@ -100,11 +128,20 @@ public class RedisCacheService : ICacheService
         }
     }
 
-    public async Task SetAsync<T>(string key, T value, TimeSpan ttl, CancellationToken cancellationToken = default) where T : class
+    /// <summary>
+    /// Stores a value in Redis cache with extended TTL for stale-while-revalidate support, with fallback to memory cache.
+    /// </summary>
+    /// <typeparam name="T">The type of the value to cache.</typeparam>
+    /// <param name="key">The cache key.</param>
+    /// <param name="value">The value to cache.</param>
+    /// <param name="expiration">The time-to-live duration for the cached value.</param>
+    /// <param name="cancellationToken">Token to cancel the operation.</param>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    public async Task SetAsync<T>(string key, T value, TimeSpan? expiration = null, CancellationToken cancellationToken = default) where T : class
     {
         if (_redis == null || !_redis.IsConnected)
         {
-            await _fallbackCache.SetAsync(key, value, ttl, cancellationToken);
+            await _fallbackCache.SetAsync(key, value, expiration, cancellationToken);
             return;
         }
 
@@ -112,30 +149,38 @@ public class RedisCacheService : ICacheService
         {
             var db = _redis.GetDatabase();
 
+            var actualExpiration = expiration ?? TimeSpan.FromMinutes(15);
+
             // T120: Wrap value with metadata for stale-while-revalidate
             var cacheEntry = new CacheEntry<T>
             {
                 Value = value,
                 CachedAtUtc = DateTime.UtcNow,
-                OriginalTtl = ttl
+                OriginalTtl = actualExpiration
             };
 
             var json = JsonSerializer.Serialize(cacheEntry);
 
             // T120: Store with extended TTL (original + grace period)
-            var extendedTtl = ttl + StaleGracePeriod;
+            var extendedTtl = actualExpiration + StaleGracePeriod;
             await db.StringSetAsync(key, json, extendedTtl);
 
             // Also set in fallback cache for faster local access
-            await _fallbackCache.SetAsync(key, value, ttl, cancellationToken);
+            await _fallbackCache.SetAsync(key, value, expiration, cancellationToken);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Redis SET failed for key {Key}, using fallback", key);
-            await _fallbackCache.SetAsync(key, value, ttl, cancellationToken);
+            await _fallbackCache.SetAsync(key, value, expiration, cancellationToken);
         }
     }
 
+    /// <summary>
+    /// Removes a cached value from Redis and fallback cache by key.
+    /// </summary>
+    /// <param name="key">The cache key to remove.</param>
+    /// <param name="cancellationToken">Token to cancel the operation.</param>
+    /// <returns>A task representing the asynchronous operation.</returns>
     public async Task RemoveAsync(string key, CancellationToken cancellationToken = default)
     {
         if (_redis == null || !_redis.IsConnected)
@@ -157,6 +202,12 @@ public class RedisCacheService : ICacheService
         }
     }
 
+    /// <summary>
+    /// Removes all cached values matching a pattern from Redis and fallback cache.
+    /// </summary>
+    /// <param name="pattern">The pattern to match cache keys (e.g., "country:*").</param>
+    /// <param name="cancellationToken">Token to cancel the operation.</param>
+    /// <returns>A task representing the asynchronous operation.</returns>
     public async Task RemovePatternAsync(string pattern, CancellationToken cancellationToken = default)
     {
         if (_redis == null || !_redis.IsConnected)

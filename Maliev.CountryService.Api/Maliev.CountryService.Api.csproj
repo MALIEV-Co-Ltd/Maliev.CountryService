@@ -4,8 +4,9 @@
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
-    <UserSecretsId>52fd7eaf-6677-4f94-a08d-70cf48a1e1bb</UserSecretsId>
+    <UserSecretsId>maliev-countryservice-api</UserSecretsId>
     <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
   </PropertyGroup>
 
@@ -26,17 +27,8 @@
     </PackageReference>
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.0" />
 
-    <!-- Logging -->
-    <PackageReference Include="Serilog.AspNetCore" Version="9.0.0" />
-    <PackageReference Include="Serilog.Enrichers.Environment" Version="3.0.1" />
-    <PackageReference Include="Serilog.Enrichers.Thread" Version="4.0.0" />
-    <PackageReference Include="Serilog.Enrichers.Process" Version="3.0.0" />
-
     <!-- Validation -->
     <PackageReference Include="FluentValidation.DependencyInjectionExtensions" Version="12.1.0" />
-
-    <!-- Mapping -->
-    <PackageReference Include="AutoMapper" Version="13.0.1" />
 
     <!-- Caching & Resilience -->
     <PackageReference Include="StackExchange.Redis" Version="2.10.1" />
@@ -50,13 +42,9 @@
     <PackageReference Include="AspNetCore.HealthChecks.UI.Client" Version="9.0.0" />
     <PackageReference Include="AspNetCore.HealthChecks.NpgSql" Version="9.0.0" />
     <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks.EntityFrameworkCore" Version="10.0.0" />
-    <PackageReference Include="prometheus-net.AspNetCore" Version="8.2.1" />
 
     <!-- Messaging -->
-    <PackageReference Include="MassTransit.RabbitMQ" Version="8.5.5" />
-
-    <!-- Configuration -->
-    <PackageReference Include="NetEscapades.Configuration.Yaml" Version="3.1.0" />
+    <PackageReference Include="MassTransit.RabbitMQ" Version="8.5.7" />
 
     <!-- Development -->
     <PackageReference Include="Microsoft.AspNetCore.Diagnostics.EntityFrameworkCore" Version="10.0.0" />
@@ -64,7 +52,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Maliev.CountryService.Data\Maliev.CountryService.Data.csproj" />
-    <PackageReference Include="Maliev.Aspire.ServiceDefaults" Version="1.0.*" />
+    <ProjectReference Include="..\..\Maliev.Aspire\Maliev.Aspire.ServiceDefaults\Maliev.Aspire.ServiceDefaults.csproj" />
   </ItemGroup>
 
 </Project>

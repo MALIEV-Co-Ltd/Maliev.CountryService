@@ -1,14 +1,26 @@
 namespace Maliev.CountryService.Api.Middleware;
 
+/// <summary>
+/// Middleware that adds security headers to HTTP responses to enhance application security.
+/// </summary>
 public class SecurityHeadersMiddleware
 {
     private readonly RequestDelegate _next;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="SecurityHeadersMiddleware"/> class.
+    /// </summary>
+    /// <param name="next">The next delegate in the pipeline.</param>
     public SecurityHeadersMiddleware(RequestDelegate next)
     {
         _next = next;
     }
 
+    /// <summary>
+    /// Invokes the middleware to add security headers to the HTTP response.
+    /// </summary>
+    /// <param name="context">The HTTP context.</param>
+    /// <returns>A task representing the asynchronous operation.</returns>
     public async Task InvokeAsync(HttpContext context)
     {
         // HSTS - HTTP Strict Transport Security
