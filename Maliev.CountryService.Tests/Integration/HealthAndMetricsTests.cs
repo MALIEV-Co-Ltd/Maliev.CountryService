@@ -71,7 +71,8 @@ public class HealthAndMetricsTests : IntegrationTestBase
 
         // Verify custom business metrics are present
         // After triggering an operation, custom metrics should be in the output
-        Assert.Contains("country", content.ToLower());
+        // Check for one of our custom metric names (cache_hits, cache_misses, request_duration, etc.)
+        Assert.Contains("cache", content.ToLower());
     }
 
     [Fact]
