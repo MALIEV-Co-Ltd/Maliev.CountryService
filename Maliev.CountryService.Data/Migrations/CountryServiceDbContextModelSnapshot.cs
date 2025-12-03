@@ -93,6 +93,10 @@ namespace Maliev.CountryService.Data.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("failed_records");
 
+                    b.Property<string>("PayloadData")
+                        .HasColumnType("jsonb")
+                        .HasColumnName("payload_data");
+
                     b.Property<int>("ProcessedRecords")
                         .HasColumnType("integer")
                         .HasColumnName("processed_records");
@@ -300,8 +304,6 @@ namespace Maliev.CountryService.Data.Migrations
                         .HasFilter("iso3 IS NOT NULL");
 
                     b.HasIndex("Name");
-
-                    NpgsqlIndexBuilderExtensions.HasMethod(b.HasIndex("Name"), "GIN");
 
                     b.ToTable("countries");
                 });
