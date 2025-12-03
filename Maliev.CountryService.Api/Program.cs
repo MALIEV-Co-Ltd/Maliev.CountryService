@@ -20,9 +20,11 @@ var builder = WebApplication.CreateBuilder(args);
 // T026: Add ServiceDefaults for OpenTelemetry, health checks, and service discovery
 builder.AddServiceDefaults();
 
-// Add custom business metrics to OpenTelemetry
-builder.Services.AddOpenTelemetry()
-    .WithMetrics(metrics => metrics.AddMeter("country-service"));
+// Add custom business metrics to OpenTelemetry (must be done AFTER AddServiceDefaults)
+builder.Services.ConfigureOpenTelemetryMeterProvider(metrics =>
+{
+    metrics.AddMeter("country-service");
+});
 
 try
 {
