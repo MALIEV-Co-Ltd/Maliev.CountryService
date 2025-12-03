@@ -7,6 +7,10 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Maliev.CountryService.Api.Controllers;
 
+/// <summary>
+/// Public endpoints for querying country information (read-only operations).
+/// Provides lookup by ID/ISO codes, pagination, and search capabilities with caching.
+/// </summary>
 [ApiController]
 [ApiVersion("1.0")]
 [Route("countries/v{version:apiVersion}/countries")]
@@ -14,6 +18,10 @@ public class CountriesController : ControllerBase
 {
     private readonly ICountryService _countryService;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="CountriesController"/> class.
+    /// </summary>
+    /// <param name="countryService">The country service instance.</param>
     public CountriesController(ICountryService countryService)
     {
         _countryService = countryService;

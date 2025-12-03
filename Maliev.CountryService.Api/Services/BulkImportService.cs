@@ -17,6 +17,12 @@ public class BulkImportService : IBulkImportService
     private readonly ICountryService _countryService;
     private readonly ILogger<BulkImportService> _logger;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="BulkImportService"/> class.
+    /// </summary>
+    /// <param name="context">The database context.</param>
+    /// <param name="countryService">The country service for CRUD operations.</param>
+    /// <param name="logger">The logger instance.</param>
     public BulkImportService(
         CountryServiceDbContext context,
         ICountryService countryService,
@@ -112,7 +118,7 @@ public class BulkImportService : IBulkImportService
             .ToListAsync(cancellationToken);
 
         var existingIso3Codes = await _context.Countries
-            .Select(c => c.Iso3.ToUpper())
+            .Select(c => (c.Iso3 ?? "").ToUpper())
             .ToListAsync(cancellationToken);
 
         var existingIso2Set = new HashSet<string>(existingIso2Codes, StringComparer.OrdinalIgnoreCase);
@@ -122,6 +128,8 @@ public class BulkImportService : IBulkImportService
         for (int i = 0; i < request.Countries.Count; i++)
         {
             var country = request.Countries[i];
+            if (country == null) continue;
+
             var rowNumber = i + 1;
 
             // Manual validation check
@@ -141,8 +149,8 @@ public class BulkImportService : IBulkImportService
             }
 
             // T111: Check for within-batch duplicates
-            var iso2Upper = country.Iso2.ToUpperInvariant();
-            var iso3Upper = country.Iso3.ToUpperInvariant();
+            var iso2Upper = (country.Iso2 ?? "").ToUpperInvariant();
+            var iso3Upper = (country.Iso3 ?? "").ToUpperInvariant();
 
             if (iso2Seen.Contains(iso2Upper))
             {

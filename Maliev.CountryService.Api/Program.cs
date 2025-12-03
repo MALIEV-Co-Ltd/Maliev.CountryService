@@ -17,7 +17,12 @@ using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// T026: Logging configured via ServiceDefaults (OpenTelemetry)
+// T026: Add ServiceDefaults for OpenTelemetry, health checks, and service discovery
+builder.AddServiceDefaults();
+
+// Add custom business metrics to OpenTelemetry
+builder.Services.AddOpenTelemetry()
+    .WithMetrics(metrics => metrics.AddMeter("country-service"));
 
 try
 {
@@ -178,6 +183,9 @@ try
         return new RedisCacheService(logger, memoryCache, redis);
     });
 
+    // Register business metrics
+    builder.Services.AddSingleton<Maliev.CountryService.Api.Metrics.BusinessMetrics>();
+
     // User Story 6: Register degradation tracking
     builder.Services.AddScoped<DegradationContext>();
 
@@ -227,6 +235,9 @@ try
 
     app.MapControllers();
 
+    // Redirect root to OpenAPI documentation
+    app.MapGet("/", () => Results.Redirect("/openapi/v1.json")).ExcludeFromDescription();
+
     app.Run();
 }
 catch (Exception ex)
@@ -236,4 +247,7 @@ catch (Exception ex)
 }
 
 // Make Program class accessible for integration tests
+/// <summary>
+/// Entry point for the application.
+/// </summary>
 public partial class Program { }

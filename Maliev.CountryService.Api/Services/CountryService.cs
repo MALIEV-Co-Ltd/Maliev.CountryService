@@ -442,6 +442,7 @@ public class CountryService : ICountryService
     /// </summary>
     /// <param name="country">The country entity to map.</param>
     /// <returns>A country response DTO.</returns>
+#nullable disable
     private CountryResponse MapToResponse(Data.Entities.Country country)
     {
         return new CountryResponse
@@ -461,17 +462,15 @@ public class CountryService : ICountryService
             AreaKm2 = (double?)country.AreaKm2,
             Population = country.Population,
             GiniCoefficient = (double?)country.GiniCoefficient,
-#pragma warning disable CS8602 // Dereference of a possibly null reference.
-            Timezones = DeserializeJson(country.Timezones!),
-            Borders = DeserializeJson(country.Borders!),
-            CallingCodes = DeserializeJson(country.CallingCodes!),
-            TopLevelDomains = DeserializeJson(country.TopLevelDomains!),
-            Currencies = DeserializeJson(country.Currencies!),
-            Languages = DeserializeJson(country.Languages!),
-            Translations = DeserializeJson(country.Translations!),
-            Flags = DeserializeJson(country.Flags!),
-            CoatOfArms = country.CoatOfArms != null ? DeserializeJson(country.CoatOfArms!) : JsonDocument.Parse("{}").RootElement,
-#pragma warning restore CS8602 // Dereference of a possibly null reference.
+            Timezones = DeserializeJson(country.Timezones),
+            Borders = DeserializeJson(country.Borders),
+            CallingCodes = DeserializeJson(country.CallingCodes),
+            TopLevelDomains = DeserializeJson(country.TopLevelDomains),
+            Currencies = DeserializeJson(country.Currencies),
+            Languages = DeserializeJson(country.Languages),
+            Translations = DeserializeJson(country.Translations),
+            Flags = DeserializeJson(country.Flags),
+            CoatOfArms = DeserializeJson(country.CoatOfArms),
             Independent = country.Independent,
             UnMember = country.UnMember,
             Landlocked = country.Landlocked,
@@ -481,8 +480,9 @@ public class CountryService : ICountryService
             ETag = GenerateETag(country.Version)
         };
     }
+#nullable restore
 
-    private JsonElement DeserializeJson(string json)
+    private JsonElement DeserializeJson(string? json)
     {
         if (string.IsNullOrWhiteSpace(json))
         {
@@ -538,7 +538,7 @@ public class CountryService : ICountryService
         }
 
         var existingIso3 = await _context.Countries
-            .AnyAsync(c => c.Iso3 == request.Iso3.ToUpperInvariant(), cancellationToken);
+            .AnyAsync(c => c.Iso3 == (request.Iso3 ?? "").ToUpperInvariant(), cancellationToken);
 
         if (existingIso3)
         {
@@ -546,6 +546,7 @@ public class CountryService : ICountryService
         }
 
         // T080: Create new country entity
+#nullable disable
         var country = new Data.Entities.Country
         {
             Iso2 = request.Iso2.ToUpperInvariant(),
@@ -562,17 +563,15 @@ public class CountryService : ICountryService
             AreaKm2 = (double?)request.AreaKm2,
             Population = request.Population,
             GiniCoefficient = (double?)request.GiniCoefficient,
-#pragma warning disable CS8602 // Dereference of a possibly null reference.
-            Timezones = request.Timezones!,
-            Borders = request.Borders!,
-            CallingCodes = request.CallingCodes!,
-            TopLevelDomains = request.TopLevelDomains!,
-            Currencies = request.Currencies!,
-            Languages = request.Languages!,
-            Translations = request.Translations!,
-            Flags = request.Flags!,
-#pragma warning restore CS8602 // Dereference of a possibly null reference.
-            CoatOfArms = request.CoatOfArms,
+            Timezones = request.Timezones ?? "{}",
+            Borders = request.Borders ?? "{}",
+            CallingCodes = request.CallingCodes ?? "{}",
+            TopLevelDomains = request.TopLevelDomains ?? "{}",
+            Currencies = request.Currencies ?? "{}",
+            Languages = request.Languages ?? "{}",
+            Translations = request.Translations ?? "{}",
+            Flags = request.Flags ?? "{}",
+            CoatOfArms = request.CoatOfArms ?? "{}",
             Independent = request.Independent ?? false,
             UnMember = request.UnMember ?? false,
             Landlocked = request.Landlocked ?? false,
@@ -583,6 +582,7 @@ public class CountryService : ICountryService
             UpdatedBy = userId,
             Version = Guid.NewGuid()
         };
+#nullable restore
 
         _context.Countries.Add(country);
         await _context.SaveChangesAsync(cancellationToken);
@@ -634,7 +634,7 @@ public class CountryService : ICountryService
         }
 
         var iso3Conflict = await _context.Countries
-            .AnyAsync(c => c.Id != id && c.Iso3 == request.Iso3.ToUpperInvariant(), cancellationToken);
+            .AnyAsync(c => c.Id != id && c.Iso3 == (request.Iso3 ?? "").ToUpperInvariant(), cancellationToken);
 
         if (iso3Conflict)
         {
@@ -642,6 +642,7 @@ public class CountryService : ICountryService
         }
 
         // T082: Update all fields (full replacement)
+#nullable disable
         country.Iso2 = request.Iso2.ToUpperInvariant();
         country.Iso3 = request.Iso3.ToUpperInvariant();
         country.Name = request.Name;
@@ -656,23 +657,22 @@ public class CountryService : ICountryService
         country.AreaKm2 = (double?)request.AreaKm2;
         country.Population = request.Population;
         country.GiniCoefficient = (double?)request.GiniCoefficient;
-#pragma warning disable CS8602 // Dereference of a possibly null reference.
-        country.Timezones = request.Timezones!;
-        country.Borders = request.Borders!;
-        country.CallingCodes = request.CallingCodes!;
-        country.TopLevelDomains = request.TopLevelDomains!;
-        country.Currencies = request.Currencies!;
-        country.Languages = request.Languages!;
-        country.Translations = request.Translations!;
-        country.Flags = request.Flags!;
-#pragma warning restore CS8602 // Dereference of a possibly null reference.
-        country.CoatOfArms = request.CoatOfArms;
+        country.Timezones = request.Timezones ?? "{}";
+        country.Borders = request.Borders ?? "{}";
+        country.CallingCodes = request.CallingCodes ?? "{}";
+        country.TopLevelDomains = request.TopLevelDomains ?? "{}";
+        country.Currencies = request.Currencies ?? "{}";
+        country.Languages = request.Languages ?? "{}";
+        country.Translations = request.Translations ?? "{}";
+        country.Flags = request.Flags ?? "{}";        
+        country.CoatOfArms = request.CoatOfArms ?? "{}" ;
         country.Independent = request.Independent ?? false;
         country.UnMember = request.UnMember ?? false;
         country.Landlocked = request.Landlocked ?? false;
         country.LastModifiedUtc = DateTime.UtcNow;
         country.UpdatedBy = userId;
         country.Version = Guid.NewGuid();
+#nullable restore
 
         try
         {
@@ -723,6 +723,7 @@ public class CountryService : ICountryService
         }
 
         // T083: Apply only non-null fields
+#nullable disable
         if (request.Iso2 != null)
         {
             var conflict = await _context.Countries.AnyAsync(c => c.Id != id && c.Iso2 == request.Iso2.ToUpperInvariant(), cancellationToken);
@@ -749,16 +750,14 @@ public class CountryService : ICountryService
         if (request.AreaKm2.HasValue) country.AreaKm2 = (double?)request.AreaKm2;
         if (request.Population.HasValue) country.Population = request.Population;
         if (request.GiniCoefficient.HasValue) country.GiniCoefficient = (double?)request.GiniCoefficient;
-#pragma warning disable CS8602 // Dereference of a possibly null reference.
-        if (request.Timezones is not null) country.Timezones = request.Timezones!;
-        if (request.Borders is not null) country.Borders = request.Borders!;
-        if (request.CallingCodes is not null) country.CallingCodes = request.CallingCodes!;
-        if (request.TopLevelDomains is not null) country.TopLevelDomains = request.TopLevelDomains!;
-        if (request.Currencies is not null) country.Currencies = request.Currencies!;
-        if (request.Languages is not null) country.Languages = request.Languages!;
-        if (request.Translations is not null) country.Translations = request.Translations!;
-        if (request.Flags is not null) country.Flags = request.Flags!;
-#pragma warning restore CS8602 // Dereference of a possibly null reference.
+        if (request.Timezones is not null) country.Timezones = request.Timezones;
+        if (request.Borders is not null) country.Borders = request.Borders;
+        if (request.CallingCodes is not null) country.CallingCodes = request.CallingCodes;
+        if (request.TopLevelDomains is not null) country.TopLevelDomains = request.TopLevelDomains;
+        if (request.Currencies is not null) country.Currencies = request.Currencies;
+        if (request.Languages is not null) country.Languages = request.Languages;
+        if (request.Translations is not null) country.Translations = request.Translations;
+        if (request.Flags is not null) country.Flags = request.Flags;
         if (request.CoatOfArms is not null) country.CoatOfArms = request.CoatOfArms;
         if (request.Independent.HasValue) country.Independent = request.Independent.Value;
         if (request.UnMember.HasValue) country.UnMember = request.UnMember.Value;
@@ -766,6 +765,7 @@ public class CountryService : ICountryService
         country.LastModifiedUtc = DateTime.UtcNow;
         country.UpdatedBy = userId;
         country.Version = Guid.NewGuid();
+#nullable restore
 
         try
         {
