@@ -21,10 +21,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.AddServiceDefaults();
 
 // Add custom business metrics to OpenTelemetry (must be done AFTER AddServiceDefaults)
-builder.Services.ConfigureOpenTelemetryMeterProvider(metrics =>
-{
-    metrics.AddMeter("country-service");
-});
+builder.AddServiceMeters("country-service");
 
 try
 {
