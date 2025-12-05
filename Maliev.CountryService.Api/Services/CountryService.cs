@@ -848,11 +848,11 @@ public class CountryService : ICountryService
         var iso2 = country.Iso2;
         var name = country.Name;
 
+        // Log audit BEFORE deleting (FK constraint requires country to exist when logging)
+        await LogAuditAsync(id, "HARD_DELETE", userId, JsonSerializer.Serialize(new { Id = id, Iso2 = iso2, Name = name }), cancellationToken);
+
         _context.Countries.Remove(country);
         await _context.SaveChangesAsync(cancellationToken);
-
-        // Log audit
-        await LogAuditAsync(id, "HARD_DELETE", userId, JsonSerializer.Serialize(new { Id = id, Iso2 = iso2, Name = name }), cancellationToken);
 
         _logger.LogWarning("Country HARD-DELETED: {Iso2} - {Name} by user {UserId}", iso2, name, userId);
 
