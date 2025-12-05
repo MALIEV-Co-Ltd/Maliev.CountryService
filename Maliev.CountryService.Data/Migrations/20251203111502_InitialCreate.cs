@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -13,52 +13,25 @@ namespace Maliev.CountryService.Data.Migrations
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.CreateTable(
-                name: "audit_logs",
-                columns: table => new
-                {
-                    id = table.Column<long>(type: "bigint", nullable: false)
-                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
-                    country_id = table.Column<long>(type: "bigint", nullable: false),
-                    operation = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false),
-                    user_id = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
-                    user_email = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: true),
-                    user_roles = table.Column<string>(type: "jsonb", nullable: false, defaultValue: "[]"),
-                    before_snapshot = table.Column<string>(type: "jsonb", nullable: true),
-                    after_snapshot = table.Column<string>(type: "jsonb", nullable: false),
-                    changed_fields = table.Column<string>(type: "jsonb", nullable: false, defaultValue: "[]"),
-                    ip_address = table.Column<string>(type: "character varying(45)", maxLength: 45, nullable: true),
-                    user_agent = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true),
-                    correlation_id = table.Column<Guid>(type: "uuid", nullable: true),
-                    created_at_utc = table.Column<DateTime>(type: "timestamp with time zone", nullable: false, defaultValueSql: "NOW()")
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_audit_logs", x => x.id);
-                });
-
-            migrationBuilder.CreateTable(
                 name: "bulk_import_jobs",
                 columns: table => new
                 {
                     id = table.Column<long>(type: "bigint", nullable: false)
                         .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
-                    status = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false, defaultValue: "Pending"),
+                    status = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false),
                     total_records = table.Column<int>(type: "integer", nullable: false),
-                    processed_records = table.Column<int>(type: "integer", nullable: false, defaultValue: 0),
-                    failed_records = table.Column<int>(type: "integer", nullable: false, defaultValue: 0),
-                    validation_errors = table.Column<string>(type: "jsonb", nullable: false, defaultValue: "[]"),
-                    error_message = table.Column<string>(type: "text", nullable: true),
-                    user_id = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
-                    user_email = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: true),
-                    ip_address = table.Column<string>(type: "character varying(45)", maxLength: 45, nullable: true),
-                    correlation_id = table.Column<Guid>(type: "uuid", nullable: true),
-                    created_at_utc = table.Column<DateTime>(type: "timestamp with time zone", nullable: false, defaultValueSql: "NOW()"),
+                    processed_records = table.Column<int>(type: "integer", nullable: false),
+                    failed_records = table.Column<int>(type: "integer", nullable: false),
+                    validation_errors = table.Column<string>(type: "jsonb", nullable: false),
+                    created_by = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
+                    created_at_utc = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     started_at_utc = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
-                    completed_at_utc = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
+                    completed_at_utc = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    payload_data = table.Column<string>(type: "jsonb", nullable: true)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_bulk_import_jobs", x => x.id);
+                    table.PrimaryKey("pk_bulk_import_jobs", x => x.id);
                 });
 
             migrationBuilder.CreateTable(
@@ -67,43 +40,46 @@ namespace Maliev.CountryService.Data.Migrations
                 {
                     id = table.Column<long>(type: "bigint", nullable: false)
                         .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
-                    iso2 = table.Column<string>(type: "character varying(2)", maxLength: 2, nullable: false),
-                    iso3 = table.Column<string>(type: "character varying(3)", maxLength: 3, nullable: false),
+                    iso2 = table.Column<string>(type: "character(2)", fixedLength: true, maxLength: 2, nullable: false),
+                    iso3 = table.Column<string>(type: "character(3)", fixedLength: true, maxLength: 3, nullable: true),
                     name = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
                     official_name = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: true),
                     numeric_code = table.Column<string>(type: "character varying(3)", maxLength: 3, nullable: true),
                     capital = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: true),
                     region = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: true),
                     subregion = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: true),
-                    latitude = table.Column<decimal>(type: "numeric(10,8)", precision: 10, scale: 8, nullable: true),
-                    longitude = table.Column<decimal>(type: "numeric(11,8)", precision: 11, scale: 8, nullable: true),
+                    latitude = table.Column<double>(type: "double precision", nullable: true),
+                    longitude = table.Column<double>(type: "double precision", nullable: true),
                     demonym = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: true),
-                    area_km2 = table.Column<decimal>(type: "numeric(15,2)", precision: 15, scale: 2, nullable: true),
+                    area_km2 = table.Column<double>(type: "double precision", nullable: true),
                     population = table.Column<long>(type: "bigint", nullable: true),
-                    gini_coefficient = table.Column<decimal>(type: "numeric(4,2)", precision: 4, scale: 2, nullable: true),
-                    timezones = table.Column<string>(type: "jsonb", nullable: false, defaultValue: "[]"),
-                    borders = table.Column<string>(type: "jsonb", nullable: false, defaultValue: "[]"),
-                    calling_codes = table.Column<string>(type: "jsonb", nullable: false, defaultValue: "[]"),
-                    top_level_domains = table.Column<string>(type: "jsonb", nullable: false, defaultValue: "[]"),
-                    currencies = table.Column<string>(type: "jsonb", nullable: false, defaultValue: "{}"),
-                    languages = table.Column<string>(type: "jsonb", nullable: false, defaultValue: "{}"),
-                    translations = table.Column<string>(type: "jsonb", nullable: false, defaultValue: "{}"),
-                    flags = table.Column<string>(type: "jsonb", nullable: false, defaultValue: "{}"),
+                    gini_coefficient = table.Column<double>(type: "double precision", nullable: true),
+                    timezones = table.Column<string>(type: "jsonb", nullable: false),
+                    borders = table.Column<string>(type: "jsonb", nullable: false),
+                    calling_codes = table.Column<string>(type: "jsonb", nullable: false),
+                    top_level_domains = table.Column<string>(type: "jsonb", nullable: false),
+                    currencies = table.Column<string>(type: "jsonb", nullable: false),
+                    languages = table.Column<string>(type: "jsonb", nullable: false),
+                    translations = table.Column<string>(type: "jsonb", nullable: false),
+                    flags = table.Column<string>(type: "jsonb", nullable: false),
                     coat_of_arms = table.Column<string>(type: "jsonb", nullable: true),
-                    independent = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false),
-                    un_member = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false),
-                    landlocked = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false),
-                    is_active = table.Column<bool>(type: "boolean", nullable: false, defaultValue: true),
+                    independent = table.Column<bool>(type: "boolean", nullable: false),
+                    un_member = table.Column<bool>(type: "boolean", nullable: false),
+                    landlocked = table.Column<bool>(type: "boolean", nullable: false),
+                    is_active = table.Column<bool>(type: "boolean", nullable: false),
                     version = table.Column<Guid>(type: "uuid", nullable: false, defaultValueSql: "gen_random_uuid()"),
-                    created_at_utc = table.Column<DateTime>(type: "timestamp with time zone", nullable: false, defaultValueSql: "NOW()"),
-                    last_modified_utc = table.Column<DateTime>(type: "timestamp with time zone", nullable: false, defaultValueSql: "NOW()")
+                    created_by = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false, defaultValue: "System"),
+                    created_at_utc = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    updated_by = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false, defaultValue: "System"),
+                    last_modified_utc = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    deleted_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_countries", x => x.id);
+                    table.PrimaryKey("pk_countries", x => x.id);
                 });
 
-            // Seed all 197 production countries with exact ID mappings from country-list.csv
+                // Seed all 197 production countries with exact ID mappings from country-list.csv
             migrationBuilder.Sql(@"
 INSERT INTO countries (id, name, official_name, numeric_code, capital, region, subregion, latitude, longitude, demonym, area_km2, population, gini_coefficient, timezones, borders, calling_codes, top_level_domains, currencies, languages, translations, flags, coat_of_arms, independent, un_member, landlocked, iso2, iso3, created_at_utc, last_modified_utc, is_active) VALUES
 (1, 'Afghanistan', 'Islamic Republic of Afghanistan', '004', 'Kabul', 'Asia', 'Southern Asia', 33.00000000, 65.00000000, 'Afghan', 652230.00000000, 43844000, null, '[""UTC\u002B04:30""]'::jsonb, '[""IRN"",""PAK"",""TKM"",""UZB"",""TJK"",""CHN""]'::jsonb, '[""\u002B93""]'::jsonb, '["".af""]'::jsonb, '{""AFN"":{""name"":""Afghan afghani"",""symbol"":""\u060B""}}'::jsonb, '{""prs"":""Dari"",""pus"":""Pashto"",""tuk"":""Turkmen""}'::jsonb, '{""ara"":{""official"":""\u062C\u0645\u0647\u0648\u0631\u064A\u0629 \u0623\u0641\u0641\u0627\u0646\u0633\u062A\u0627\u0646 \u0627\u0644\u0625\u0633\u0644\u0627\u0645\u064A\u0629"",""common"":""\u0623\u0641\u063A\u0627\u0646\u0633\u062A\u0627\u0646""},""bre"":{""official"":""Republik Islamek Afghanistan"",""common"":""Afghanistan""},""ces"":{""official"":""Afgh\u00E1nsk\u00E1 isl\u00E1msk\u00E1 republika"",""common"":""Afgh\u00E1nist\u00E1n""},""cym"":{""official"":""Gweriniaeth Islamaidd Affganistan"",""common"":""Affganistan""},""deu"":{""official"":""Islamische Republik Afghanistan"",""common"":""Afghanistan""},""est"":{""official"":""Afganistani Islamivabariik"",""common"":""Afganistan""},""fin"":{""official"":""Afganistanin islamilainen tasavalta"",""common"":""Afganistan""},""fra"":{""official"":""R\u00E9publique islamique d\u0027Afghanistan"",""common"":""Afghanistan""},""hrv"":{""official"":""Islamska Republika Afganistan"",""common"":""Afganistan""},""hun"":{""official"":""Afganiszt\u00E1ni Iszl\u00E1m K\u00F6zt\u00E1rsas\u00E1g"",""common"":""Afganiszt\u00E1n""},""ind"":{""official"":""Keamiran Islam Afganistan"",""common"":""Afganistan""},""ita"":{""official"":""Repubblica islamica dell\u0027Afghanistan"",""common"":""Afghanistan""},""jpn"":{""official"":""\u30A2\u30D5\u30AC\u30CB\u30B9\u30BF\u30F3\u00B7\u30A4\u30B9\u30E9\u30E0\u5171\u548C\u56FD"",""common"":""\u30A2\u30D5\u30AC\u30CB\u30B9\u30BF\u30F3""},""kor"":{""official"":""\uC544\uD504\uAC00\uB2C8\uC2A4\uD0C4 \uC774\uC2AC\uB78C \uACF5\uD654\uAD6D"",""common"":""\uC544\uD504\uAC00\uB2C8\uC2A4\uD0C4""},""nld"":{""official"":""Islamitische Republiek Afghanistan"",""common"":""Afghanistan""},""per"":{""official"":""\u062C\u0645\u0647\u0648\u0631\u06CC \u0627\u0633\u0644\u0627\u0645\u06CC \u0627\u0641\u063A\u0627\u0646\u0633\u062A\u0627\u0646"",""common"":""\u0627\u0641\u063A\u0627\u0646\u0633\u062A\u0627\u0646""},""pol"":{""official"":""Islamska Republika Afganistanu"",""common"":""Afganistan""},""por"":{""official"":""Rep\u00FAblica Isl\u00E2mica do Afeganist\u00E3o"",""common"":""Afeganist\u00E3o""},""rus"":{""official"":""\u0418\u0441\u043B\u0430\u043C\u0441\u043A\u0430\u044F \u0420\u0435\u0441\u043F\u0443\u0431\u043B\u0438\u043A\u0430 \u0410\u0444\u0433\u0430\u043D\u0438\u0441\u0442\u0430\u043D"",""common"":""\u0410\u0444\u0433\u0430\u043D\u0438\u0441\u0442\u0430\u043D""},""slk"":{""official"":""Afg\u00E1nsky islamsk\u00FD \u0161t\u00E1t"",""common"":""Afganistan""},""spa"":{""official"":""Rep\u00FAblica Isl\u00E1mica de Afganist\u00E1n"",""common"":""Afganist\u00E1n""},""srp"":{""official"":""\u0418\u0441\u043B\u0430\u043C\u0441\u043A\u0430 \u0420\u0435\u043F\u0443\u0431\u043B\u0438\u043A\u0430 \u0410\u0432\u0433\u0430\u043D\u0438\u0441\u0442\u0430\u043D"",""common"":""\u0410\u0432\u0433\u0430\u043D\u0438\u0441\u0442\u0430\u043D""},""swe"":{""official"":""Islamiska republiken Afghanistan"",""common"":""Afghanistan""},""tur"":{""official"":""Afganistan \u0130slam Cumhuriyeti"",""common"":""Afganistan""},""urd"":{""official"":""\u0627\u0633\u0644\u0627\u0645\u06CC \u062C\u0645\u06C1\u0648\u0631\u06CC\u06C1 \u0627\u0641\u063A\u0627\u0646\u0633\u062A\u0627\u0646"",""common"":""\u0627\u0641\u063A\u0627\u0646\u0633\u062A\u0627\u0646""},""zho"":{""official"":""\u963F\u5BCC\u6C57\u4F0A\u65AF\u5170\u5171\u548C\u56FD"",""common"":""\u963F\u5BCC\u6C57""}}'::jsonb, '{""png"":""https://upload.wikimedia.org/wikipedia/commons/thumb/5/5c/Flag_of_the_Taliban.svg/320px-Flag_of_the_Taliban.svg.png"",""svg"":""https://upload.wikimedia.org/wikipedia/commons/5/5c/Flag_of_the_Taliban.svg""}'::jsonb, '{""png"":""https://mainfacts.com/media/images/coats_of_arms/af.png"",""svg"":""https://mainfacts.com/media/images/coats_of_arms/af.svg""}'::jsonb, true, true, true, 'AF', 'AFG', '2024-11-28 07:00:00+00', '2024-11-28 07:00:00+00', true),
@@ -305,73 +281,52 @@ INSERT INTO countries (id, name, official_name, numeric_code, capital, region, s
 (197, 'Hong Kong', 'Hong Kong Special Administrative Region of the People''s Republic of China', '344', 'City of Victoria', 'Asia', 'Eastern Asia', 22.26700000, 114.18800000, 'Hong Konger', 1104.00000000, 7527500, null, '[""UTC\u002B08:00""]'::jsonb, '[""CHN""]'::jsonb, '[""\u002B852""]'::jsonb, '["".hk"","".\u9999\u6E2F""]'::jsonb, '{""HKD"":{""name"":""Hong Kong dollar"",""symbol"":""$""}}'::jsonb, '{""eng"":""English"",""zho"":""Chinese""}'::jsonb, '{""ara"":{""official"":""\u0645\u0646\u0637\u0642\u0629 \u0647\u0648\u0646\u063A \u0643\u0648\u0646\u063A \u0627\u0644\u0627\u062F\u0627\u0631\u064A\u0629 \u0627\u0644\u062A\u0627\u0628\u0639\u0629 \u0644\u062C\u0645\u0647\u0648\u0631\u064A\u0629 \u0627\u0644\u0635\u064A\u0646 \u0627\u0644\u0634\u0639\u0628\u064A\u0629"",""common"":""\u0647\u0648\u0646\u063A \u0643\u0648\u0646\u063A""},""bre"":{""official"":""Rannvro velestradurel arbennik Hong Kong eus Republik pobl Sina"",""common"":""Hong Kong""},""ces"":{""official"":""Zvl\u00E1\u0161tn\u00ED administrativn\u00ED oblast \u010C\u00EDnsk\u00E9 lidov\u00E9 republiky Hongkong"",""common"":""Hongkong""},""cym"":{""official"":""Hong Kong Special Administrative Region of the People\u0027s Republic of China"",""common"":""Hong Kong""},""deu"":{""official"":""Sonderverwaltungszone Hongkong der Volksrepublik China"",""common"":""Hongkong""},""est"":{""official"":""Hongkongi erihalduspiirkond"",""common"":""Hongkong""},""fin"":{""official"":""Hong Kongin erityishallintoalue"",""common"":""Hongkong""},""fra"":{""official"":""R\u00E9gion administrative sp\u00E9ciale de Hong Kong de la R\u00E9publique populaire de Chine"",""common"":""Hong Kong""},""hrv"":{""official"":""Hong Kong Posebnog upravnog podru\u010DjaNarodne Republike Kine"",""common"":""Hong Kong""},""hun"":{""official"":""Hongkong"",""common"":""Hongkong""},""ind"":{""official"":""Daerah Administratif Khusus Republik Rakyat Tiongkok Hong Kong"",""common"":""Hong Kong""},""ita"":{""official"":""Hong Kong Regione amministrativa speciale della Repubblica Popolare Cinese"",""common"":""Hong Kong""},""jpn"":{""official"":""\u4E2D\u83EF\u4EBA\u6C11\u5171\u548C\u56FD\u9999\u6E2F\u7279\u5225\u884C\u653F\u533A"",""common"":""\u9999\u6E2F""},""kor"":{""official"":""\uC911\uD654\uC778\uBBFC\uACF5\uD654\uAD6D \uD64D\uCF69 \uD2B9\uBCC4\uD589\uC815\uAD6C"",""common"":""\uD64D\uCF69""},""nld"":{""official"":""Hong Kong Speciale Administratieve Regio van de Volksrepubliek China"",""common"":""Hongkong""},""per"":{""official"":""\u0647\u064F\u0646\u06AF \u06A9\u064F\u0646\u06AF"",""common"":""\u0647\u064F\u0646\u06AF \u06A9\u064F\u0646\u06AF""},""pol"":{""official"":""Specjalny Region Administracyjny Chi\u0144skiej Republiki Ludowej Hongkong"",""common"":""Hongkong""},""por"":{""official"":""Hong Kong Regi\u00E3o Administrativa Especial da Rep\u00FAblica Popular da China"",""common"":""Hong Kong""},""rus"":{""official"":""Hong Kong \u0421\u043F\u0435\u0446\u0438\u0430\u043B\u044C\u043D\u044B\u0439 \u0430\u0434\u043C\u0438\u043D\u0438\u0441\u0442\u0440\u0430\u0442\u0438\u0432\u043D\u044B\u0439 \u0440\u0430\u0439\u043E\u043D \u041A\u0438\u0442\u0430\u0439\u0441\u043A\u043E\u0439 \u041D\u0430\u0440\u043E\u0434\u043D\u043E\u0439 \u0420\u0435\u0441\u043F\u0443\u0431\u043B\u0438\u043A\u0438 \u041A\u0438\u0442\u0430\u044F"",""common"":""\u0413\u043E\u043D\u043A\u043E\u043D\u0433""},""slk"":{""official"":""\u0160peci\u00E1lna administrat\u00EDvna oblas\u0165\u010C\u00EDnskej \u013Eudovej republiky Hongkong"",""common"":""Hongkong""},""spa"":{""official"":""Hong Kong Regi\u00F3n Administrativa Especial de la Rep\u00FAblica Popular China"",""common"":""Hong Kong""},""srp"":{""official"":""\u0425\u043E\u043D\u0433\u043A\u043E\u043D\u0433 \u0441\u043F\u0435\u0446\u0438\u0458\u0430\u043B\u043D\u0430 \u0430\u0434\u043C\u0438\u043D\u0438\u0441\u0442\u0440\u0430\u0442\u0438\u0432\u043D\u0430 \u043E\u0431\u043B\u0430\u0441\u0442 \u041D\u0430\u0440\u043E\u0434\u043D\u0435 \u0420\u0435\u043F\u0443\u0431\u043B\u0438\u043A\u0435 \u041A\u0438\u043D\u0435"",""common"":""\u0425\u043E\u043D\u0433\u043A\u043E\u043D\u0433""},""swe"":{""official"":""Hongkong"",""common"":""Hongkong""},""tur"":{""official"":""\u00C7in Halk Cumhuriyeti Hong Kong \u00D6zel \u0130dari B\u00F6lgesi"",""common"":""Hong Kong""},""urd"":{""official"":""\u06C1\u0627\u0646\u06AF \u06A9\u0627\u0646\u06AF \u0639\u0648\u0627\u0645\u06CC \u062C\u0645\u06C1\u0648\u0631\u06CC\u06C1 \u0686\u06CC\u0646 \u06A9\u0627 \u062E\u0635\u0648\u0635\u06CC \u0627\u0646\u062A\u0638\u0627\u0645\u06CC \u0639\u0644\u0627\u0642\u06C1"",""common"":""\u06C1\u0627\u0646\u06AF \u06A9\u0627\u0646\u06AF""}}'::jsonb, '{""png"":""https://flagcdn.com/w320/hk.png"",""svg"":""https://flagcdn.com/hk.svg""}'::jsonb, '{""png"":""https://mainfacts.com/media/images/coats_of_arms/hk.png"",""svg"":""https://mainfacts.com/media/images/coats_of_arms/hk.svg""}'::jsonb, false, false, false, 'HK', 'HKG', '2024-11-28 07:00:00+00', '2024-11-28 07:00:00+00', true);
             ");
 
-            migrationBuilder.CreateIndex(
-                name: "IX_audit_logs_correlation_id",
-                table: "audit_logs",
-                column: "correlation_id");
+            migrationBuilder.CreateTable(
+                name: "audit_logs",
+                columns: table => new
+                {
+                    id = table.Column<long>(type: "bigint", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    country_id = table.Column<long>(type: "bigint", nullable: false),
+                    action = table.Column<string>(type: "text", nullable: false),
+                    user_id = table.Column<string>(type: "text", nullable: false),
+                    timestamp_utc = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    changes = table.Column<string>(type: "text", nullable: true),
+                    ip_address = table.Column<string>(type: "text", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("pk_audit_logs", x => x.id);
+                    table.ForeignKey(
+                        name: "fk_audit_logs_countries_country_id",
+                        column: x => x.country_id,
+                        principalTable: "countries",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Cascade);
+                });
 
             migrationBuilder.CreateIndex(
-                name: "IX_audit_logs_country_id",
+                name: "ix_audit_logs_country_id",
                 table: "audit_logs",
                 column: "country_id");
 
             migrationBuilder.CreateIndex(
-                name: "IX_audit_logs_created_at_utc",
-                table: "audit_logs",
-                column: "created_at_utc");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_audit_logs_user_id",
-                table: "audit_logs",
-                column: "user_id");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_bulk_import_jobs_correlation_id",
-                table: "bulk_import_jobs",
-                column: "correlation_id");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_bulk_import_jobs_created_at_utc",
-                table: "bulk_import_jobs",
-                column: "created_at_utc",
-                descending: new bool[0]);
-
-            migrationBuilder.CreateIndex(
-                name: "IX_bulk_import_jobs_status",
-                table: "bulk_import_jobs",
-                column: "status");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_bulk_import_jobs_user_id",
-                table: "bulk_import_jobs",
-                column: "user_id");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_countries_is_active",
-                table: "countries",
-                column: "is_active");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_countries_name_gin",
-                table: "countries",
-                column: "name");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_countries_region",
-                table: "countries",
-                column: "region");
-
-            migrationBuilder.CreateIndex(
-                name: "UQ_countries_iso2",
+                name: "IX_countries_iso2",
                 table: "countries",
                 column: "iso2",
                 unique: true);
 
             migrationBuilder.CreateIndex(
-                name: "UQ_countries_iso3",
+                name: "IX_countries_iso3",
                 table: "countries",
                 column: "iso3",
-                unique: true);
+                unique: true,
+                filter: "iso3 IS NOT NULL");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_countries_name",
+                table: "countries",
+                column: "name");
         }
 
         /// <inheritdoc />
