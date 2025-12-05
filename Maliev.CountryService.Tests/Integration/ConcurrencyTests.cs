@@ -20,7 +20,7 @@ public class ConcurrencyTests : IntegrationTestBase
     public async Task ConcurrentUpdate_SecondUpdateWithOldETag_Returns412()
     {
         // Arrange
-        var adminClient = CreateAdminClient("user1", "country_admin");
+        var adminClient = CreateAdminClient("user1", "CountryAdmin");
 
         // Create a country
         var createRequest = new CreateCountryRequest
@@ -81,7 +81,7 @@ public class ConcurrencyTests : IntegrationTestBase
     public async Task ConcurrentPatch_SecondPatchWithOldETag_Returns412()
     {
         // Arrange
-        var adminClient = CreateAdminClient("user2", "country_admin");
+        var adminClient = CreateAdminClient("user2", "CountryAdmin");
 
         // Create a country
         var createRequest = new CreateCountryRequest
@@ -134,7 +134,7 @@ public class ConcurrencyTests : IntegrationTestBase
     public async Task SequentialUpdates_WithCorrectETags_AllSucceed()
     {
         // Arrange
-        var adminClient = CreateAdminClient("user3", "country_admin");
+        var adminClient = CreateAdminClient("user3", "CountryAdmin");
 
         // Create a country
         var createRequest = new CreateCountryRequest
@@ -181,7 +181,7 @@ public class ConcurrencyTests : IntegrationTestBase
     public async Task ETag_ChangesOnEveryModification()
     {
         // Arrange
-        var adminClient = CreateAdminClient("user4", "country_admin");
+        var adminClient = CreateAdminClient("user4", "CountryAdmin");
 
         // Create a country
         var createRequest = new CreateCountryRequest
@@ -241,7 +241,7 @@ public class ConcurrencyTests : IntegrationTestBase
     public async Task GetById_ReturnsETag()
     {
         // Arrange
-        var adminClient = CreateAdminClient("user5", "country_admin");
+        var adminClient = CreateAdminClient("user5", "CountryAdmin");
 
         // Create a country
         var createRequest = new CreateCountryRequest
@@ -271,8 +271,8 @@ public class ConcurrencyTests : IntegrationTestBase
     public async Task SimulateConcurrentUsers_OnlyOneUpdateSucceeds()
     {
         // Arrange
-        var admin1 = CreateAdminClient("user6a", "country_admin");
-        var admin2 = CreateAdminClient("user6b", "country_admin");
+        var admin1 = CreateAdminClient("user6a", "CountryAdmin");
+        var admin2 = CreateAdminClient("user6b", "CountryAdmin");
 
         // Create a country
         var createRequest = new CreateCountryRequest

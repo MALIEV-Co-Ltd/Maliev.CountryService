@@ -38,7 +38,7 @@ public class BulkImportTests : IntegrationTestBase
     public async Task BulkImport_WithValidData_Returns202()
     {
         // Arrange
-        var adminClient = CreateAdminClient("testuser", "country_admin");
+        var adminClient = CreateAdminClient("testuser", "CountryAdmin");
         var request = new BulkImportRequest
         {
             Countries = new List<CreateCountryRequest>
@@ -75,7 +75,7 @@ public class BulkImportTests : IntegrationTestBase
     public async Task BulkImport_WithInvalidData_Returns400()
     {
         // Arrange
-        var adminClient = CreateAdminClient("testuser", "country_admin");
+        var adminClient = CreateAdminClient("testuser", "CountryAdmin");
         var request = new BulkImportRequest
         {
             Countries = new List<CreateCountryRequest>
@@ -99,7 +99,7 @@ public class BulkImportTests : IntegrationTestBase
     public async Task BulkImport_ExceedsLimit_Returns413()
     {
         // Arrange
-        var adminClient = CreateAdminClient("testuser", "country_admin");
+        var adminClient = CreateAdminClient("testuser", "CountryAdmin");
         var countries = new List<CreateCountryRequest>();
 
         // Create 1001 countries to exceed the 1000 limit
@@ -136,7 +136,7 @@ public class BulkImportTests : IntegrationTestBase
     public async Task BulkImport_EmptyList_Returns400()
     {
         // Arrange
-        var adminClient = CreateAdminClient("testuser", "country_admin");
+        var adminClient = CreateAdminClient("testuser", "CountryAdmin");
         var request = new BulkImportRequest { Countries = new List<CreateCountryRequest>() };
 
         // Act
@@ -150,7 +150,7 @@ public class BulkImportTests : IntegrationTestBase
     public async Task GetJobStatus_ValidJob_Returns200()
     {
         // Arrange
-        var adminClient = CreateAdminClient("testuser", "country_admin");
+        var adminClient = CreateAdminClient("testuser", "CountryAdmin");
 
         // Create a bulk import job first
         var createRequest = new BulkImportRequest
@@ -180,7 +180,7 @@ public class BulkImportTests : IntegrationTestBase
     public async Task GetJobStatus_NonExistentJob_Returns404()
     {
         // Arrange
-        var adminClient = CreateAdminClient("testuser", "country_admin");
+        var adminClient = CreateAdminClient("testuser", "CountryAdmin");
         var nonExistentJobId = Guid.NewGuid();
 
         // Act
@@ -194,7 +194,7 @@ public class BulkImportTests : IntegrationTestBase
     public async Task ProcessJob_ValidatedJob_Returns202()
     {
         // Arrange
-        var adminClient = CreateAdminClient("testuser", "country_admin");
+        var adminClient = CreateAdminClient("testuser", "CountryAdmin");
 
         // Create a validated job first
         var createRequest = new BulkImportRequest
@@ -226,7 +226,7 @@ public class BulkImportTests : IntegrationTestBase
     public async Task ProcessJob_NonExistentJob_Returns404()
     {
         // Arrange
-        var adminClient = CreateAdminClient("testuser", "country_admin");
+        var adminClient = CreateAdminClient("testuser", "CountryAdmin");
         var nonExistentJobId = Guid.NewGuid();
 
         // Act
@@ -240,7 +240,7 @@ public class BulkImportTests : IntegrationTestBase
     public async Task BulkImport_WithDuplicateInBatch_FailsValidation()
     {
         // Arrange
-        var adminClient = CreateAdminClient("testuser", "country_admin");
+        var adminClient = CreateAdminClient("testuser", "CountryAdmin");
         var request = new BulkImportRequest
         {
             Countries = new List<CreateCountryRequest>
@@ -261,7 +261,7 @@ public class BulkImportTests : IntegrationTestBase
     public async Task BulkImport_CompleteFlow_ValidateProcessCheck()
     {
         // Arrange
-        var adminClient = CreateAdminClient("testuser", "country_admin");
+        var adminClient = CreateAdminClient("testuser", "CountryAdmin");
         var request = new BulkImportRequest
         {
             Countries = new List<CreateCountryRequest>
@@ -316,7 +316,7 @@ public class BulkImportTests : IntegrationTestBase
     public async Task BulkImport_MultipleJobs_CanBeTrackedIndependently()
     {
         // Arrange
-        var adminClient = CreateAdminClient("testuser", "country_admin");
+        var adminClient = CreateAdminClient("testuser", "CountryAdmin");
 
         var request1 = new BulkImportRequest
         {

@@ -38,7 +38,7 @@ public class AdminCountryTests : IntegrationTestBase
     public async Task Create_WithAuthentication_Returns201()
     {
         // Arrange
-        var adminClient = CreateAdminClient("testuser", "country_admin");
+        var adminClient = CreateAdminClient("testuser", "CountryAdmin");
         var request = new CreateCountryRequest
         {
             Iso2 = "TA",
@@ -67,7 +67,7 @@ public class AdminCountryTests : IntegrationTestBase
     public async Task Create_WithDuplicateIso2_Returns409()
     {
         // Arrange
-        var adminClient = CreateAdminClient("testuser", "country_admin");
+        var adminClient = CreateAdminClient("testuser", "CountryAdmin");
         var request1 = new CreateCountryRequest
         {
             Iso2 = "TB",
@@ -97,7 +97,7 @@ public class AdminCountryTests : IntegrationTestBase
     public async Task Update_WithoutIfMatch_Returns428()
     {
         // Arrange
-        var adminClient = CreateAdminClient("testuser", "country_admin");
+        var adminClient = CreateAdminClient("testuser", "CountryAdmin");
 
         // Create a country first
         var createRequest = new CreateCountryRequest
@@ -129,7 +129,7 @@ public class AdminCountryTests : IntegrationTestBase
     public async Task Update_WithValidIfMatch_Returns200()
     {
         // Arrange
-        var adminClient = CreateAdminClient("testuser", "country_admin");
+        var adminClient = CreateAdminClient("testuser", "CountryAdmin");
 
         // Create a country first
         var createRequest = new CreateCountryRequest
@@ -174,7 +174,7 @@ public class AdminCountryTests : IntegrationTestBase
     public async Task Update_WithWrongIfMatch_Returns412()
     {
         // Arrange
-        var adminClient = CreateAdminClient("testuser", "country_admin");
+        var adminClient = CreateAdminClient("testuser", "CountryAdmin");
 
         // Create a country first
         var createRequest = new CreateCountryRequest
@@ -212,7 +212,7 @@ public class AdminCountryTests : IntegrationTestBase
     public async Task Patch_WithValidIfMatch_Returns200()
     {
         // Arrange
-        var adminClient = CreateAdminClient("testuser", "country_admin");
+        var adminClient = CreateAdminClient("testuser", "CountryAdmin");
 
         // Create a country first
         var createRequest = new CreateCountryRequest
@@ -254,7 +254,7 @@ public class AdminCountryTests : IntegrationTestBase
     public async Task SoftDelete_WithAuthentication_Returns204()
     {
         // Arrange
-        var adminClient = CreateAdminClient("testuser", "country_admin");
+        var adminClient = CreateAdminClient("testuser", "CountryAdmin");
 
         // Create a country first
         var createRequest = new CreateCountryRequest
@@ -282,7 +282,7 @@ public class AdminCountryTests : IntegrationTestBase
     public async Task HardDelete_WithoutSuperAdminRole_Returns403()
     {
         // Arrange
-        var adminClient = CreateAdminClient("testuser", "country_admin"); // Only country_admin, not super_admin
+        var adminClient = CreateAdminClient("testuser", "CountryAdmin"); // Only country_admin, not super_admin
 
         // Create a country first
         var createRequest = new CreateCountryRequest
@@ -306,10 +306,10 @@ public class AdminCountryTests : IntegrationTestBase
     public async Task HardDelete_WithSuperAdminRole_Returns204()
     {
         // Arrange - Try with both possible role names
-        var superAdminClient = CreateAdminClient("superadmin", "super_admin");
+        var superAdminClient = CreateAdminClient("superadmin", "SuperAdmin");
 
         // Create a country first using country_admin client
-        var adminClient = CreateAdminClient("testuser", "country_admin");
+        var adminClient = CreateAdminClient("testuser", "CountryAdmin");
         var createRequest = new CreateCountryRequest
         {
             Iso2 = "TI",
@@ -342,7 +342,7 @@ public class AdminCountryTests : IntegrationTestBase
     public async Task Create_WithInvalidData_Returns400()
     {
         // Arrange
-        var adminClient = CreateAdminClient("testuser", "country_admin");
+        var adminClient = CreateAdminClient("testuser", "CountryAdmin");
         var request = new CreateCountryRequest
         {
             Iso2 = "", // Invalid - empty
@@ -360,7 +360,7 @@ public class AdminCountryTests : IntegrationTestBase
     public async Task Update_NonExistentCountry_Returns404()
     {
         // Arrange
-        var adminClient = CreateAdminClient("testuser", "country_admin");
+        var adminClient = CreateAdminClient("testuser", "CountryAdmin");
         var updateRequest = new UpdateCountryRequest
         {
             Iso2 = "XX",

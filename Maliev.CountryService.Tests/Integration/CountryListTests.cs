@@ -187,7 +187,7 @@ public class CountryListTests : IntegrationTestBase
         var inactiveCountryIso2 = "ZZ"; // Assuming this is an inactive country
 
         // First, create an inactive country for testing
-        var adminClient = CreateAdminClient("testuser", "country_admin"); // Admin client with country_admin role
+        var adminClient = CreateAdminClient("testuser", "CountryAdmin"); // Admin client with country_admin role
         var createRequest = new CreateCountryRequest
         {
             Iso2 = inactiveCountryIso2,

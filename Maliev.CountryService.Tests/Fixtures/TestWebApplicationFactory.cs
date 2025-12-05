@@ -13,8 +13,7 @@ using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Caching.StackExchangeRedis;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.Extensions.Options;
-using Microsoft.AspNetCore.Authorization; // Added for Authorization
-using Microsoft.AspNetCore.Authentication.JwtBearer; // Added for JwtBearerDefaults
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 
 namespace Maliev.CountryService.Tests;
 
@@ -28,6 +27,8 @@ public class TestWebApplicationFactory : WebApplicationFactory<Program>, IAsyncL
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseSetting("ConnectionStrings:redis", _db.RedisConnectionString);
+        // Clear Jwt:PublicKey so AddJwtAuthentication uses Testing environment path
+        builder.UseSetting("Jwt:PublicKey", "");
         
         builder.ConfigureTestServices(services =>
         {
@@ -45,13 +46,8 @@ public class TestWebApplicationFactory : WebApplicationFactory<Program>, IAsyncL
                 Configuration = _db.RedisConnectionString
             })));
 
-            // Configure JWT Authentication for testing
-            services.AddAuthentication(options =>
-            {
-                options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-                options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-            })
-            .AddJwtBearer(options =>
+            // Override JWT Bearer options with test RSA key via PostConfigureAll
+            services.PostConfigureAll<JwtBearerOptions>(options =>
             {
                 options.TokenValidationParameters = new TokenValidationParameters
                 {
@@ -64,21 +60,6 @@ public class TestWebApplicationFactory : WebApplicationFactory<Program>, IAsyncL
                     ValidateIssuerSigningKey = true
                 };
             });
-
-            // Configure Authorization Policies for testing
-            services.AddAuthorization(options =>
-            {
-                options.AddPolicy("CountryAdmin", policy =>
-                {
-                    policy.AuthenticationSchemes.Add(JwtBearerDefaults.AuthenticationScheme);
-                    policy.RequireRole("country_admin");
-                });
-                options.AddPolicy("SuperAdmin", policy =>
-                {
-                    policy.AuthenticationSchemes.Add(JwtBearerDefaults.AuthenticationScheme);
-                    policy.RequireRole("super_admin");
-                });
-            });
         });
         builder.UseEnvironment("Testing");
     }
@@ -90,7 +71,7 @@ public class TestWebApplicationFactory : WebApplicationFactory<Program>, IAsyncL
         TestRsaKey.Dispose();
     }
 
-    public string GenerateTestToken(string userId, string role = "country_admin")
+    public string GenerateTestToken(string userId, string role = "CountryAdmin")
     {
         var claims = new List<Claim>
         {

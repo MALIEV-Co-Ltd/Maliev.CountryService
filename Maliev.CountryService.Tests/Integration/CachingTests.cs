@@ -153,7 +153,7 @@ public class CachingTests : IntegrationTestBase
     public async Task AfterModification_CacheIsInvalidated()
     {
         // Arrange
-        var adminClient = CreateAdminClient("cachetest", "country_admin");
+        var adminClient = CreateAdminClient("cachetest", "CountryAdmin");
 
         // Create a country
         var createRequest = new CreateCountryRequest
