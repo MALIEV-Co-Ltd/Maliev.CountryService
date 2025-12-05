@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using Maliev.CountryService.Data.Models;
+using Maliev.CountryService.Data.Entities;
 
 namespace Maliev.CountryService.Data.Configurations;
 
@@ -70,10 +70,13 @@ public class CountryConfiguration : IEntityTypeConfiguration<Country>
             .HasDefaultValueSql("gen_random_uuid()")
             .IsConcurrencyToken();
 
-        // Timestamps
+        // Audit columns
+        builder.Property(c => c.CreatedBy).HasColumnName("created_by").HasMaxLength(100).IsRequired();
         builder.Property(c => c.CreatedAtUtc).HasColumnName("created_at_utc")
             .HasDefaultValueSql("NOW()");
+        builder.Property(c => c.UpdatedBy).HasColumnName("updated_by").HasMaxLength(100).IsRequired();
         builder.Property(c => c.LastModifiedUtc).HasColumnName("last_modified_utc")
             .HasDefaultValueSql("NOW()");
+        builder.Property(c => c.DeletedAt).HasColumnName("deleted_at");
     }
 }
