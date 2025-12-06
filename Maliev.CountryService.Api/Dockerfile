@@ -1,23 +1,53 @@
+# syntax=docker/dockerfile:1.4
+# See https://aka.ms/customizecontainer to learn how to customize your debug container and how Visual Studio uses this Dockerfile to build your images for faster debugging.
+
+# This stage is used when running from VS in fast mode (Default for Debug configuration)
+FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS base
+USER $APP_UID
+WORKDIR /app
+EXPOSE 8080
+EXPOSE 8081
+
+# This stage is used to build the service project
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
-COPY nuget.config ./
 COPY ["Maliev.CountryService.Api/Maliev.CountryService.Api.csproj", "Maliev.CountryService.Api/"]
 COPY ["Maliev.CountryService.Data/Maliev.CountryService.Data.csproj", "Maliev.CountryService.Data/"]
+COPY ["nuget.config", "."]
 RUN --mount=type=secret,id=nuget_username \
     --mount=type=secret,id=nuget_password \
     NUGET_USERNAME=$(cat /run/secrets/nuget_username) \
     NUGET_PASSWORD=$(cat /run/secrets/nuget_password) \
-    dotnet restore "Maliev.CountryService.Api/Maliev.CountryService.Api.csproj"
+    dotnet restore "./Maliev.CountryService.Api/Maliev.CountryService.Api.csproj"
 COPY . .
 WORKDIR "/src/Maliev.CountryService.Api"
-RUN dotnet publish -c Release -o /app/publish
+RUN dotnet build "./Maliev.CountryService.Api.csproj" -c $BUILD_CONFIGURATION -o /app/build
 
-FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
+# This stage is used to publish the service project to be copied to the final stage
+FROM build AS publish
+ARG BUILD_CONFIGURATION=Release
+RUN dotnet publish "./Maliev.CountryService.Api.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
+
+# This stage is used in production or when running from VS in regular mode (Default when not using the Debug configuration)
+FROM base AS final
 WORKDIR /app
+
+# Ensure 'app' owns the workdir (app user already exists in ASP.NET runtime image)
 RUN chown -R app:app /app
+
+# Switch to non-root user
 USER app
-COPY --from=build /app/publish .
-EXPOSE 8080
+
+# Copy published application (now owned by app)
+COPY --from=publish /app/publish .
+
+# Set environment variables
 ENV ASPNETCORE_URLS=http://+:8080
-HEALTHCHECK CMD curl -f http://localhost:8080/countries/liveness || exit 1
+ENV ASPNETCORE_ENVIRONMENT=Production
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:8080/countries/liveness || exit 1
+
 ENTRYPOINT ["dotnet", "Maliev.CountryService.Api.dll"]
