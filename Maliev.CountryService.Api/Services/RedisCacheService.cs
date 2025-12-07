@@ -99,7 +99,7 @@ public class RedisCacheService : ICacheService
             // T120: Check if data is stale but within grace period
             if (now > freshnessExpiry && now < staleExpiry)
             {
-                _logger.LogInformation("Serving stale cache entry for key {Key}, age {Age}s, triggering refresh",
+                _logger.LogDebug("Serving stale cache entry for key {Key}, age {Age}s, triggering refresh",
                     key, (now - cacheEntry.CachedAtUtc).TotalSeconds);
 
                 // Trigger background refresh (fire-and-forget)
