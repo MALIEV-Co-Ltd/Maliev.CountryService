@@ -110,6 +110,15 @@ public class CountryServiceDbContext : DbContext
             entity.Property(e => e.CompletedAtUtc).HasColumnType("timestamp with time zone");
             entity.Property(e => e.PayloadData).HasColumnType("jsonb"); // Configure PayloadData as jsonb
         });
+
+        modelBuilder.Entity<AuditLog>(entity =>
+        {
+            entity.HasOne(e => e.Country)
+                  .WithMany()
+                  .HasForeignKey(e => e.CountryId)
+                  .IsRequired(false) // Fix for global query filter warning
+                  .OnDelete(DeleteBehavior.Cascade); // Ensure hard delete works
+        });
     }
 }
 
