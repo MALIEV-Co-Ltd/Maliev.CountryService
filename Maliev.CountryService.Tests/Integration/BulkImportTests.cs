@@ -11,6 +11,7 @@ namespace Maliev.CountryService.Tests.Integration;
 /// Integration tests for bulk import operations.
 /// Tests validation, async processing, job tracking, and error handling.
 /// </summary>
+[Collection("TestDatabase")]
 public class BulkImportTests : IntegrationTestBase
 {
     public BulkImportTests(TestWebApplicationFactory factory) : base(factory) { }
@@ -23,12 +24,12 @@ public class BulkImportTests : IntegrationTestBase
         {
             Countries = new List<CreateCountryRequest>
             {
-                new CreateCountryRequest { Iso2 = "BA", Name = "Test Country" }
+                new CreateCountryRequest { Iso2 = "XD", Name = "Test Country" }
             }
         };
 
         // Act
-        var response = await _client.PostAsJsonAsync("/countries/v1/admin/bulk-import", request);
+        var response = await _client.PostAsJsonAsync("/country/v1/admin/bulk-import", request);
 
         // Assert
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
@@ -38,28 +39,28 @@ public class BulkImportTests : IntegrationTestBase
     public async Task BulkImport_WithValidData_Returns202()
     {
         // Arrange
-        var adminClient = CreateAdminClient("testuser", "CountryAdmin");
+        var adminClient = _factory.CreateAuthenticatedClient("testuser", CountryAdminRoles);
         var request = new BulkImportRequest
         {
             Countries = new List<CreateCountryRequest>
             {
                 new CreateCountryRequest
                 {
-                    Iso2 = "BB",
-                    Iso3 = "BBA",
+                    Iso2 = "XE",
+                    Iso3 = "XXE",
                     Name = "Bulk Test Country 1"
                 },
                 new CreateCountryRequest
                 {
-                    Iso2 = "BC",
-                    Iso3 = "BCB",
+                    Iso2 = "XF",
+                    Iso3 = "XXF",
                     Name = "Bulk Test Country 2"
                 }
             }
         };
 
         // Act
-        var response = await adminClient.PostAsJsonAsync("/countries/v1/admin/bulk-import", request);
+        var response = await adminClient.PostAsJsonAsync("/country/v1/admin/bulk-import", request);
 
         // Assert
         Assert.Equal(HttpStatusCode.Accepted, response.StatusCode); // 202
@@ -75,7 +76,7 @@ public class BulkImportTests : IntegrationTestBase
     public async Task BulkImport_WithInvalidData_Returns400()
     {
         // Arrange
-        var adminClient = CreateAdminClient("testuser", "CountryAdmin");
+        var adminClient = _factory.CreateAuthenticatedClient("testuser", CountryAdminRoles);
         var request = new BulkImportRequest
         {
             Countries = new List<CreateCountryRequest>
@@ -89,7 +90,7 @@ public class BulkImportTests : IntegrationTestBase
         };
 
         // Act
-        var response = await adminClient.PostAsJsonAsync("/countries/v1/admin/bulk-import", request);
+        var response = await adminClient.PostAsJsonAsync("/country/v1/admin/bulk-import", request);
 
         // Assert
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
@@ -99,7 +100,7 @@ public class BulkImportTests : IntegrationTestBase
     public async Task BulkImport_ExceedsLimit_Returns413()
     {
         // Arrange
-        var adminClient = CreateAdminClient("testuser", "CountryAdmin");
+        var adminClient = _factory.CreateAuthenticatedClient("testuser", CountryAdminRoles);
         var countries = new List<CreateCountryRequest>();
 
         // Create 1001 countries to exceed the 1000 limit
@@ -126,7 +127,7 @@ public class BulkImportTests : IntegrationTestBase
         var request = new BulkImportRequest { Countries = countries };
 
         // Act
-        var response = await adminClient.PostAsJsonAsync("/countries/v1/admin/bulk-import", request);
+        var response = await adminClient.PostAsJsonAsync("/country/v1/admin/bulk-import", request);
 
         // Assert
         Assert.Equal((HttpStatusCode)413, response.StatusCode); // 413 Payload Too Large
@@ -136,11 +137,11 @@ public class BulkImportTests : IntegrationTestBase
     public async Task BulkImport_EmptyList_Returns400()
     {
         // Arrange
-        var adminClient = CreateAdminClient("testuser", "CountryAdmin");
+        var adminClient = _factory.CreateAuthenticatedClient("testuser", CountryAdminRoles);
         var request = new BulkImportRequest { Countries = new List<CreateCountryRequest>() };
 
         // Act
-        var response = await adminClient.PostAsJsonAsync("/countries/v1/admin/bulk-import", request);
+        var response = await adminClient.PostAsJsonAsync("/country/v1/admin/bulk-import", request);
 
         // Assert
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
@@ -150,23 +151,23 @@ public class BulkImportTests : IntegrationTestBase
     public async Task GetJobStatus_ValidJob_Returns200()
     {
         // Arrange
-        var adminClient = CreateAdminClient("testuser", "CountryAdmin");
+        var adminClient = _factory.CreateAuthenticatedClient("testuser", CountryAdminRoles);
 
         // Create a bulk import job first
         var createRequest = new BulkImportRequest
         {
             Countries = new List<CreateCountryRequest>
             {
-                new CreateCountryRequest { Iso2 = "BD", Iso3 = "BBD", Name = "Status Test Country" }
+                new CreateCountryRequest { Iso2 = "XG", Iso3 = "XXG", Name = "Status Test Country" }
             }
         };
 
-        var createResponse = await adminClient.PostAsJsonAsync("/countries/v1/admin/bulk-import", createRequest);
+        var createResponse = await adminClient.PostAsJsonAsync("/country/v1/admin/bulk-import", createRequest);
         var createResult = await createResponse.Content.ReadFromJsonAsync<BulkImportStatusResponse>(JsonSerializerOptions);
         Assert.NotNull(createResult);
 
         // Act - Get job status
-        var response = await adminClient.GetAsync($"/countries/v1/admin/bulk-import/{createResult.JobId}");
+        var response = await adminClient.GetAsync($"/country/v1/admin/bulk-import/{createResult.JobId}");
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -180,11 +181,11 @@ public class BulkImportTests : IntegrationTestBase
     public async Task GetJobStatus_NonExistentJob_Returns404()
     {
         // Arrange
-        var adminClient = CreateAdminClient("testuser", "CountryAdmin");
+        var adminClient = _factory.CreateAuthenticatedClient("testuser", CountryAdminRoles);
         var nonExistentJobId = Guid.NewGuid();
 
         // Act
-        var response = await adminClient.GetAsync($"/countries/v1/admin/bulk-import/{nonExistentJobId}");
+        var response = await adminClient.GetAsync($"/country/v1/admin/bulk-import/{nonExistentJobId}");
 
         // Assert
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
@@ -194,18 +195,18 @@ public class BulkImportTests : IntegrationTestBase
     public async Task ProcessJob_ValidatedJob_Returns202()
     {
         // Arrange
-        var adminClient = CreateAdminClient("testuser", "CountryAdmin");
+        var adminClient = _factory.CreateAuthenticatedClient("testuser", CountryAdminRoles);
 
         // Create a validated job first
         var createRequest = new BulkImportRequest
         {
             Countries = new List<CreateCountryRequest>
             {
-                new CreateCountryRequest { Iso2 = "BE", Iso3 = "BBE", Name = "Process Test Country" }
+                new CreateCountryRequest { Iso2 = "XI", Iso3 = "XXI", Name = "Process Test Country" }
             }
         };
 
-        var createResponse = await adminClient.PostAsJsonAsync("/countries/v1/admin/bulk-import", createRequest);
+        var createResponse = await adminClient.PostAsJsonAsync("/country/v1/admin/bulk-import", createRequest);
         var createResult = await createResponse.Content.ReadFromJsonAsync<BulkImportStatusResponse>(JsonSerializerOptions);
         Assert.NotNull(createResult);
 
@@ -213,7 +214,7 @@ public class BulkImportTests : IntegrationTestBase
         await Task.Delay(500);
 
         // Act - Process the job
-        var response = await adminClient.PostAsync($"/countries/v1/admin/bulk-import/{createResult.JobId}/process", null);
+        var response = await adminClient.PostAsync($"/country/v1/admin/bulk-import/{createResult.JobId}/process", null);
 
         // Assert
         Assert.True(
@@ -226,11 +227,11 @@ public class BulkImportTests : IntegrationTestBase
     public async Task ProcessJob_NonExistentJob_Returns404()
     {
         // Arrange
-        var adminClient = CreateAdminClient("testuser", "CountryAdmin");
+        var adminClient = _factory.CreateAuthenticatedClient("testuser", CountryAdminRoles);
         var nonExistentJobId = Guid.NewGuid();
 
         // Act
-        var response = await adminClient.PostAsync($"/countries/v1/admin/bulk-import/{nonExistentJobId}/process", null);
+        var response = await adminClient.PostAsync($"/country/v1/admin/bulk-import/{nonExistentJobId}/process", null);
 
         // Assert
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
@@ -240,18 +241,18 @@ public class BulkImportTests : IntegrationTestBase
     public async Task BulkImport_WithDuplicateInBatch_FailsValidation()
     {
         // Arrange
-        var adminClient = CreateAdminClient("testuser", "CountryAdmin");
+        var adminClient = _factory.CreateAuthenticatedClient("testuser", CountryAdminRoles);
         var request = new BulkImportRequest
         {
             Countries = new List<CreateCountryRequest>
             {
-                new CreateCountryRequest { Iso2 = "BF", Iso3 = "BBF", Name = "Duplicate Test 1" },
-                new CreateCountryRequest { Iso2 = "BF", Iso3 = "BBG", Name = "Duplicate Test 2" } // Same Iso2
+                new CreateCountryRequest { Iso2 = "XJ", Iso3 = "XXJ", Name = "Duplicate Test 1" },
+                new CreateCountryRequest { Iso2 = "XJ", Iso3 = "XXK", Name = "Duplicate Test 2" } // Same Iso2
             }
         };
 
         // Act
-        var response = await adminClient.PostAsJsonAsync("/countries/v1/admin/bulk-import", request);
+        var response = await adminClient.PostAsJsonAsync("/country/v1/admin/bulk-import", request);
 
         // Assert - Should fail validation due to duplicate ISO2
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
@@ -261,18 +262,18 @@ public class BulkImportTests : IntegrationTestBase
     public async Task BulkImport_CompleteFlow_ValidateProcessCheck()
     {
         // Arrange
-        var adminClient = CreateAdminClient("testuser", "CountryAdmin");
+        var adminClient = _factory.CreateAuthenticatedClient("testuser", CountryAdminRoles);
         var request = new BulkImportRequest
         {
             Countries = new List<CreateCountryRequest>
             {
-                new CreateCountryRequest { Iso2 = "BG", Iso3 = "BBG", Name = "Flow Test Country 1" },
-                new CreateCountryRequest { Iso2 = "BH", Iso3 = "BBH", Name = "Flow Test Country 2" }
+                new CreateCountryRequest { Iso2 = "XL", Iso3 = "XXL", Name = "Flow Test Country 1" },
+                new CreateCountryRequest { Iso2 = "XM", Iso3 = "XXM", Name = "Flow Test Country 2" }
             }
         };
 
         // Act 1 - Submit for validation
-        var submitResponse = await adminClient.PostAsJsonAsync("/countries/v1/admin/bulk-import", request);
+        var submitResponse = await adminClient.PostAsJsonAsync("/country/v1/admin/bulk-import", request);
         Assert.Equal(HttpStatusCode.Accepted, submitResponse.StatusCode);
 
         var submitResult = await submitResponse.Content.ReadFromJsonAsync<BulkImportStatusResponse>(JsonSerializerOptions);
@@ -283,7 +284,7 @@ public class BulkImportTests : IntegrationTestBase
         await Task.Delay(1000);
 
         // Act 2 - Check status
-        var statusResponse = await adminClient.GetAsync($"/countries/v1/admin/bulk-import/{jobId}");
+        var statusResponse = await adminClient.GetAsync($"/country/v1/admin/bulk-import/{jobId}");
         Assert.Equal(HttpStatusCode.OK, statusResponse.StatusCode);
 
         var statusResult = await statusResponse.Content.ReadFromJsonAsync<BulkImportStatusResponse>(JsonSerializerOptions);
@@ -292,14 +293,14 @@ public class BulkImportTests : IntegrationTestBase
         // Act 3 - Process job (if validated)
         if (statusResult.Status == "Validated")
         {
-            var processResponse = await adminClient.PostAsync($"/countries/v1/admin/bulk-import/{jobId}/process", null);
+            var processResponse = await adminClient.PostAsync($"/country/v1/admin/bulk-import/{jobId}/process", null);
             Assert.Equal(HttpStatusCode.Accepted, processResponse.StatusCode);
 
             // Wait for processing
             await Task.Delay(2000);
 
             // Act 4 - Check final status
-            var finalStatusResponse = await adminClient.GetAsync($"/countries/v1/admin/bulk-import/{jobId}");
+            var finalStatusResponse = await adminClient.GetAsync($"/country/v1/admin/bulk-import/{jobId}");
             var finalStatus = await finalStatusResponse.Content.ReadFromJsonAsync<BulkImportStatusResponse>(JsonSerializerOptions);
             Assert.NotNull(finalStatus);
 
@@ -316,13 +317,13 @@ public class BulkImportTests : IntegrationTestBase
     public async Task BulkImport_MultipleJobs_CanBeTrackedIndependently()
     {
         // Arrange
-        var adminClient = CreateAdminClient("testuser", "CountryAdmin");
+        var adminClient = _factory.CreateAuthenticatedClient("testuser", CountryAdminRoles);
 
         var request1 = new BulkImportRequest
         {
             Countries = new List<CreateCountryRequest>
             {
-                new CreateCountryRequest { Iso2 = "MA", Iso3 = "MMA", Name = "Multi Job 1" }
+                new CreateCountryRequest { Iso2 = "XN", Iso3 = "XXN", Name = "Multi Job 1" }
             }
         };
 
@@ -330,13 +331,13 @@ public class BulkImportTests : IntegrationTestBase
         {
             Countries = new List<CreateCountryRequest>
             {
-                new CreateCountryRequest { Iso2 = "MB", Iso3 = "MMB", Name = "Multi Job 2" }
+                new CreateCountryRequest { Iso2 = "XO", Iso3 = "XXO", Name = "Multi Job 2" }
             }
         };
 
         // Act - Submit two separate jobs
-        var response1 = await adminClient.PostAsJsonAsync("/countries/v1/admin/bulk-import", request1);
-        var response2 = await adminClient.PostAsJsonAsync("/countries/v1/admin/bulk-import", request2);
+        var response1 = await adminClient.PostAsJsonAsync("/country/v1/admin/bulk-import", request1);
+        var response2 = await adminClient.PostAsJsonAsync("/country/v1/admin/bulk-import", request2);
 
         var result1 = await response1.Content.ReadFromJsonAsync<BulkImportStatusResponse>(JsonSerializerOptions);
         var result2 = await response2.Content.ReadFromJsonAsync<BulkImportStatusResponse>(JsonSerializerOptions);
@@ -348,8 +349,8 @@ public class BulkImportTests : IntegrationTestBase
         Assert.NotEqual(result1.JobId, result2.JobId);
 
         // Both should be trackable independently
-        var status1 = await adminClient.GetAsync($"/countries/v1/admin/bulk-import/{result1.JobId}");
-        var status2 = await adminClient.GetAsync($"/countries/v1/admin/bulk-import/{result2.JobId}");
+        var status1 = await adminClient.GetAsync($"/country/v1/admin/bulk-import/{result1.JobId}");
+        var status2 = await adminClient.GetAsync($"/country/v1/admin/bulk-import/{result2.JobId}");
 
         Assert.Equal(HttpStatusCode.OK, status1.StatusCode);
         Assert.Equal(HttpStatusCode.OK, status2.StatusCode);

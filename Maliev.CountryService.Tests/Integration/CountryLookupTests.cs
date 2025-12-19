@@ -6,6 +6,7 @@ using Maliev.CountryService.Api.Models.Countries; // Assuming CountryResponse is
 
 namespace Maliev.CountryService.Tests.Integration;
 
+[Collection("TestDatabase")]
 public class CountryLookupTests : IntegrationTestBase
 {
     public CountryLookupTests(TestWebApplicationFactory factory) : base(factory) { }
@@ -17,7 +18,7 @@ public class CountryLookupTests : IntegrationTestBase
         var nonExistentId = 9999;
 
         // Act
-        var response = await _client.GetAsync($"/countries/{nonExistentId}");
+        var response = await _client.GetAsync($"/country/{nonExistentId}");
 
         // Assert
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
@@ -30,7 +31,7 @@ public class CountryLookupTests : IntegrationTestBase
         var nonExistentIso2 = "XX";
 
         // Act
-        var response = await _client.GetAsync($"/countries/iso2/{nonExistentIso2}");
+        var response = await _client.GetAsync($"/country/iso2/{nonExistentIso2}");
 
         // Assert
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
@@ -43,7 +44,7 @@ public class CountryLookupTests : IntegrationTestBase
         var nonExistentIso3 = "XXX";
 
         // Act
-        var response = await _client.GetAsync($"/countries/iso3/{nonExistentIso3}");
+        var response = await _client.GetAsync($"/country/iso3/{nonExistentIso3}");
 
         // Assert
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);

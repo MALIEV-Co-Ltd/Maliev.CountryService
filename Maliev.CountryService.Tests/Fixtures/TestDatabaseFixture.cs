@@ -4,6 +4,7 @@ using Maliev.CountryService.Data;
 using Microsoft.EntityFrameworkCore;
 using Testcontainers.PostgreSql;
 using Testcontainers.Redis;
+using Testcontainers.RabbitMq;
 
 namespace Maliev.CountryService.Tests.Fixtures;
 
@@ -11,14 +12,16 @@ public class TestDatabaseFixture : IAsyncLifetime
 {
     public IContainer? PostgresContainer { get; private set; }
     public IContainer? RedisContainer { get; private set; }
+    public IContainer? RabbitMqContainer { get; private set; }
 
     public string ConnectionString { get; private set; } = string.Empty;
     public string RedisConnectionString { get; private set; } = string.Empty;
+    public string RabbitMqConnectionString { get; private set; } = string.Empty;
 
     public async Task InitializeAsync()
     {
         PostgresContainer = new PostgreSqlBuilder()
-            .WithImage("postgres:16-alpine")
+            .WithImage("postgres:18-alpine")
             .WithDatabase("test_db")
             .WithUsername("postgres")
             .WithPassword("postgres")
@@ -28,17 +31,32 @@ public class TestDatabaseFixture : IAsyncLifetime
             .WithImage("redis:alpine")
             .Build();
 
-        await PostgresContainer.StartAsync();
-        await RedisContainer.StartAsync();
+        RabbitMqContainer = new RabbitMqBuilder()
+            .WithImage("rabbitmq:4.2.1-alpine")
+            .Build();
+
+        // Start all containers in parallel
+        await Task.WhenAll(
+            PostgresContainer.StartAsync(),
+            RedisContainer.StartAsync(),
+            RabbitMqContainer.StartAsync()
+        );
 
         ConnectionString = ((PostgreSqlContainer)PostgresContainer).GetConnectionString();
         RedisConnectionString = ((RedisContainer)RedisContainer).GetConnectionString();
+        RabbitMqConnectionString = ((RabbitMqContainer)RabbitMqContainer).GetConnectionString();
 
-        var options = new DbContextOptionsBuilder<CountryServiceDbContext>()
+        // Wait for Redis to be ready
+        using (var connection = await StackExchange.Redis.ConnectionMultiplexer.ConnectAsync(RedisConnectionString))
+        {
+            await connection.GetDatabase().PingAsync();
+        }
+
+        var options = new DbContextOptionsBuilder<CountryDbContext>()
             .UseNpgsql(ConnectionString)
             .Options;
 
-        using var context = new CountryServiceDbContext(options);
+        using var context = new CountryDbContext(options);
         await context.Database.EnsureDeletedAsync(); // Ensure clean database
         await context.Database.EnsureCreatedAsync(); // Create schema from model
         Console.WriteLine("Database schema created using EnsureCreatedAsync().");
@@ -185,6 +203,11 @@ public class TestDatabaseFixture : IAsyncLifetime
         if (RedisContainer != null)
         {
             await RedisContainer.DisposeAsync();
+        }
+
+        if (RabbitMqContainer != null)
+        {
+            await RabbitMqContainer.DisposeAsync();
         }
     }
 }

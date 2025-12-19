@@ -11,6 +11,7 @@ namespace Maliev.CountryService.Tests.Integration;
 /// Integration tests for resilience features including graceful degradation.
 /// Tests that the service can serve from cache when the database is unavailable.
 /// </summary>
+[Collection("TestDatabase")]
 public class ResilienceTests : IntegrationTestBase
 {
     public ResilienceTests(TestWebApplicationFactory factory) : base(factory) { }
@@ -19,10 +20,10 @@ public class ResilienceTests : IntegrationTestBase
     public async Task GetById_AfterCacheWarming_ThenDbStop_ServesFromCache()
     {
         // Arrange - First, ensure the data is cached by making a successful request
-        var countryId = 1; // US from seed data
+        var countryId = 187; // US from seed data (United States is at ID 187)
 
         // Initial request to populate cache
-        var initialResponse = await _client.GetAsync($"/countries/v1/countries/{countryId}");
+        var initialResponse = await _client.GetAsync($"/country/v1/countries/{countryId}");
         Assert.Equal(HttpStatusCode.OK, initialResponse.StatusCode);
 
         var initialCountry = await initialResponse.Content.ReadFromJsonAsync<CountryResponse>(JsonSerializerOptions);
@@ -56,7 +57,7 @@ public class ResilienceTests : IntegrationTestBase
         await Task.Delay(1000);
 
         // Try to get the same country - should still work from cache
-        var degradedResponse = await _client.GetAsync($"/countries/v1/countries/{countryId}");
+        var degradedResponse = await _client.GetAsync($"/country/v1/countries/{countryId}");
 
         // Assert - Request should succeed with cached data (or gracefully handle failure)
         // In test environment, cache might not persist after DB stop, so accept either OK or error
@@ -90,7 +91,7 @@ public class ResilienceTests : IntegrationTestBase
         // Arrange - Populate cache with ISO2 lookup
         var iso2 = "CA";
 
-        var initialResponse = await _client.GetAsync($"/countries/v1/countries/iso2/{iso2}");
+        var initialResponse = await _client.GetAsync($"/country/v1/countries/iso2/{iso2}");
         Assert.Equal(HttpStatusCode.OK, initialResponse.StatusCode);
 
         var initialCountry = await initialResponse.Content.ReadFromJsonAsync<CountryResponse>(JsonSerializerOptions);
@@ -119,7 +120,7 @@ public class ResilienceTests : IntegrationTestBase
         }
 
         // Try to get by ISO2 - should work from cache
-        var degradedResponse = await _client.GetAsync($"/countries/v1/countries/iso2/{iso2}");
+        var degradedResponse = await _client.GetAsync($"/country/v1/countries/iso2/{iso2}");
 
         // Assert - Accept either OK (cache) or ServiceUnavailable (cache miss)
         Assert.True(
@@ -162,7 +163,7 @@ public class ResilienceTests : IntegrationTestBase
 
         try
         {
-            var response = await _client.GetAsync($"/countries/v1/countries/{uncachedId}");
+            var response = await _client.GetAsync($"/country/v1/countries/{uncachedId}");
 
             // Assert - Should fail when DB is down and no cache exists
             // The service should return 503 Service Unavailable or 500 Internal Server Error
@@ -198,7 +199,7 @@ public class ResilienceTests : IntegrationTestBase
                 await Task.Delay(1000);
             }
 
-            var response = await _client.GetAsync("/countries/v1/countries?page=1&pageSize=10");
+            var response = await _client.GetAsync("/country/v1/countries?page=1&pageSize=10");
 
             // Assert - List operations should either:
             // 1) Fail gracefully (503/500) if cache is empty
@@ -224,8 +225,8 @@ public class ResilienceTests : IntegrationTestBase
     public async Task DatabaseRecovery_AfterRestart_NormalOperationsResume()
     {
         // Arrange - Make initial request
-        var countryId = 1;
-        var initialResponse = await _client.GetAsync($"/countries/v1/countries/{countryId}");
+        var countryId = 187; // US from seed data (United States is at ID 187)
+        var initialResponse = await _client.GetAsync($"/country/v1/countries/{countryId}");
         Assert.Equal(HttpStatusCode.OK, initialResponse.StatusCode);
 
         var dbFixture = _factory.Services.GetService(typeof(TestDatabaseFixture)) as TestDatabaseFixture;
@@ -240,7 +241,7 @@ public class ResilienceTests : IntegrationTestBase
             }
 
             // Verify degraded mode (serving from cache)
-            var degradedResponse = await _client.GetAsync($"/countries/v1/countries/{countryId}");
+            var degradedResponse = await _client.GetAsync($"/country/v1/countries/{countryId}");
             Assert.Equal(HttpStatusCode.OK, degradedResponse.StatusCode);
 
             // Act - Restart DB
@@ -251,7 +252,7 @@ public class ResilienceTests : IntegrationTestBase
             }
 
             // Make a new request
-            var recoveredResponse = await _client.GetAsync($"/countries/v1/countries/{countryId}");
+            var recoveredResponse = await _client.GetAsync($"/country/v1/countries/{countryId}");
 
             // Assert - Normal operation should resume
             Assert.Equal(HttpStatusCode.OK, recoveredResponse.StatusCode);

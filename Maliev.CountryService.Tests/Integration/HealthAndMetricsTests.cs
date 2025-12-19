@@ -8,6 +8,7 @@ namespace Maliev.CountryService.Tests.Integration;
 /// Integration tests for health checks, metrics, and operational endpoints.
 /// Tests liveness, readiness, and Prometheus metrics endpoints.
 /// </summary>
+[Collection("TestDatabase")]
 public class HealthAndMetricsTests : IntegrationTestBase
 {
     public HealthAndMetricsTests(TestWebApplicationFactory factory) : base(factory) { }
@@ -16,7 +17,7 @@ public class HealthAndMetricsTests : IntegrationTestBase
     public async Task Liveness_ReturnsHealthy()
     {
         // Act
-        var response = await _client.GetAsync("/countries/liveness");
+        var response = await _client.GetAsync("/country/liveness");
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -29,7 +30,7 @@ public class HealthAndMetricsTests : IntegrationTestBase
     public async Task Readiness_ReturnsHealthy()
     {
         // Act
-        var response = await _client.GetAsync("/countries/readiness");
+        var response = await _client.GetAsync("/country/readiness");
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -42,7 +43,7 @@ public class HealthAndMetricsTests : IntegrationTestBase
     public async Task Metrics_ReturnsPrometheusFormat()
     {
         // Act
-        var response = await _client.GetAsync("/countries/metrics");
+        var response = await _client.GetAsync("/country/metrics");
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -59,14 +60,14 @@ public class HealthAndMetricsTests : IntegrationTestBase
     {
         // Arrange - Trigger some operations to generate custom metrics
         // Make multiple requests to ensure metrics are recorded
-        await _client.GetAsync("/countries/v1/countries?page=1&pageSize=10");
-        await _client.GetAsync("/countries/v1/countries/codes");
+        await _client.GetAsync("/country/v1/countries?page=1&pageSize=10");
+        await _client.GetAsync("/country/v1/countries/codes");
 
         // Wait a moment for metrics to be collected and exported
         await Task.Delay(500);
 
         // Act
-        var response = await _client.GetAsync("/countries/metrics");
+        var response = await _client.GetAsync("/country/metrics");
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -100,7 +101,7 @@ public class HealthAndMetricsTests : IntegrationTestBase
         // Act - Try to fetch OpenAPI document
         try
         {
-            var response = await _client.GetAsync("/countries/openapi/v1.json");
+            var response = await _client.GetAsync("/country/openapi/v1.json");
 
             // Allow redirects or not found (OpenAPI endpoint may not be available in test environment)
             if (response.StatusCode == HttpStatusCode.NotFound ||
@@ -144,7 +145,7 @@ public class HealthAndMetricsTests : IntegrationTestBase
     public async Task Scalar_Documentation_IsAccessible()
     {
         // Act
-        var request = new HttpRequestMessage(HttpMethod.Get, "/countries/scalar");
+        var request = new HttpRequestMessage(HttpMethod.Get, "/country/scalar");
         var response = await _client.SendAsync(request);
 
         // Allow redirects or not found (Scalar endpoint may not be available in test environment)
@@ -172,7 +173,7 @@ public class HealthAndMetricsTests : IntegrationTestBase
     public async Task HealthCheck_WithDatabase_IncludesDbStatus()
     {
         // Act
-        var response = await _client.GetAsync("/countries/readiness");
+        var response = await _client.GetAsync("/country/readiness");
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);

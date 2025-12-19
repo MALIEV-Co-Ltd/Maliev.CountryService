@@ -4,6 +4,7 @@ using Maliev.CountryService.Tests.Fixtures;
 
 namespace Maliev.CountryService.Tests.Integration;
 
+[Collection("TestDatabase")]
 public class HealthCheckTests : IntegrationTestBase
 {
     public HealthCheckTests(TestWebApplicationFactory factory) : base(factory) { }
@@ -12,7 +13,7 @@ public class HealthCheckTests : IntegrationTestBase
     public async Task Liveness_ReturnsHealthy()
     {
         // Act
-        var response = await _client.GetAsync("/countries/liveness");
+        var response = await _client.GetAsync("/country/liveness");
 
         // Assert
         response.EnsureSuccessStatusCode();
@@ -24,7 +25,7 @@ public class HealthCheckTests : IntegrationTestBase
     public async Task Readiness_ReturnsHealthy()
     {
         // Act
-        var response = await _client.GetAsync("/countries/readiness");
+        var response = await _client.GetAsync("/country/readiness");
 
         // Assert
         response.EnsureSuccessStatusCode();

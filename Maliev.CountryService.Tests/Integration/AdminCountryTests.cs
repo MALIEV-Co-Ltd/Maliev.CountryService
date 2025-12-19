@@ -12,6 +12,7 @@ namespace Maliev.CountryService.Tests.Integration;
 /// Integration tests for Admin Country CRUD operations.
 /// Tests authentication, authorization, optimistic concurrency, and audit logging.
 /// </summary>
+[Collection("TestDatabase")]
 public class AdminCountryTests : IntegrationTestBase
 {
     public AdminCountryTests(TestWebApplicationFactory factory) : base(factory) { }
@@ -28,7 +29,7 @@ public class AdminCountryTests : IntegrationTestBase
         };
 
         // Act
-        var response = await _client.PostAsJsonAsync("/countries/v1/admin/countries", request);
+        var response = await _client.PostAsJsonAsync("/country/v1/admin/countries", request);
 
         // Assert
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
@@ -38,7 +39,7 @@ public class AdminCountryTests : IntegrationTestBase
     public async Task Create_WithAuthentication_Returns201()
     {
         // Arrange
-        var adminClient = CreateAdminClient("testuser", "CountryAdmin");
+        var adminClient = _factory.CreateAuthenticatedClient("testuser", CountryAdminRoles);
         var request = new CreateCountryRequest
         {
             Iso2 = "TA",
@@ -48,7 +49,7 @@ public class AdminCountryTests : IntegrationTestBase
         };
 
         // Act
-        var response = await adminClient.PostAsJsonAsync("/countries/v1/admin/countries", request);
+        var response = await adminClient.PostAsJsonAsync("/country/v1/admin/countries", request);
 
         // Assert
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
@@ -67,7 +68,7 @@ public class AdminCountryTests : IntegrationTestBase
     public async Task Create_WithDuplicateIso2_Returns409()
     {
         // Arrange
-        var adminClient = CreateAdminClient("testuser", "CountryAdmin");
+        var adminClient = _factory.CreateAuthenticatedClient("testuser", CountryAdminRoles);
         var request1 = new CreateCountryRequest
         {
             Iso2 = "TB",
@@ -76,7 +77,7 @@ public class AdminCountryTests : IntegrationTestBase
         };
 
         // Create first country
-        await adminClient.PostAsJsonAsync("/countries/v1/admin/countries", request1);
+        await adminClient.PostAsJsonAsync("/country/v1/admin/countries", request1);
 
         // Try to create duplicate
         var request2 = new CreateCountryRequest
@@ -87,7 +88,7 @@ public class AdminCountryTests : IntegrationTestBase
         };
 
         // Act
-        var response = await adminClient.PostAsJsonAsync("/countries/v1/admin/countries", request2);
+        var response = await adminClient.PostAsJsonAsync("/country/v1/admin/countries", request2);
 
         // Assert
         Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
@@ -97,7 +98,7 @@ public class AdminCountryTests : IntegrationTestBase
     public async Task Update_WithoutIfMatch_Returns428()
     {
         // Arrange
-        var adminClient = CreateAdminClient("testuser", "CountryAdmin");
+        var adminClient = _factory.CreateAuthenticatedClient("testuser", CountryAdminRoles);
 
         // Create a country first
         var createRequest = new CreateCountryRequest
@@ -106,7 +107,7 @@ public class AdminCountryTests : IntegrationTestBase
             Iso3 = "TSC",
             Name = "Test Country Update"
         };
-        var createResponse = await adminClient.PostAsJsonAsync("/countries/v1/admin/countries", createRequest);
+        var createResponse = await adminClient.PostAsJsonAsync("/country/v1/admin/countries", createRequest);
         var created = await createResponse.Content.ReadFromJsonAsync<CountryResponse>(JsonSerializerOptions);
         Assert.NotNull(created);
 
@@ -119,7 +120,7 @@ public class AdminCountryTests : IntegrationTestBase
         };
 
         // Act
-        var response = await adminClient.PutAsJsonAsync($"/countries/v1/admin/countries/{created.Id}", updateRequest);
+        var response = await adminClient.PutAsJsonAsync($"/country/v1/admin/countries/{created.Id}", updateRequest);
 
         // Assert
         Assert.Equal((HttpStatusCode)428, response.StatusCode); // 428 Precondition Required
@@ -129,16 +130,17 @@ public class AdminCountryTests : IntegrationTestBase
     public async Task Update_WithValidIfMatch_Returns200()
     {
         // Arrange
-        var adminClient = CreateAdminClient("testuser", "CountryAdmin");
+        var adminClient = _factory.CreateAuthenticatedClient("testuser", CountryAdminRoles);
 
         // Create a country first
         var createRequest = new CreateCountryRequest
         {
-            Iso2 = "TD",
-            Iso3 = "TSD",
+            Iso2 = "XD",
+            Iso3 = "XDD",
             Name = "Test Country Update Valid"
         };
-        var createResponse = await adminClient.PostAsJsonAsync("/countries/v1/admin/countries", createRequest);
+        var createResponse = await adminClient.PostAsJsonAsync("/country/v1/admin/countries", createRequest);
+        Assert.Equal(HttpStatusCode.Created, createResponse.StatusCode);
         var created = await createResponse.Content.ReadFromJsonAsync<CountryResponse>(JsonSerializerOptions);
         Assert.NotNull(created);
         Assert.NotNull(created.ETag);
@@ -146,12 +148,12 @@ public class AdminCountryTests : IntegrationTestBase
         // Update with valid If-Match
         var updateRequest = new UpdateCountryRequest
         {
-            Iso2 = "TD",
-            Iso3 = "TSD",
+            Iso2 = "XD",
+            Iso3 = "XDD",
             Name = "Updated Name Valid"
         };
 
-        var updateMessage = new HttpRequestMessage(HttpMethod.Put, $"/countries/v1/admin/countries/{created.Id}")
+        var updateMessage = new HttpRequestMessage(HttpMethod.Put, $"/country/v1/admin/countries/{created.Id}")
         {
             Content = new StringContent(JsonSerializer.Serialize(updateRequest), Encoding.UTF8, "application/json")
         };
@@ -174,7 +176,7 @@ public class AdminCountryTests : IntegrationTestBase
     public async Task Update_WithWrongIfMatch_Returns412()
     {
         // Arrange
-        var adminClient = CreateAdminClient("testuser", "CountryAdmin");
+        var adminClient = _factory.CreateAuthenticatedClient("testuser", CountryAdminRoles);
 
         // Create a country first
         var createRequest = new CreateCountryRequest
@@ -183,7 +185,7 @@ public class AdminCountryTests : IntegrationTestBase
             Iso3 = "TSE",
             Name = "Test Country Wrong ETag"
         };
-        var createResponse = await adminClient.PostAsJsonAsync("/countries/v1/admin/countries", createRequest);
+        var createResponse = await adminClient.PostAsJsonAsync("/country/v1/admin/countries", createRequest);
         var created = await createResponse.Content.ReadFromJsonAsync<CountryResponse>(JsonSerializerOptions);
         Assert.NotNull(created);
 
@@ -195,7 +197,7 @@ public class AdminCountryTests : IntegrationTestBase
             Name = "Updated Name Wrong"
         };
 
-        var updateMessage = new HttpRequestMessage(HttpMethod.Put, $"/countries/v1/admin/countries/{created.Id}")
+        var updateMessage = new HttpRequestMessage(HttpMethod.Put, $"/country/v1/admin/countries/{created.Id}")
         {
             Content = new StringContent(JsonSerializer.Serialize(updateRequest), Encoding.UTF8, "application/json")
         };
@@ -212,7 +214,7 @@ public class AdminCountryTests : IntegrationTestBase
     public async Task Patch_WithValidIfMatch_Returns200()
     {
         // Arrange
-        var adminClient = CreateAdminClient("testuser", "CountryAdmin");
+        var adminClient = _factory.CreateAuthenticatedClient("testuser", CountryAdminRoles);
 
         // Create a country first
         var createRequest = new CreateCountryRequest
@@ -222,7 +224,7 @@ public class AdminCountryTests : IntegrationTestBase
             Name = "Test Country Patch",
             Region = "Original Region"
         };
-        var createResponse = await adminClient.PostAsJsonAsync("/countries/v1/admin/countries", createRequest);
+        var createResponse = await adminClient.PostAsJsonAsync("/country/v1/admin/countries", createRequest);
         var created = await createResponse.Content.ReadFromJsonAsync<CountryResponse>(JsonSerializerOptions);
         Assert.NotNull(created);
 
@@ -232,7 +234,7 @@ public class AdminCountryTests : IntegrationTestBase
             Region = "Updated Region"
         };
 
-        var patchMessage = new HttpRequestMessage(HttpMethod.Patch, $"/countries/v1/admin/countries/{created.Id}")
+        var patchMessage = new HttpRequestMessage(HttpMethod.Patch, $"/country/v1/admin/countries/{created.Id}")
         {
             Content = new StringContent(JsonSerializer.Serialize(patchRequest), Encoding.UTF8, "application/json")
         };
@@ -254,27 +256,28 @@ public class AdminCountryTests : IntegrationTestBase
     public async Task SoftDelete_WithAuthentication_Returns204()
     {
         // Arrange
-        var adminClient = CreateAdminClient("testuser", "CountryAdmin");
+        var adminClient = _factory.CreateAuthenticatedClient("testuser", CountryAdminRoles);
 
         // Create a country first
         var createRequest = new CreateCountryRequest
         {
-            Iso2 = "TG",
-            Iso3 = "TSG",
+            Iso2 = "XE",
+            Iso3 = "XEE",
             Name = "Test Country Delete"
         };
-        var createResponse = await adminClient.PostAsJsonAsync("/countries/v1/admin/countries", createRequest);
+        var createResponse = await adminClient.PostAsJsonAsync("/country/v1/admin/countries", createRequest);
+        Assert.Equal(HttpStatusCode.Created, createResponse.StatusCode);
         var created = await createResponse.Content.ReadFromJsonAsync<CountryResponse>(JsonSerializerOptions);
         Assert.NotNull(created);
 
         // Act - Soft delete
-        var response = await adminClient.DeleteAsync($"/countries/v1/admin/countries/{created.Id}");
+        var response = await adminClient.DeleteAsync($"/country/v1/admin/countries/{created.Id}");
 
         // Assert
         Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
 
         // Verify the country is no longer accessible (soft-deleted)
-        var getResponse = await _client.GetAsync($"/countries/{created.Id}");
+        var getResponse = await _client.GetAsync($"/country/{created.Id}");
         Assert.Equal(HttpStatusCode.NotFound, getResponse.StatusCode);
     }
 
@@ -282,21 +285,21 @@ public class AdminCountryTests : IntegrationTestBase
     public async Task HardDelete_WithoutSuperAdminRole_Returns403()
     {
         // Arrange
-        var adminClient = CreateAdminClient("testuser", "CountryAdmin"); // Only country_admin, not super_admin
+        var adminClient = _factory.CreateAuthenticatedClient("testuser", CountryAdminRoles); // Only country_admin, not super_admin
 
         // Create a country first
         var createRequest = new CreateCountryRequest
         {
-            Iso2 = "TH",
+            Iso2 = "XH",
             Iso3 = "TSH",
             Name = "Test Country Hard Delete"
         };
-        var createResponse = await adminClient.PostAsJsonAsync("/countries/v1/admin/countries", createRequest);
+        var createResponse = await adminClient.PostAsJsonAsync("/country/v1/admin/countries", createRequest);
         var created = await createResponse.Content.ReadFromJsonAsync<CountryResponse>(JsonSerializerOptions);
         Assert.NotNull(created);
 
         // Act - Try hard delete without super_admin role
-        var response = await adminClient.DeleteAsync($"/countries/v1/admin/countries/{created.Id}/hard-delete");
+        var response = await adminClient.DeleteAsync($"/country/v1/admin/countries/{created.Id}/hard-delete");
 
         // Assert
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
@@ -306,22 +309,22 @@ public class AdminCountryTests : IntegrationTestBase
     public async Task HardDelete_WithSuperAdminRole_Returns204()
     {
         // Arrange - Try with both possible role names
-        var superAdminClient = CreateAdminClient("superadmin", "SuperAdmin");
+        var superAdminClient = _factory.CreateAuthenticatedClient("superadmin", SuperAdminRoles);
 
         // Create a country first using country_admin client
-        var adminClient = CreateAdminClient("testuser", "CountryAdmin");
+        var adminClient = _factory.CreateAuthenticatedClient("testuser", CountryAdminRoles);
         var createRequest = new CreateCountryRequest
         {
             Iso2 = "TI",
             Iso3 = "TSI",
             Name = "Test Country Super Delete"
         };
-        var createResponse = await adminClient.PostAsJsonAsync("/countries/v1/admin/countries", createRequest);
+        var createResponse = await adminClient.PostAsJsonAsync("/country/v1/admin/countries", createRequest);
         var created = await createResponse.Content.ReadFromJsonAsync<CountryResponse>(JsonSerializerOptions);
         Assert.NotNull(created);
 
         // Act - Hard delete with super_admin role
-        var response = await superAdminClient.DeleteAsync($"/countries/v1/admin/countries/{created.Id}/hard-delete");
+        var response = await superAdminClient.DeleteAsync($"/country/v1/admin/countries/{created.Id}/hard-delete");
 
         // If still forbidden, the SuperAdmin policy may not be configured correctly in test environment
         if (response.StatusCode == HttpStatusCode.Forbidden)
@@ -334,7 +337,7 @@ public class AdminCountryTests : IntegrationTestBase
         Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
 
         // Verify the country is completely gone
-        var getResponse = await _client.GetAsync($"/countries/v1/countries/{created.Id}");
+        var getResponse = await _client.GetAsync($"/country/v1/country/{created.Id}");
         Assert.Equal(HttpStatusCode.NotFound, getResponse.StatusCode);
     }
 
@@ -342,7 +345,7 @@ public class AdminCountryTests : IntegrationTestBase
     public async Task Create_WithInvalidData_Returns400()
     {
         // Arrange
-        var adminClient = CreateAdminClient("testuser", "CountryAdmin");
+        var adminClient = _factory.CreateAuthenticatedClient("testuser", CountryAdminRoles);
         var request = new CreateCountryRequest
         {
             Iso2 = "", // Invalid - empty
@@ -350,7 +353,7 @@ public class AdminCountryTests : IntegrationTestBase
         };
 
         // Act
-        var response = await adminClient.PostAsJsonAsync("/countries/v1/admin/countries", request);
+        var response = await adminClient.PostAsJsonAsync("/country/v1/admin/countries", request);
 
         // Assert
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
@@ -360,14 +363,14 @@ public class AdminCountryTests : IntegrationTestBase
     public async Task Update_NonExistentCountry_Returns404()
     {
         // Arrange
-        var adminClient = CreateAdminClient("testuser", "CountryAdmin");
+        var adminClient = _factory.CreateAuthenticatedClient("testuser", CountryAdminRoles);
         var updateRequest = new UpdateCountryRequest
         {
             Iso2 = "XX",
             Name = "Non Existent"
         };
 
-        var updateMessage = new HttpRequestMessage(HttpMethod.Put, "/countries/v1/admin/countries/999999")
+        var updateMessage = new HttpRequestMessage(HttpMethod.Put, "/country/v1/admin/countries/999999")
         {
             Content = new StringContent(JsonSerializer.Serialize(updateRequest), Encoding.UTF8, "application/json")
         };

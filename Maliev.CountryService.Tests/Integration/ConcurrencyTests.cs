@@ -12,6 +12,7 @@ namespace Maliev.CountryService.Tests.Integration;
 /// Integration tests for optimistic concurrency control using ETags.
 /// Tests the If-Match header validation and concurrent update scenarios.
 /// </summary>
+[Collection("TestDatabase")]
 public class ConcurrencyTests : IntegrationTestBase
 {
     public ConcurrencyTests(TestWebApplicationFactory factory) : base(factory) { }
@@ -20,16 +21,16 @@ public class ConcurrencyTests : IntegrationTestBase
     public async Task ConcurrentUpdate_SecondUpdateWithOldETag_Returns412()
     {
         // Arrange
-        var adminClient = CreateAdminClient("user1", "CountryAdmin");
+        var adminClient = _factory.CreateAuthenticatedClient("user1", CountryAdminRoles);
 
         // Create a country
         var createRequest = new CreateCountryRequest
         {
-            Iso2 = "CX",
+            Iso2 = "XP",
             Iso3 = "CCX",
             Name = "Concurrency Test Country"
         };
-        var createResponse = await adminClient.PostAsJsonAsync("/countries/v1/admin/countries", createRequest);
+        var createResponse = await adminClient.PostAsJsonAsync("/country/v1/admin/countries", createRequest);
         var created = await createResponse.Content.ReadFromJsonAsync<CountryResponse>(JsonSerializerOptions);
         Assert.NotNull(created);
         var originalETag = created.ETag;
@@ -38,12 +39,12 @@ public class ConcurrencyTests : IntegrationTestBase
         // First update succeeds
         var firstUpdateRequest = new UpdateCountryRequest
         {
-            Iso2 = "CX",
+            Iso2 = "XP",
             Iso3 = "CCX",
             Name = "First Update"
         };
 
-        var firstUpdateMessage = new HttpRequestMessage(HttpMethod.Put, $"/countries/v1/admin/countries/{created.Id}")
+        var firstUpdateMessage = new HttpRequestMessage(HttpMethod.Put, $"/country/v1/admin/countries/{created.Id}")
         {
             Content = new StringContent(JsonSerializer.Serialize(firstUpdateRequest), Encoding.UTF8, "application/json")
         };
@@ -59,12 +60,12 @@ public class ConcurrencyTests : IntegrationTestBase
         // Second update with OLD ETag should fail
         var secondUpdateRequest = new UpdateCountryRequest
         {
-            Iso2 = "CX",
+            Iso2 = "XP",
             Iso3 = "CCX",
             Name = "Second Update (should fail)"
         };
 
-        var secondUpdateMessage = new HttpRequestMessage(HttpMethod.Put, $"/countries/v1/admin/countries/{created.Id}")
+        var secondUpdateMessage = new HttpRequestMessage(HttpMethod.Put, $"/country/v1/admin/countries/{created.Id}")
         {
             Content = new StringContent(JsonSerializer.Serialize(secondUpdateRequest), Encoding.UTF8, "application/json")
         };
@@ -81,17 +82,17 @@ public class ConcurrencyTests : IntegrationTestBase
     public async Task ConcurrentPatch_SecondPatchWithOldETag_Returns412()
     {
         // Arrange
-        var adminClient = CreateAdminClient("user2", "CountryAdmin");
+        var adminClient = _factory.CreateAuthenticatedClient("user2", CountryAdminRoles);
 
         // Create a country
         var createRequest = new CreateCountryRequest
         {
-            Iso2 = "CY",
+            Iso2 = "XQ",
             Iso3 = "CCY",
             Name = "Concurrency Patch Test",
             Region = "Original Region"
         };
-        var createResponse = await adminClient.PostAsJsonAsync("/countries/v1/admin/countries", createRequest);
+        var createResponse = await adminClient.PostAsJsonAsync("/country/v1/admin/countries", createRequest);
         var created = await createResponse.Content.ReadFromJsonAsync<CountryResponse>(JsonSerializerOptions);
         Assert.NotNull(created);
         var originalETag = created.ETag;
@@ -102,7 +103,7 @@ public class ConcurrencyTests : IntegrationTestBase
             Region = "First Patch Region"
         };
 
-        var firstPatchMessage = new HttpRequestMessage(HttpMethod.Patch, $"/countries/v1/admin/countries/{created.Id}")
+        var firstPatchMessage = new HttpRequestMessage(HttpMethod.Patch, $"/country/v1/admin/countries/{created.Id}")
         {
             Content = new StringContent(JsonSerializer.Serialize(firstPatchRequest), Encoding.UTF8, "application/json")
         };
@@ -117,7 +118,7 @@ public class ConcurrencyTests : IntegrationTestBase
             Region = "Second Patch Region (should fail)"
         };
 
-        var secondPatchMessage = new HttpRequestMessage(HttpMethod.Patch, $"/countries/v1/admin/countries/{created.Id}")
+        var secondPatchMessage = new HttpRequestMessage(HttpMethod.Patch, $"/country/v1/admin/countries/{created.Id}")
         {
             Content = new StringContent(JsonSerializer.Serialize(secondPatchRequest), Encoding.UTF8, "application/json")
         };
@@ -134,16 +135,16 @@ public class ConcurrencyTests : IntegrationTestBase
     public async Task SequentialUpdates_WithCorrectETags_AllSucceed()
     {
         // Arrange
-        var adminClient = CreateAdminClient("user3", "CountryAdmin");
+        var adminClient = _factory.CreateAuthenticatedClient("user3", CountryAdminRoles);
 
         // Create a country
         var createRequest = new CreateCountryRequest
         {
-            Iso2 = "CZ",
+            Iso2 = "XR",
             Iso3 = "CCZ",
             Name = "Sequential Test Country"
         };
-        var createResponse = await adminClient.PostAsJsonAsync("/countries/v1/admin/countries", createRequest);
+        var createResponse = await adminClient.PostAsJsonAsync("/country/v1/admin/countries", createRequest);
         var created = await createResponse.Content.ReadFromJsonAsync<CountryResponse>(JsonSerializerOptions);
         Assert.NotNull(created);
         var currentETag = created.ETag;
@@ -153,12 +154,12 @@ public class ConcurrencyTests : IntegrationTestBase
         {
             var updateRequest = new UpdateCountryRequest
             {
-                Iso2 = "CZ",
+                Iso2 = "XR",
                 Iso3 = "CCZ",
                 Name = $"Update {i}"
             };
 
-            var updateMessage = new HttpRequestMessage(HttpMethod.Put, $"/countries/v1/admin/countries/{created.Id}")
+            var updateMessage = new HttpRequestMessage(HttpMethod.Put, $"/country/v1/admin/countries/{created.Id}")
             {
                 Content = new StringContent(JsonSerializer.Serialize(updateRequest), Encoding.UTF8, "application/json")
             };
@@ -181,7 +182,7 @@ public class ConcurrencyTests : IntegrationTestBase
     public async Task ETag_ChangesOnEveryModification()
     {
         // Arrange
-        var adminClient = CreateAdminClient("user4", "CountryAdmin");
+        var adminClient = _factory.CreateAuthenticatedClient("user4", CountryAdminRoles);
 
         // Create a country
         var createRequest = new CreateCountryRequest
@@ -190,7 +191,7 @@ public class ConcurrencyTests : IntegrationTestBase
             Iso3 = "CCA",
             Name = "ETag Change Test"
         };
-        var createResponse = await adminClient.PostAsJsonAsync("/countries/v1/admin/countries", createRequest);
+        var createResponse = await adminClient.PostAsJsonAsync("/country/v1/admin/countries", createRequest);
         var created = await createResponse.Content.ReadFromJsonAsync<CountryResponse>(JsonSerializerOptions);
         Assert.NotNull(created);
         var etag1 = created.ETag;
@@ -203,7 +204,7 @@ public class ConcurrencyTests : IntegrationTestBase
             Name = "Updated Name"
         };
 
-        var updateMessage = new HttpRequestMessage(HttpMethod.Put, $"/countries/v1/admin/countries/{created.Id}")
+        var updateMessage = new HttpRequestMessage(HttpMethod.Put, $"/country/v1/admin/countries/{created.Id}")
         {
             Content = new StringContent(JsonSerializer.Serialize(updateRequest), Encoding.UTF8, "application/json")
         };
@@ -220,7 +221,7 @@ public class ConcurrencyTests : IntegrationTestBase
             Region = "New Region"
         };
 
-        var patchMessage = new HttpRequestMessage(HttpMethod.Patch, $"/countries/v1/admin/countries/{created.Id}")
+        var patchMessage = new HttpRequestMessage(HttpMethod.Patch, $"/country/v1/admin/countries/{created.Id}")
         {
             Content = new StringContent(JsonSerializer.Serialize(patchRequest), Encoding.UTF8, "application/json")
         };
@@ -241,7 +242,7 @@ public class ConcurrencyTests : IntegrationTestBase
     public async Task GetById_ReturnsETag()
     {
         // Arrange
-        var adminClient = CreateAdminClient("user5", "CountryAdmin");
+        var adminClient = _factory.CreateAuthenticatedClient("user5", CountryAdminRoles);
 
         // Create a country
         var createRequest = new CreateCountryRequest
@@ -250,13 +251,13 @@ public class ConcurrencyTests : IntegrationTestBase
             Iso3 = "CCB",
             Name = "ETag Get Test"
         };
-        var createResponse = await adminClient.PostAsJsonAsync("/countries/v1/admin/countries", createRequest);
+        var createResponse = await adminClient.PostAsJsonAsync("/country/v1/admin/countries", createRequest);
         var created = await createResponse.Content.ReadFromJsonAsync<CountryResponse>(JsonSerializerOptions);
         Assert.NotNull(created);
         var originalETag = created.ETag;
 
         // Act - Get the country by ID
-        var getResponse = await _client.GetAsync($"/countries/v1/countries/{created.Id}");
+        var getResponse = await _client.GetAsync($"/country/v1/countries/{created.Id}");
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, getResponse.StatusCode);
@@ -271,8 +272,8 @@ public class ConcurrencyTests : IntegrationTestBase
     public async Task SimulateConcurrentUsers_OnlyOneUpdateSucceeds()
     {
         // Arrange
-        var admin1 = CreateAdminClient("user6a", "CountryAdmin");
-        var admin2 = CreateAdminClient("user6b", "CountryAdmin");
+        var admin1 = _factory.CreateAuthenticatedClient("user6a", CountryAdminRoles);
+        var admin2 = _factory.CreateAuthenticatedClient("user6b", CountryAdminRoles);
 
         // Create a country
         var createRequest = new CreateCountryRequest
@@ -281,7 +282,7 @@ public class ConcurrencyTests : IntegrationTestBase
             Iso3 = "CCC",
             Name = "Concurrent Users Test"
         };
-        var createResponse = await admin1.PostAsJsonAsync("/countries/v1/admin/countries", createRequest);
+        var createResponse = await admin1.PostAsJsonAsync("/country/v1/admin/countries", createRequest);
         var created = await createResponse.Content.ReadFromJsonAsync<CountryResponse>(JsonSerializerOptions);
         Assert.NotNull(created);
         var sharedETag = created.ETag;
@@ -301,13 +302,13 @@ public class ConcurrencyTests : IntegrationTestBase
             Name = "User 2 Update"
         };
 
-        var message1 = new HttpRequestMessage(HttpMethod.Put, $"/countries/v1/admin/countries/{created.Id}")
+        var message1 = new HttpRequestMessage(HttpMethod.Put, $"/country/v1/admin/countries/{created.Id}")
         {
             Content = new StringContent(JsonSerializer.Serialize(update1), Encoding.UTF8, "application/json")
         };
         message1.Headers.Add("If-Match", sharedETag);
 
-        var message2 = new HttpRequestMessage(HttpMethod.Put, $"/countries/v1/admin/countries/{created.Id}")
+        var message2 = new HttpRequestMessage(HttpMethod.Put, $"/country/v1/admin/countries/{created.Id}")
         {
             Content = new StringContent(JsonSerializer.Serialize(update2), Encoding.UTF8, "application/json")
         };
