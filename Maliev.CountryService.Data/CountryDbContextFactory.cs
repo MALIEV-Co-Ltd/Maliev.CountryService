@@ -7,11 +7,11 @@ namespace Maliev.CountryService.Data;
 /// Design-time factory for EF Core migrations.
 /// Uses environment variable for connection string.
 /// </summary>
-public class CountryServiceDbContextFactory : IDesignTimeDbContextFactory<CountryServiceDbContext>
+public class CountryDbContextFactory : IDesignTimeDbContextFactory<CountryDbContext>
 {
-    public CountryServiceDbContext CreateDbContext(string[] args)
+    public CountryDbContext CreateDbContext(string[] args)
     {
-        var optionsBuilder = new DbContextOptionsBuilder<CountryServiceDbContext>();
+        var optionsBuilder = new DbContextOptionsBuilder<CountryDbContext>();
 
         // Read from environment variable for migration commands
         var connectionString = Environment.GetEnvironmentVariable("ConnectionStrings__CountryDbContext")
@@ -22,6 +22,6 @@ public class CountryServiceDbContextFactory : IDesignTimeDbContextFactory<Countr
             npgsqlOptions.MigrationsHistoryTable("__ef_migrations_history", "public");
         });
 
-        return new CountryServiceDbContext(optionsBuilder.Options);
+        return new CountryDbContext(optionsBuilder.Options);
     }
 }

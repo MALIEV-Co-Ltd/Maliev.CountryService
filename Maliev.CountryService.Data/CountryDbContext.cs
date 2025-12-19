@@ -1,12 +1,13 @@
 using Maliev.CountryService.Data.Entities;
 using Microsoft.EntityFrameworkCore;
+using Maliev.Aspire.ServiceDefaults.Database;
 using System.Text.RegularExpressions; // Added for Regex
 
 namespace Maliev.CountryService.Data;
 
-public class CountryServiceDbContext : DbContext
+public class CountryDbContext : DbContext
 {
-    public CountryServiceDbContext(DbContextOptions<CountryServiceDbContext> options) : base(options)
+    public CountryDbContext(DbContextOptions<CountryDbContext> options) : base(options)
     {
     }
 
@@ -45,7 +46,10 @@ public class CountryServiceDbContext : DbContext
             foreach (var index in entity.GetIndexes())
             {
                 index.SetDatabaseName(index.GetDatabaseName()?.ToSnakeCase());
-            }
+        
+        // Apply PostgreSQL snake_case naming convention globally
+        SnakeCaseNamingHelper.ApplySnakeCaseNaming(modelBuilder);
+    }
         }
 
         modelBuilder.Entity<Country>(entity =>
