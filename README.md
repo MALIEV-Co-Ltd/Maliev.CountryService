@@ -89,8 +89,8 @@ Logging: Serilog (console JSON)
 5. **Access the API**:
    - **OpenAPI documentation**: `http://localhost:5000/openapi/v1.json`
    - **Health checks**:
-     - Liveness: `http://localhost:5000/countries/v1/liveness`
-     - Readiness: `http://localhost:5000/countries/v1/readiness`
+     - Liveness: `http://localhost:5000/country/v1/liveness`
+     - Readiness: `http://localhost:5000/country/v1/readiness`
    - **Metrics**: `http://localhost:5000/metrics`
 
 ### Running Tests
@@ -109,29 +109,29 @@ dotnet test Maliev.CountryService.sln --collect:"XPlat Code Coverage"
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| `GET` | `/countries/v1/countries/{id}` | Get country by ID |
-| `GET` | `/countries/v1/countries/iso2/{iso2}` | Get country by ISO2 code (e.g., "US") |
-| `GET` | `/countries/v1/countries/iso3/{iso3}` | Get country by ISO3 code (e.g., "USA") |
-| `GET` | `/countries/v1/countries` | List countries (paginated, filterable, sortable) |
-| `GET` | `/countries/v1/countries/search?q={query}` | Full-text search countries |
+| `GET` | `/country/v1/countries/{id}` | Get country by ID |
+| `GET` | `/country/v1/countries/iso2/{iso2}` | Get country by ISO2 code (e.g., "US") |
+| `GET` | `/country/v1/countries/iso3/{iso3}` | Get country by ISO3 code (e.g., "USA") |
+| `GET` | `/country/v1/countries` | List countries (paginated, filterable, sortable) |
+| `GET` | `/country/v1/countries/search?q={query}` | Full-text search countries |
 
 ### Admin Endpoints (Rate limit: 20 req/min per user, requires JWT)
 
 | Method | Endpoint | Description | Required Policy |
 |--------|----------|-------------|-----------------|
-| `POST` | `/countries/v1/admin/countries` | Create new country | CountryAdmin |
-| `PUT` | `/countries/v1/admin/countries/{id}` | Update country (requires If-Match) | CountryAdmin |
-| `PATCH` | `/countries/v1/admin/countries/{id}` | Partial update country (requires If-Match) | CountryAdmin |
-| `DELETE` | `/countries/v1/admin/countries/{id}?hard=false` | Soft delete country | CountryAdmin |
-| `DELETE` | `/countries/v1/admin/countries/{id}?hard=true` | Hard delete country | SuperAdmin |
+| `POST` | `/country/v1/admin/countries` | Create new country | CountryAdmin |
+| `PUT` | `/country/v1/admin/countries/{id}` | Update country (requires If-Match) | CountryAdmin |
+| `PATCH` | `/country/v1/admin/countries/{id}` | Partial update country (requires If-Match) | CountryAdmin |
+| `DELETE` | `/country/v1/admin/countries/{id}?hard=false` | Soft delete country | CountryAdmin |
+| `DELETE` | `/country/v1/admin/countries/{id}?hard=true` | Hard delete country | SuperAdmin |
 
 ### Bulk Import Endpoints (CountryAdmin required)
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| `POST` | `/countries/v1/admin/bulk-import` | Submit bulk import (max 1,000 countries) |
-| `GET` | `/countries/v1/admin/bulk-import/{jobId}` | Get import job status |
-| `POST` | `/countries/v1/admin/bulk-import/{jobId}/process` | Trigger processing of validated job |
+| `POST` | `/country/v1/admin/bulk-import` | Submit bulk import (max 1,000 countries) |
+| `GET` | `/country/v1/admin/bulk-import/{jobId}` | Get import job status |
+| `POST` | `/country/v1/admin/bulk-import/{jobId}/process` | Trigger processing of validated job |
 
 ## API Examples
 
@@ -141,22 +141,22 @@ See [specs/001-country-service/contracts/examples/](specs/001-country-service/co
 
 **Get country by ISO2 code**:
 ```bash
-curl http://localhost:5000/countries/v1/countries/iso2/US
+curl http://localhost:5000/country/v1/countries/iso2/US
 ```
 
 **List countries with pagination**:
 ```bash
-curl "http://localhost:5000/countries/v1/countries?page=1&pageSize=20&sortBy=name&sortOrder=asc"
+curl "http://localhost:5000/country/v1/countries?page=1&pageSize=20&sortBy=name&sortOrder=asc"
 ```
 
 **Search countries**:
 ```bash
-curl "http://localhost:5000/countries/v1/countries/search?q=united&page=1&pageSize=10"
+curl "http://localhost:5000/country/v1/countries/search?q=united&page=1&pageSize=10"
 ```
 
 **Create country (requires JWT)**:
 ```bash
-curl -X POST http://localhost:5000/countries/v1/admin/countries \
+curl -X POST http://localhost:5000/country/v1/admin/countries \
   -H "Authorization: Bearer YOUR_JWT_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{

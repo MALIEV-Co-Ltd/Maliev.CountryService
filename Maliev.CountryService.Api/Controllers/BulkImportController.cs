@@ -18,7 +18,7 @@ namespace Maliev.CountryService.Api.Controllers;
 /// </summary>
 [ApiController]
 [ApiVersion("1.0")]
-[Route("countries/v{version:apiVersion}/admin/bulk-import")]
+[Route("country/v{version:apiVersion}/admin/bulk-import")]
 [EnableRateLimiting("admin-endpoints")]
 [Authorize(Policy = "CountryAdmin")]
 public class BulkImportController : ControllerBase

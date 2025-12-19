@@ -1,5 +1,5 @@
 using Maliev.CountryService.Api.BackgroundServices;
-using Maliev.CountryService.Api.HealthChecks;
+
 using Maliev.CountryService.Api.Middleware;
 using Maliev.CountryService.Api.Services;
 using Maliev.CountryService.Data;
@@ -14,9 +14,10 @@ builder.AddGoogleSecretManagerVolume(); // Load secrets from /mnt/secrets if ava
 
 // --- Infrastructure & Observability ---
 builder.AddServiceDefaults(); // OpenTelemetry, health checks, resilience
-builder.AddServiceMeters("country-service"); // Register service meters for OpenTelemetry business metrics
+builder.AddServiceMeters("countries-meter"); // Register service meters for OpenTelemetry business metrics
 
-builder.AddPostgresDbContext<CountryServiceDbContext>(connectionStringName: "CountryDbContext"); // PostgreSQL with retry logic
+// Register DbContext for all environments (test factory provides connection string via environment variables)
+builder.AddPostgresDbContext<CountryDbContext>(connectionStringName: "CountryDbContext"); // PostgreSQL with retry logic
 
 // --- API Configuration ---
 builder.AddDefaultCors(); // CORS from CORS:AllowedOrigins config
@@ -46,20 +47,8 @@ builder.Services.AddControllers();
 // Configure memory cache
 builder.Services.AddMemoryCache();
 
-// Configure Redis connection with StackExchange.Redis
-var redisConnectionString = builder.Configuration.GetConnectionString("Redis");
-if (!string.IsNullOrEmpty(redisConnectionString))
-{
-    try
-    {
-        var redis = ConnectionMultiplexer.Connect(redisConnectionString);
-        builder.Services.AddSingleton<IConnectionMultiplexer>(redis);
-    }
-    catch (Exception)
-    {
-        // Don't register Redis - services will handle fallback
-    }
-}
+// Redis Distributed Cache (ServiceDefaults)
+builder.AddRedisDistributedCache(instanceName: "country:");
 
 // Configure rate limiting
 builder.Services.AddRateLimiter(options =>
@@ -126,22 +115,11 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
     options.KnownProxies.Clear();
 });
 
-// Health checks
-builder.Services.AddHealthChecks()
-    .AddCheck<DatabaseHealthCheck>("database-connection", tags: new[] { "readiness" });
-
 // Register application services for fast country lookup
 builder.Services.AddSingleton<MemoryCacheService>();
 
-// Register ICacheService - use Redis if available, otherwise MemoryCache
-builder.Services.AddSingleton<ICacheService>(sp =>
-{
-    var redis = sp.GetService<IConnectionMultiplexer>();
-    var logger = sp.GetRequiredService<ILogger<RedisCacheService>>();
-    var memoryCache = sp.GetRequiredService<MemoryCacheService>();
-
-    return new RedisCacheService(logger, memoryCache, redis);
-});
+// Register ICacheService - RedisCacheService handles IDistributedCache injection
+builder.Services.AddSingleton<ICacheService, RedisCacheService>();
 
 // Register business metrics
 builder.Services.AddSingleton<Maliev.CountryService.Api.Metrics.BusinessMetrics>();
@@ -167,7 +145,7 @@ if (!app.Environment.IsEnvironment("Testing"))
 {
     try
     {
-        await app.MigrateDatabaseAsync<CountryServiceDbContext>();
+        await app.MigrateDatabaseAsync<CountryDbContext>();
     }
     catch (Exception ex)
     {
@@ -193,12 +171,12 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 // Map health check and metrics endpoints via ServiceDefaults
-app.MapDefaultEndpoints("countries");
+app.MapDefaultEndpoints("country");
 
 app.MapControllers();
 
 // Map OpenAPI and Scalar documentation (dev/staging only)
-app.MapApiDocumentation(servicePrefix: "countries");
+app.MapApiDocumentation(servicePrefix: "country");
 
 logger.LogInformation("CountryService started successfully");
 await app.RunAsync();

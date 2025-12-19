@@ -22,7 +22,7 @@ This document provides practical cURL examples for all Country Service API endpo
 ### 1. Get Country by ID
 
 ```bash
-curl -X GET "http://localhost:5000/countries/v1/countries/1" \
+curl -X GET "http://localhost:5000/country/v1/countries/1" \
   -H "Accept: application/json"
 ```
 
@@ -50,10 +50,10 @@ curl -X GET "http://localhost:5000/countries/v1/countries/1" \
 **With ETag Support** (Conditional GET):
 ```bash
 # First request - get ETag
-ETAG=$(curl -sI "http://localhost:5000/countries/v1/countries/1" | grep -i etag | cut -d' ' -f2 | tr -d '\r')
+ETAG=$(curl -sI "http://localhost:5000/country/v1/countries/1" | grep -i etag | cut -d' ' -f2 | tr -d '\r')
 
 # Subsequent request - use If-None-Match
-curl -X GET "http://localhost:5000/countries/v1/countries/1" \
+curl -X GET "http://localhost:5000/country/v1/countries/1" \
   -H "Accept: application/json" \
   -H "If-None-Match: $ETAG" \
   -w "\nHTTP Status: %{http_code}\n"
@@ -66,7 +66,7 @@ curl -X GET "http://localhost:5000/countries/v1/countries/1" \
 ### 2. Get Country by ISO2 Code
 
 ```bash
-curl -X GET "http://localhost:5000/countries/v1/countries/iso2/US" \
+curl -X GET "http://localhost:5000/country/v1/countries/iso2/US" \
   -H "Accept: application/json"
 ```
 
@@ -85,12 +85,12 @@ curl -X GET "http://localhost:5000/countries/v1/countries/iso2/US" \
 **Error Handling**:
 ```bash
 # Invalid ISO2 code (wrong format)
-curl -X GET "http://localhost:5000/countries/v1/countries/iso2/USA" \
+curl -X GET "http://localhost:5000/country/v1/countries/iso2/USA" \
   -w "\nHTTP Status: %{http_code}\n"
 # Returns: 400 Bad Request - "ISO2 must be exactly 2 uppercase letters"
 
 # Valid format but non-existent country
-curl -X GET "http://localhost:5000/countries/v1/countries/iso2/ZZ" \
+curl -X GET "http://localhost:5000/country/v1/countries/iso2/ZZ" \
   -w "\nHTTP Status: %{http_code}\n"
 # Returns: 404 Not Found
 ```
@@ -100,7 +100,7 @@ curl -X GET "http://localhost:5000/countries/v1/countries/iso2/ZZ" \
 ### 3. Get Country by ISO3 Code
 
 ```bash
-curl -X GET "http://localhost:5000/countries/v1/countries/iso3/USA" \
+curl -X GET "http://localhost:5000/country/v1/countries/iso3/USA" \
   -H "Accept: application/json"
 ```
 
@@ -122,45 +122,45 @@ curl -X GET "http://localhost:5000/countries/v1/countries/iso3/USA" \
 
 **Basic List** (defaults: page=1, pageSize=10, sortBy=name, sortOrder=asc):
 ```bash
-curl -X GET "http://localhost:5000/countries/v1/countries" \
+curl -X GET "http://localhost:5000/country/v1/countries" \
   -H "Accept: application/json"
 ```
 
 **With Pagination**:
 ```bash
-curl -X GET "http://localhost:5000/countries/v1/countries?page=2&pageSize=20" \
+curl -X GET "http://localhost:5000/country/v1/countries?page=2&pageSize=20" \
   -H "Accept: application/json"
 ```
 
 **With Sorting**:
 ```bash
 # Sort by population (descending)
-curl -X GET "http://localhost:5000/countries/v1/countries?sortBy=population&sortOrder=desc&pageSize=10" \
+curl -X GET "http://localhost:5000/country/v1/countries?sortBy=population&sortOrder=desc&pageSize=10" \
   -H "Accept: application/json"
 
 # Sort by name (ascending - default)
-curl -X GET "http://localhost:5000/countries/v1/countries?sortBy=name&sortOrder=asc" \
+curl -X GET "http://localhost:5000/country/v1/countries?sortBy=name&sortOrder=asc" \
   -H "Accept: application/json"
 
 # Sort by ISO2 code
-curl -X GET "http://localhost:5000/countries/v1/countries?sortBy=iso2&sortOrder=asc" \
+curl -X GET "http://localhost:5000/country/v1/countries?sortBy=iso2&sortOrder=asc" \
   -H "Accept: application/json"
 ```
 
 **With Filtering**:
 ```bash
 # Filter by region
-curl -X GET "http://localhost:5000/countries/v1/countries?region=Europe&pageSize=50" \
+curl -X GET "http://localhost:5000/country/v1/countries?region=Europe&pageSize=50" \
   -H "Accept: application/json"
 
 # Filter by region and subregion
-curl -X GET "http://localhost:5000/countries/v1/countries?region=Europe&subregion=Western%20Europe" \
+curl -X GET "http://localhost:5000/country/v1/countries?region=Europe&subregion=Western%20Europe" \
   -H "Accept: application/json"
 ```
 
 **Response Headers** (pagination metadata):
 ```bash
-curl -I "http://localhost:5000/countries/v1/countries?page=1&pageSize=20" | grep -E "X-Total-Count|X-Page-Size"
+curl -I "http://localhost:5000/country/v1/countries?page=1&pageSize=20" | grep -E "X-Total-Count|X-Page-Size"
 # X-Total-Count: 195
 # X-Page-Size: 20
 ```
@@ -192,28 +192,28 @@ curl -I "http://localhost:5000/countries/v1/countries?page=1&pageSize=20" | grep
 
 **Basic Search**:
 ```bash
-curl -X GET "http://localhost:5000/countries/v1/countries/search?q=united" \
+curl -X GET "http://localhost:5000/country/v1/countries/search?q=united" \
   -H "Accept: application/json"
 ```
 
 **Paginated Search**:
 ```bash
-curl -X GET "http://localhost:5000/countries/v1/countries/search?q=island&page=1&pageSize=10" \
+curl -X GET "http://localhost:5000/country/v1/countries/search?q=island&page=1&pageSize=10" \
   -H "Accept: application/json"
 ```
 
 **Search Examples**:
 ```bash
 # Search for "Republic"
-curl -X GET "http://localhost:5000/countries/v1/countries/search?q=republic" \
+curl -X GET "http://localhost:5000/country/v1/countries/search?q=republic" \
   -H "Accept: application/json"
 
 # Search for "Kingdom"
-curl -X GET "http://localhost:5000/countries/v1/countries/search?q=kingdom" \
+curl -X GET "http://localhost:5000/country/v1/countries/search?q=kingdom" \
   -H "Accept: application/json"
 
 # Search for partial matches
-curl -X GET "http://localhost:5000/countries/v1/countries/search?q=stan" \
+curl -X GET "http://localhost:5000/country/v1/countries/search?q=stan" \
   -H "Accept: application/json"
 ```
 
@@ -273,7 +273,7 @@ AUTHORIZATION_HEADER="Authorization: Bearer YOUR_JWT_TOKEN_HERE"
 
 **Request**:
 ```bash
-curl -X POST "http://localhost:5000/countries/v1/admin/countries" \
+curl -X POST "http://localhost:5000/country/v1/admin/countries" \
   -H "Authorization: Bearer $JWT_TOKEN" \
   -H "Content-Type: application/json" \
   -d @create-country-request.json
@@ -298,7 +298,7 @@ curl -X POST "http://localhost:5000/countries/v1/admin/countries" \
 
 **Inline JSON Example**:
 ```bash
-curl -X POST "http://localhost:5000/countries/v1/admin/countries" \
+curl -X POST "http://localhost:5000/country/v1/admin/countries" \
   -H "Authorization: Bearer $JWT_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -334,7 +334,7 @@ curl -X POST "http://localhost:5000/countries/v1/admin/countries" \
 **Error Handling**:
 ```bash
 # Duplicate ISO2 code
-curl -X POST "http://localhost:5000/countries/v1/admin/countries" \
+curl -X POST "http://localhost:5000/country/v1/admin/countries" \
   -H "Authorization: Bearer $JWT_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"iso2": "US", "iso3": "XXX", "name": "Duplicate"}' \
@@ -342,7 +342,7 @@ curl -X POST "http://localhost:5000/countries/v1/admin/countries" \
 # Returns: 409 Conflict - "Country with ISO2 'US' already exists"
 
 # Invalid data
-curl -X POST "http://localhost:5000/countries/v1/admin/countries" \
+curl -X POST "http://localhost:5000/country/v1/admin/countries" \
   -H "Authorization: Bearer $JWT_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"iso2": "ABC", "iso3": "XXX", "name": "Invalid"}' \
@@ -357,10 +357,10 @@ curl -X POST "http://localhost:5000/countries/v1/admin/countries" \
 **Request** (requires `If-Match` header with ETag):
 ```bash
 # Get current ETag
-ETAG=$(curl -sI "http://localhost:5000/countries/v1/countries/196" | grep -i etag | cut -d' ' -f2 | tr -d '\r')
+ETAG=$(curl -sI "http://localhost:5000/country/v1/countries/196" | grep -i etag | cut -d' ' -f2 | tr -d '\r')
 
 # Update country
-curl -X PUT "http://localhost:5000/countries/v1/admin/countries/196" \
+curl -X PUT "http://localhost:5000/country/v1/admin/countries/196" \
   -H "Authorization: Bearer $JWT_TOKEN" \
   -H "Content-Type: application/json" \
   -H "If-Match: $ETAG" \
@@ -382,7 +382,7 @@ curl -X PUT "http://localhost:5000/countries/v1/admin/countries/196" \
 **Optimistic Concurrency Conflict**:
 ```bash
 # Attempt update with stale ETag
-curl -X PUT "http://localhost:5000/countries/v1/admin/countries/196" \
+curl -X PUT "http://localhost:5000/country/v1/admin/countries/196" \
   -H "Authorization: Bearer $JWT_TOKEN" \
   -H "Content-Type: application/json" \
   -H "If-Match: \"stale-etag-value\"" \
@@ -393,7 +393,7 @@ curl -X PUT "http://localhost:5000/countries/v1/admin/countries/196" \
 
 **Missing If-Match Header**:
 ```bash
-curl -X PUT "http://localhost:5000/countries/v1/admin/countries/196" \
+curl -X PUT "http://localhost:5000/country/v1/admin/countries/196" \
   -H "Authorization: Bearer $JWT_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"iso2": "XX", "iso3": "XXX", "name": "Updated"}' \
@@ -408,10 +408,10 @@ curl -X PUT "http://localhost:5000/countries/v1/admin/countries/196" \
 **Request**:
 ```bash
 # Get current ETag
-ETAG=$(curl -sI "http://localhost:5000/countries/v1/countries/196" | grep -i etag | cut -d' ' -f2 | tr -d '\r')
+ETAG=$(curl -sI "http://localhost:5000/country/v1/countries/196" | grep -i etag | cut -d' ' -f2 | tr -d '\r')
 
 # Update only population and capital
-curl -X PATCH "http://localhost:5000/countries/v1/admin/countries/196" \
+curl -X PATCH "http://localhost:5000/country/v1/admin/countries/196" \
   -H "Authorization: Bearer $JWT_TOKEN" \
   -H "Content-Type: application/json" \
   -H "If-Match: $ETAG" \
@@ -424,21 +424,21 @@ curl -X PATCH "http://localhost:5000/countries/v1/admin/countries/196" \
 **Examples**:
 ```bash
 # Update only name
-curl -X PATCH "http://localhost:5000/countries/v1/admin/countries/196" \
+curl -X PATCH "http://localhost:5000/country/v1/admin/countries/196" \
   -H "Authorization: Bearer $JWT_TOKEN" \
   -H "Content-Type: application/json" \
   -H "If-Match: $ETAG" \
   -d '{"name": "New Name"}'
 
 # Update region and subregion
-curl -X PATCH "http://localhost:5000/countries/v1/admin/countries/196" \
+curl -X PATCH "http://localhost:5000/country/v1/admin/countries/196" \
   -H "Authorization: Bearer $JWT_TOKEN" \
   -H "Content-Type: application/json" \
   -H "If-Match: $ETAG" \
   -d '{"region": "Asia", "subregion": "Southern Asia"}'
 
 # Update multiple fields
-curl -X PATCH "http://localhost:5000/countries/v1/admin/countries/196" \
+curl -X PATCH "http://localhost:5000/country/v1/admin/countries/196" \
   -H "Authorization: Bearer $JWT_TOKEN" \
   -H "Content-Type: application/json" \
   -H "If-Match: $ETAG" \
@@ -456,7 +456,7 @@ curl -X PATCH "http://localhost:5000/countries/v1/admin/countries/196" \
 
 **Request** (CountryAdmin role required):
 ```bash
-curl -X DELETE "http://localhost:5000/countries/v1/admin/countries/196?hard=false" \
+curl -X DELETE "http://localhost:5000/country/v1/admin/countries/196?hard=false" \
   -H "Authorization: Bearer $JWT_TOKEN" \
   -w "\nHTTP Status: %{http_code}\n"
 ```
@@ -472,7 +472,7 @@ curl -X DELETE "http://localhost:5000/countries/v1/admin/countries/196?hard=fals
 **Verify Soft Delete**:
 ```bash
 # Country should return 404 or be excluded from public endpoints
-curl -X GET "http://localhost:5000/countries/v1/countries/196" \
+curl -X GET "http://localhost:5000/country/v1/countries/196" \
   -w "\nHTTP Status: %{http_code}\n"
 # Returns: 404 Not Found (or 200 with isActive=false depending on implementation)
 ```
@@ -483,7 +483,7 @@ curl -X GET "http://localhost:5000/countries/v1/countries/196" \
 
 **Request** (SuperAdmin role required):
 ```bash
-curl -X DELETE "http://localhost:5000/countries/v1/admin/countries/196?hard=true" \
+curl -X DELETE "http://localhost:5000/country/v1/admin/countries/196?hard=true" \
   -H "Authorization: Bearer $JWT_TOKEN" \
   -w "\nHTTP Status: %{http_code}\n"
 ```
@@ -498,7 +498,7 @@ curl -X DELETE "http://localhost:5000/countries/v1/admin/countries/196?hard=true
 **Permission Denied**:
 ```bash
 # CountryAdmin attempting hard delete (only SuperAdmin allowed)
-curl -X DELETE "http://localhost:5000/countries/v1/admin/countries/196?hard=true" \
+curl -X DELETE "http://localhost:5000/country/v1/admin/countries/196?hard=true" \
   -H "Authorization: Bearer $JWT_TOKEN_COUNTRY_ADMIN" \
   -w "\nHTTP Status: %{http_code}\n"
 # Returns: 403 Forbidden - "SuperAdmin role required for hard delete"
@@ -512,7 +512,7 @@ curl -X DELETE "http://localhost:5000/countries/v1/admin/countries/196?hard=true
 
 **Request**:
 ```bash
-curl -X POST "http://localhost:5000/countries/v1/admin/bulk-import" \
+curl -X POST "http://localhost:5000/country/v1/admin/bulk-import" \
   -H "Authorization: Bearer $JWT_TOKEN" \
   -H "Content-Type: application/json" \
   -d @bulk-import-request.json
@@ -553,7 +553,7 @@ curl -X POST "http://localhost:5000/countries/v1/admin/bulk-import" \
 **Error - Too Many Records**:
 ```bash
 # Attempt to import > 1,000 countries
-curl -X POST "http://localhost:5000/countries/v1/admin/bulk-import" \
+curl -X POST "http://localhost:5000/country/v1/admin/bulk-import" \
   -H "Authorization: Bearer $JWT_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"countries": [...]}' \
@@ -569,7 +569,7 @@ curl -X POST "http://localhost:5000/countries/v1/admin/bulk-import" \
 ```bash
 export JOB_ID="550e8400-e29b-41d4-a716-446655440000"
 
-curl -X GET "http://localhost:5000/countries/v1/admin/bulk-import/$JOB_ID" \
+curl -X GET "http://localhost:5000/country/v1/admin/bulk-import/$JOB_ID" \
   -H "Authorization: Bearer $JWT_TOKEN" \
   -H "Accept: application/json"
 ```
@@ -651,7 +651,7 @@ curl -X GET "http://localhost:5000/countries/v1/admin/bulk-import/$JOB_ID" \
 
 **Request**:
 ```bash
-curl -X POST "http://localhost:5000/countries/v1/admin/bulk-import/$JOB_ID/process" \
+curl -X POST "http://localhost:5000/country/v1/admin/bulk-import/$JOB_ID/process" \
   -H "Authorization: Bearer $JWT_TOKEN" \
   -w "\nHTTP Status: %{http_code}\n"
 ```
@@ -670,14 +670,14 @@ curl -X POST "http://localhost:5000/countries/v1/admin/bulk-import/$JOB_ID/proce
 JOB_ID="550e8400-e29b-41d4-a716-446655440000"
 
 while true; do
-  STATUS=$(curl -s "http://localhost:5000/countries/v1/admin/bulk-import/$JOB_ID" \
+  STATUS=$(curl -s "http://localhost:5000/country/v1/admin/bulk-import/$JOB_ID" \
     -H "Authorization: Bearer $JWT_TOKEN" | jq -r '.status')
 
   echo "Job status: $STATUS"
 
   if [[ "$STATUS" == "Completed" || "$STATUS" == "Failed" ]]; then
     echo "Job finished!"
-    curl -s "http://localhost:5000/countries/v1/admin/bulk-import/$JOB_ID" \
+    curl -s "http://localhost:5000/country/v1/admin/bulk-import/$JOB_ID" \
       -H "Authorization: Bearer $JWT_TOKEN" | jq
     break
   fi
@@ -694,7 +694,7 @@ done
 
 **Request**:
 ```bash
-curl -X GET "http://localhost:5000/countries/v1/liveness"
+curl -X GET "http://localhost:5000/country/v1/liveness"
 ```
 
 **Response**: `200 OK` with body `"Healthy"`
@@ -707,7 +707,7 @@ curl -X GET "http://localhost:5000/countries/v1/liveness"
 
 **Request**:
 ```bash
-curl -X GET "http://localhost:5000/countries/v1/readiness" \
+curl -X GET "http://localhost:5000/country/v1/readiness" \
   -H "Accept: application/json"
 ```
 
@@ -758,7 +758,7 @@ curl -X GET "http://localhost:5000/countries/v1/readiness" \
 
 **Headers**:
 ```bash
-curl -I "http://localhost:5000/countries/v1/readiness"
+curl -I "http://localhost:5000/country/v1/readiness"
 # X-Degraded-Mode: true (if serving from stale cache during DB outage)
 ```
 
@@ -810,9 +810,9 @@ country_bulk_import_jobs_total{status="completed"} 5
 country_bulk_import_jobs_total{status="failed"} 1
 
 # Standard HTTP metrics
-http_requests_received_total{code="200",method="GET",route="/countries/v1/countries/{id}"} 10000
-http_requests_received_total{code="404",method="GET",route="/countries/v1/countries/{id}"} 50
-http_request_duration_seconds_bucket{le="0.05",route="/countries/v1/countries/iso2/{iso2}"} 9500
+http_requests_received_total{code="200",method="GET",route="/country/v1/countries/{id}"} 10000
+http_requests_received_total{code="404",method="GET",route="/country/v1/countries/{id}"} 50
+http_request_duration_seconds_bucket{le="0.05",route="/country/v1/countries/iso2/{iso2}"} 9500
 ```
 
 **Filtering Metrics**:
@@ -834,13 +834,13 @@ All endpoints have rate limits applied:
 ```bash
 # Exceeding rate limit
 for i in {1..101}; do
-  curl -s -w "%{http_code}\n" "http://localhost:5000/countries/v1/countries/1" > /dev/null
+  curl -s -w "%{http_code}\n" "http://localhost:5000/country/v1/countries/1" > /dev/null
 done
 # First 100: 200 OK
 # 101st: 429 Too Many Requests
 
 # Check rate limit headers
-curl -I "http://localhost:5000/countries/v1/countries/1" | grep -E "X-RateLimit|Retry-After"
+curl -I "http://localhost:5000/country/v1/countries/1" | grep -E "X-RateLimit|Retry-After"
 # X-RateLimit-Limit: 100
 # X-RateLimit-Remaining: 95
 # X-RateLimit-Reset: 1699012800
@@ -848,7 +848,7 @@ curl -I "http://localhost:5000/countries/v1/countries/1" | grep -E "X-RateLimit|
 
 **Admin Endpoints** (20 requests/minute per user):
 ```bash
-curl -I "http://localhost:5000/countries/v1/admin/countries" \
+curl -I "http://localhost:5000/country/v1/admin/countries" \
   -H "Authorization: Bearer $JWT_TOKEN" | grep "X-RateLimit"
 # X-RateLimit-Limit: 20
 # X-RateLimit-Remaining: 19
@@ -970,7 +970,7 @@ All error responses follow a consistent structure:
 
 Force cache refresh by setting `Cache-Control: no-cache`:
 ```bash
-curl -X GET "http://localhost:5000/countries/v1/countries/iso2/US" \
+curl -X GET "http://localhost:5000/country/v1/countries/iso2/US" \
   -H "Cache-Control: no-cache" \
   -H "Accept: application/json"
 ```
@@ -979,17 +979,17 @@ curl -X GET "http://localhost:5000/countries/v1/countries/iso2/US" \
 
 **Verbose Output**:
 ```bash
-curl -v "http://localhost:5000/countries/v1/countries/1"
+curl -v "http://localhost:5000/country/v1/countries/1"
 ```
 
 **Timing Information**:
 ```bash
-curl -w "\nTime: %{time_total}s\n" "http://localhost:5000/countries/v1/countries/iso2/US"
+curl -w "\nTime: %{time_total}s\n" "http://localhost:5000/country/v1/countries/iso2/US"
 ```
 
 **Save Response to File**:
 ```bash
-curl "http://localhost:5000/countries/v1/countries?pageSize=100" -o countries.json
+curl "http://localhost:5000/country/v1/countries?pageSize=100" -o countries.json
 ```
 
 ### Scripting Examples
@@ -998,7 +998,7 @@ curl "http://localhost:5000/countries/v1/countries?pageSize=100" -o countries.js
 ```bash
 #!/bin/bash
 for i in {1..10}; do
-  curl -X POST "http://localhost:5000/countries/v1/admin/countries" \
+  curl -X POST "http://localhost:5000/country/v1/admin/countries" \
     -H "Authorization: Bearer $JWT_TOKEN" \
     -H "Content-Type: application/json" \
     -d "{\"iso2\":\"Z$i\",\"iso3\":\"Z0$i\",\"name\":\"Test Country $i\",\"region\":\"Test\"}"
@@ -1011,7 +1011,7 @@ done
 #!/bin/bash
 PAGE=1
 while true; do
-  RESPONSE=$(curl -s "http://localhost:5000/countries/v1/countries?page=$PAGE&pageSize=100")
+  RESPONSE=$(curl -s "http://localhost:5000/country/v1/countries?page=$PAGE&pageSize=100")
   TOTAL_PAGES=$(echo $RESPONSE | jq -r '.totalPages')
 
   echo $RESPONSE | jq '.data[]' >> all_countries.json

@@ -3,13 +3,13 @@
 **Feature Branch**: `001-country-service`
 **Created**: 2025-10-31
 **Status**: Draft
-**Input**: User description: "Country WebAPI service optimized for minimal resource use, very fast read responses, and strong caching. The service exposes a stable base path /countries/v1 and serves as the canonical read/write store for country canonical data used by other services. Public, read-optimized endpoints must allow fast retrieval of the country list and single-country lookups by internal ID or ISO code. Administrative endpoints must permit create, update, patch, and soft-delete operations and be protected by role-based authentication. The prompt should explicitly state that the service will not publish create/update/delete events to a message bus because country data changes are infrequent and downstream systems can poll or request snapshots on demand."
+**Input**: User description: "Country WebAPI service optimized for minimal resource use, very fast read responses, and strong caching. The service exposes a stable base path /country/v1 and serves as the canonical read/write store for country canonical data used by other services. Public, read-optimized endpoints must allow fast retrieval of the country list and single-country lookups by internal ID or ISO code. Administrative endpoints must permit create, update, patch, and soft-delete operations and be protected by role-based authentication. The prompt should explicitly state that the service will not publish create/update/delete events to a message bus because country data changes are infrequent and downstream systems can poll or request snapshots on demand."
 
 ## Clarifications
 
 ### Session 2025-10-31
 
-- Q: When downstream services need to obtain a full snapshot of country data (rather than polling individual records), how should the Country service expose this capability? → A: Expose the existing GET /countries/v1/countries?includeInactive=all endpoint with pagination as the snapshot mechanism - no separate endpoint needed
+- Q: When downstream services need to obtain a full snapshot of country data (rather than polling individual records), how should the Country service expose this capability? → A: Expose the existing GET /country/v1/countries?includeInactive=all endpoint with pagination as the snapshot mechanism - no separate endpoint needed
 - Q: FR-034 specifies cache-warming should pre-load "top 50 most accessed countries" on startup. How should the system determine which 50 countries to prioritize when the cache is cold (e.g., after initial deployment or complete restart)? → A: Pre-configure a static list of the 50 most populous countries as a sensible default that will cover the majority of real-world use cases
 - Q: When a bulk import contains records with duplicate ISO codes (either within the import batch itself, or conflicting with existing active records in the database), how should the system handle this conflict? → A: Reject the entire bulk import with detailed validation errors listing all duplicate ISO codes - require administrator to resolve conflicts before resubmission
 
@@ -212,9 +212,9 @@ When infrastructure failures occur (database unavailable, cache failures), the s
 - **FR-062**: System MUST implement stricter rate limiting on admin endpoints (default 20 requests/minute per authenticated user)
 
 #### Observability and Health
-- **FR-063**: System MUST provide liveness endpoint at /countries/v1/liveness returning 200 when process is running
-- **FR-064**: System MUST provide readiness endpoint at /countries/v1/readiness returning 200 only when database and cache are accessible
-- **FR-065**: System MUST expose Prometheus metrics endpoint at /countries/v1/metrics
+- **FR-063**: System MUST provide liveness endpoint at /country/v1/liveness returning 200 when process is running
+- **FR-064**: System MUST provide readiness endpoint at /country/v1/readiness returning 200 only when database and cache are accessible
+- **FR-065**: System MUST expose Prometheus metrics endpoint at /country/v1/metrics
 - **FR-066**: System MUST emit metrics for cache hit/miss rates by cache layer (in-memory, Redis)
 - **FR-067**: System MUST emit metrics for request latency percentiles (p50, p95, p99) by endpoint
 - **FR-068**: System MUST emit metrics for request volume by endpoint and HTTP status code
@@ -233,12 +233,12 @@ When infrastructure failures occur (database unavailable, cache failures), the s
 - **FR-079**: System MUST maintain readiness as healthy when serving from cache during database outage (liveness healthy, readiness degraded)
 
 #### API Versioning and Stability
-- **FR-080**: System MUST serve all endpoints under base path /countries/v1
+- **FR-080**: System MUST serve all endpoints under base path /country/v1
 - **FR-081**: System MUST maintain API compatibility within v1 (no breaking changes)
 - **FR-082**: System MUST include API version in response headers (X-API-Version: v1)
 
 #### Event Publishing
-- **FR-083**: System MUST NOT publish create/update/delete events to message bus (downstream systems poll individual records or request full snapshots via GET /countries/v1/countries?includeInactive=all with pagination)
+- **FR-083**: System MUST NOT publish create/update/delete events to message bus (downstream systems poll individual records or request full snapshots via GET /country/v1/countries?includeInactive=all with pagination)
 
 #### Audit and History
 - **FR-084**: System MUST maintain audit log table for all write operations retaining 24 months of history

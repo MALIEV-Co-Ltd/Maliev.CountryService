@@ -57,7 +57,7 @@ public class BulkImportWorkerService : BackgroundService
     private async Task ProcessPendingJobsAsync(CancellationToken cancellationToken)
     {
         using var scope = _scopeFactory.CreateScope();
-        var context = scope.ServiceProvider.GetRequiredService<CountryServiceDbContext>();
+        var context = scope.ServiceProvider.GetRequiredService<CountryDbContext>();
         var bulkImportService = scope.ServiceProvider.GetRequiredService<IBulkImportService>();
 
         // T113: Poll for Validated jobs

@@ -16,7 +16,7 @@ namespace Maliev.CountryService.Api.Services;
 /// </summary>
 public class CountryService : ICountryService
 {
-    private readonly CountryServiceDbContext _context;
+    private readonly CountryDbContext _context;
     private readonly ICacheService _cacheService;
     private readonly ILogger<CountryService> _logger;
     private readonly DegradationContext _degradationContext;
@@ -29,7 +29,7 @@ public class CountryService : ICountryService
     /// <param name="logger">The logger.</param>
     /// <param name="degradationContext">The degradation context.</param>
     public CountryService(
-        CountryServiceDbContext context,
+        CountryDbContext context,
         ICacheService cacheService,
         ILogger<CountryService> logger,
         DegradationContext degradationContext)

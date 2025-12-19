@@ -11,13 +11,13 @@ info:
     email: api-support@maliev.com
 
 servers:
-  - url: https://api.maliev.com/countries/v1
+  - url: https://api.maliev.com/country/v1
     description: Production
-  - url: https://api-staging.maliev.com/countries/v1
+  - url: https://api-staging.maliev.com/country/v1
     description: Staging
-  - url: https://api-dev.maliev.com/countries/v1
+  - url: https://api-dev.maliev.com/country/v1
     description: Development
-  - url: http://localhost:5000/countries/v1
+  - url: http://localhost:5000/country/v1
     description: Local Development
 
 tags:
@@ -264,7 +264,7 @@ paths:
               schema:
                 type: string
               description: URL of created resource
-              example: /countries/v1/countries/123
+              example: /country/v1/countries/123
             ETag:
               schema:
                 type: string
@@ -450,7 +450,7 @@ paths:
             Location:
               schema:
                 type: string
-              example: /countries/v1/admin/bulk-import/123
+              example: /country/v1/admin/bulk-import/123
           content:
             application/json:
               schema:

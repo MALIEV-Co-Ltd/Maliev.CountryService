@@ -15,7 +15,7 @@ namespace Maliev.CountryService.Api.Controllers;
 /// </summary>
 [ApiController]
 [ApiVersion("1.0")]
-[Route("countries/v{version:apiVersion}/admin/countries")]
+[Route("country/v{version:apiVersion}/admin/countries")]
 [EnableRateLimiting("admin-endpoints")]
 [Authorize(Policy = "CountryAdmin")]
 public class AdminCountriesController : ControllerBase
@@ -66,7 +66,7 @@ public class AdminCountriesController : ControllerBase
             _logger.LogInformation("Country created: {Iso2} by user {UserId} with correlationId {CorrelationId}",
                 result.Iso2, userId, HttpContext.TraceIdentifier);
 
-            Response.Headers["Location"] = $"/countries/v1/countries/{result.Id}";
+            Response.Headers["Location"] = $"/country/v1/countries/{result.Id}";
             Response.Headers["ETag"] = result.ETag;
 
             _businessMetrics.RecordRequestDuration(stopwatch.Elapsed.TotalSeconds, "Create", "POST", "201"); // Changed

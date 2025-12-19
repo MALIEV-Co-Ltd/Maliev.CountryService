@@ -13,7 +13,7 @@ namespace Maliev.CountryService.Api.Controllers;
 /// </summary>
 [ApiController]
 [ApiVersion("1.0")]
-[Route("countries/v{version:apiVersion}/countries")]
+[Route("country/v{version:apiVersion}/countries")]
 public class CountriesController : ControllerBase
 {
     private readonly ICountryService _countryService;

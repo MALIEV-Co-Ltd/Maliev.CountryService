@@ -13,7 +13,7 @@ namespace Maliev.CountryService.Api.Services;
 /// </summary>
 public class BulkImportService : IBulkImportService
 {
-    private readonly CountryServiceDbContext _context;
+    private readonly CountryDbContext _context;
     private readonly ICountryService _countryService;
     private readonly ILogger<BulkImportService> _logger;
 
@@ -24,7 +24,7 @@ public class BulkImportService : IBulkImportService
     /// <param name="countryService">The country service for CRUD operations.</param>
     /// <param name="logger">The logger instance.</param>
     public BulkImportService(
-        CountryServiceDbContext context,
+        CountryDbContext context,
         ICountryService countryService,
         ILogger<BulkImportService> logger)
     {
@@ -254,33 +254,38 @@ public class BulkImportService : IBulkImportService
             // For now, we'll assume this is called immediately after validation with the data still available
             // This is a simplified implementation
 
-            // T110: Begin transaction for atomic insert
-            using var transaction = await _context.Database.BeginTransactionAsync(cancellationToken);
-
-            try
+            // T110: Process validated job with atomic transaction using execution strategy
+            var strategy = _context.Database.CreateExecutionStrategy();
+            await strategy.ExecuteAsync(async () =>
             {
-                // In a real implementation, the country data would be stored with the job
-                // For this simplified version, we'll just mark as completed
-                // The actual insert logic would go here
+                // T110: Begin transaction for atomic insert
+                using var transaction = await _context.Database.BeginTransactionAsync(cancellationToken);
 
-                job.ProcessedRecords = job.TotalRecords;
-                job.Status = "Completed";
-                job.CompletedAtUtc = DateTime.UtcNow;
+                try
+                {
+                    // In a real implementation, the country data would be stored with the job
+                    // For this simplified version, we'll just mark as completed
+                    // The actual insert logic would go here
 
-                await _context.SaveChangesAsync(cancellationToken);
-                await transaction.CommitAsync(cancellationToken);
+                    job.ProcessedRecords = job.TotalRecords;
+                    job.Status = "Completed";
+                    job.CompletedAtUtc = DateTime.UtcNow;
 
-                _logger.LogInformation("Bulk import processing completed: JobId {JobId}, Records {Count}",
-                    job.Id, job.TotalRecords);
+                    await _context.SaveChangesAsync(cancellationToken);
+                    await transaction.CommitAsync(cancellationToken);
 
-                // T112: Invalidate all list and search caches
-                await _countryService.InvalidateListCachesAsync(cancellationToken);
-            }
-            catch (Exception)
-            {
-                await transaction.RollbackAsync(cancellationToken);
-                throw;
-            }
+                    _logger.LogInformation("Bulk import processing completed: JobId {JobId}, Records {Count}",
+                        job.Id, job.TotalRecords);
+
+                    // T112: Invalidate all list and search caches
+                    await _countryService.InvalidateListCachesAsync(cancellationToken);
+                }
+                catch (Exception)
+                {
+                    await transaction.RollbackAsync(cancellationToken);
+                    throw;
+                }
+            });
         }
         catch (Exception ex)
         {
