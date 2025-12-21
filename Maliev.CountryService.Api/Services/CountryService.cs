@@ -410,7 +410,7 @@ public class CountryService : ICountryService
     /// <param name="changesJson">Optional JSON string representing the changes made.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>A task representing the asynchronous operation.</returns>
-    private async Task LogAuditAsync(long countryId, string action, string userId, string? changesJson, CancellationToken cancellationToken)
+    private async Task LogAuditAsync(long? countryId, string action, string userId, string? changesJson, CancellationToken cancellationToken)
     {
         var auditLog = new AuditLog
         {
@@ -419,7 +419,6 @@ public class CountryService : ICountryService
             UserId = userId,
             TimestampUtc = DateTime.UtcNow,
             Changes = changesJson,
-            // IpAddress will require IHttpContextAccessor injection, which is not available in Service layer directly
         };
         _context.AuditLogs.Add(auditLog);
         await _context.SaveChangesAsync(cancellationToken);
@@ -855,6 +854,48 @@ public class CountryService : ICountryService
         await _context.SaveChangesAsync(cancellationToken);
 
         _logger.LogWarning("Country HARD-DELETED: {Iso2} - {Name} by user {UserId}", iso2, name, userId);
+
+        // Invalidate caches
+        await InvalidateSingleCountryCacheAsync(country, cancellationToken);
+        await InvalidateListCachesAsync(cancellationToken);
+    }
+
+    /// <summary>
+    /// Restores a soft-deleted country (sets IsActive=true).
+    /// </summary>
+    /// <param name="id">The ID of the country to restore.</param>
+    /// <param name="userId">The ID of the user restoring the country.</param>
+    /// <param name="cancellationToken">Token to cancel the operation.</param>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    public async Task RestoreAsync(long id, string userId, CancellationToken cancellationToken = default)
+    {
+        // Need to use IgnoreQueryFilters to find inactive country
+        var country = await _context.Countries
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(c => c.Id == id, cancellationToken);
+
+        if (country == null)
+        {
+            throw new KeyNotFoundException($"Country with ID {id} not found");
+        }
+
+        if (country.IsActive)
+        {
+            throw new InvalidOperationException($"Country {country.Iso2} is already active");
+        }
+
+        country.IsActive = true;
+        country.LastModifiedUtc = DateTime.UtcNow;
+        country.DeletedAt = null;
+        country.UpdatedBy = userId;
+        country.Version = Guid.NewGuid();
+
+        await _context.SaveChangesAsync(cancellationToken);
+
+        // Log audit
+        await LogAuditAsync(id, "RESTORE", userId, JsonSerializer.Serialize(new { IsActive = true, RestoredAt = DateTime.UtcNow }), cancellationToken);
+
+        _logger.LogInformation("Country restored: {Iso2} - {Name} by user {UserId}", country.Iso2, country.Name, userId);
 
         // Invalidate caches
         await InvalidateSingleCountryCacheAsync(country, cancellationToken);

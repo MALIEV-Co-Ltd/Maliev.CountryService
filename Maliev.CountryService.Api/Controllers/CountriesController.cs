@@ -14,6 +14,7 @@ namespace Maliev.CountryService.Api.Controllers;
 [ApiController]
 [ApiVersion("1.0")]
 [Route("country/v{version:apiVersion}/countries")]
+[AllowAnonymous]
 public class CountriesController : ControllerBase
 {
     private readonly ICountryService _countryService;
@@ -139,7 +140,6 @@ public class CountriesController : ControllerBase
     /// <param name="cancellationToken">A token to cancel the operation.</param>
     /// <returns>A paginated list of countries.</returns>
     [HttpGet]
-    [AllowAnonymous] // Add this attribute
     [ProducesResponseType(typeof(PaginatedResponse<CountryResponse>), StatusCodes.Status200OK)]
     public async Task<IActionResult> List([FromQuery] CountryListRequest request, CancellationToken cancellationToken)
     {

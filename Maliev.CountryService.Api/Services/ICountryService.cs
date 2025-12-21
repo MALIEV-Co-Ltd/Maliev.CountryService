@@ -96,4 +96,12 @@ public interface ICountryService
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>A task that represents the asynchronous operation.</returns>
     Task HardDeleteAsync(long id, string userId, CancellationToken cancellationToken = default);
+    /// <summary>
+    /// Restores a soft-deleted country by marking it as active. (Admin operation)
+    /// </summary>
+    /// <param name="id">The ID of the country to restore.</param>
+    /// <param name="userId">The ID of the user performing the operation.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>A task that represents the asynchronous operation.</returns>
+    Task RestoreAsync(long id, string userId, CancellationToken cancellationToken = default);
 }

@@ -276,7 +276,7 @@ public class BaseIntegrationTestFactory<TProgram, TDbContext> : WebApplicationFa
     public string CreateTestJwtToken(
         string userId = "test-user",
         string[]? roles = null,
-        Dictionary<string, string>? additionalClaims = null)
+        IEnumerable<Claim>? additionalClaims = null)
     {
         var claims = new List<Claim>
         {
@@ -294,10 +294,7 @@ public class BaseIntegrationTestFactory<TProgram, TDbContext> : WebApplicationFa
 
         if (additionalClaims != null)
         {
-            foreach (var (key, value) in additionalClaims)
-            {
-                claims.Add(new Claim(key, value));
-            }
+            claims.AddRange(additionalClaims);
         }
 
         var rsaSecurityKey = new RsaSecurityKey(_testRsa);

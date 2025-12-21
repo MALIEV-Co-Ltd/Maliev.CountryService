@@ -5,6 +5,15 @@
 **Status**: Draft  
 **Input**: User description: "Permission-Based Authorization Migration" (based on country-specify.md)
 
+## Clarifications
+
+### Session 2025-12-21
+- Q: How should the system handle synchronization if permissions or roles already exist in IAM with different definitions? → A: Ensure existence (Merge): Add missing permissions/roles; do not delete or modify existing ones.
+- Q: Should "public access" be truly anonymous or require a valid JWT? → A: True Anonymous: No authentication (JWT) required for public read endpoints.
+- Q: If the initial permission/role registration fails during service startup, how should the application behave? → A: Degraded Mode: Log the error and continue startup; public read access remains available while protected endpoints will naturally fail permission checks.
+- Q: Should the system explicitly log an audit entry for every denied administrative attempt? → A: Log All (Audit): Create a persistent audit log entry for every denied attempt on a protected endpoint.
+- Q: When the feature flag PermissionBasedAuthEnabled is set to false, how should protected administrative endpoints behave? → A: Legacy Mode (Bypass): Permission checks are skipped; administrative endpoints behave as they do today (unprotected).
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Secure Administrative Data Management (Priority: P1)
@@ -70,22 +79,23 @@ As a System Operator, I want to refresh the system cache and view service statis
 
 ### Edge Cases
 
-- **Identity Service Downtime**: If the external identity management service is unreachable during startup, the system should handle the failure gracefully (e.g., logging an error and entering a safe state).
-- **Stale Permissions**: Permissions should be re-evaluated frequently enough to handle cases where a user's rights are revoked during an active session.
+- **Identity Service Downtime**: If the external identity management service is unreachable during startup, the system MUST log the error and continue starting up in a degraded mode; public read access remains available, but protected administrative and import endpoints will return errors for all users since permissions cannot be validated.
+- **Stale Permissions**: Permissions MUST be refreshed from the identity token on every request. The IAM permission cache TTL MUST NOT exceed 5 minutes to ensure timely revocation.
 - **Migration Transition**: During the transition period, the system should allow for a controlled "dry run" or toggle to enable enforcement without breaking existing workflows unexpectedly.
 
 ## Requirements *(mandatory)*
 
 ### Functional Requirements
 
-- **FR-001**: System MUST register granular permissions (e.g., read, create, update, delete, import, system maintenance) with the identity management provider upon startup.
+- **FR-001**: System MUST register granular permissions (e.g., read, create, update, delete, import, system maintenance) with the IAM Service upon startup using an idempotent merge strategy (add missing, do not delete existing).
 - **FR-002**: System MUST define predefined roles (e.g., Admin, Manager, Importer, Viewer) that map to specific sets of these permissions.
 - **FR-003**: System MUST enforce permission checks on all data modification operations (create, update, delete, restore).
 - **FR-004**: System MUST distinguish between standard (soft) deletion and permanent (hard) deletion with separate permission requirements.
 - **FR-005**: System MUST enforce permission checks on all bulk import lifecycle operations.
 - **FR-006**: System MUST enforce permission checks on system maintenance and monitoring operations.
-- **FR-007**: System MUST allow public, unauthenticated access to basic data retrieval operations (listing, searching, and looking up countries).
-- **FR-008**: System MUST provide a mechanism to enable or disable permission enforcement via configuration to support a safe migration.
+- **FR-009**: System MUST create a persistent audit log record for every denied administrative or import operation attempt, capturing the user identity and the requested operation.
+- **FR-007**: System MUST allow public, unauthenticated (anonymous) access to basic data retrieval operations (listing, searching, and looking up countries).
+- **FR-008**: System MUST provide a mechanism to enable or disable permission enforcement via configuration (e.g., `PermissionBasedAuthEnabled`) to support a safe migration; when disabled, permission checks are bypassed (Legacy Mode).
 
 ### Key Entities *(include if feature involves data)*
 

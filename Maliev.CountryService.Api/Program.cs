@@ -133,9 +133,26 @@ builder.Services.AddScoped<ICountryService, CountryService>();
 // Register bulk import services
 builder.Services.AddScoped<IBulkImportService, BulkImportService>();
 
+// Register IAM Service Client
+builder.Services.AddHttpClient("IAMService", client =>
+{
+    var iamUrl = builder.Configuration.GetValue<string>("ExternalServices:IAM:BaseUrl");
+    if (!string.IsNullOrEmpty(iamUrl))
+    {
+        client.BaseAddress = new Uri(iamUrl);
+    }
+    
+    var token = builder.Configuration.GetValue<string>("ExternalServices:IAM:ServiceAccountToken");
+    if (!string.IsNullOrEmpty(token))
+    {
+        client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+    }
+});
+
 // Register hosted services
 builder.Services.AddHostedService<CacheWarmingService>();
 builder.Services.AddHostedService<BulkImportWorkerService>();
+builder.Services.AddHostedService<CountryIAMRegistrationService>();
 
 var app = builder.Build();
 var logger = app.Services.GetRequiredService<ILogger<Program>>();
@@ -169,6 +186,9 @@ app.UseCors();
 // JWT Authentication & Authorization
 app.UseAuthentication();
 app.UseAuthorization();
+
+// Log permission denials
+app.UseMiddleware<PermissionDenialLoggingMiddleware>();
 
 // Map health check and metrics endpoints via ServiceDefaults
 app.MapDefaultEndpoints("country");
