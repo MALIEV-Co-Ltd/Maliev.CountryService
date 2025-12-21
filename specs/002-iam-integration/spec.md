@@ -1,6 +1,6 @@
 # Feature Specification: Permission-Based Authorization Migration
 
-**Feature Branch**: `002-country-auth-migration`  
+**Feature Branch**: `002-iam-integration`  
 **Created**: 2025-12-21  
 **Status**: Draft  
 **Input**: User description: "Permission-Based Authorization Migration" (based on country-specify.md)

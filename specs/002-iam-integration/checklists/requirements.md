@@ -1,4 +1,4 @@
-# Specification Quality Checklist: Permission-Based Authorization Migration
+# Specification Quality Checklist: IAM Integration Migration
 
 **Purpose**: Validate specification completeness and quality before proceeding to planning
 **Created**: 2025-12-21
