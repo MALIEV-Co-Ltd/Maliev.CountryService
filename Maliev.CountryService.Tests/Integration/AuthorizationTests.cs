@@ -50,7 +50,7 @@ public class AuthorizationTests : IntegrationTestBase
     public async Task CreateCountry_WithoutPermission_ShouldFail()
     {
         var request = new CreateCountryRequest { Name = "AuthTest2", Iso2 = "AU", Iso3 = "AUS" };
-        var client = _factory.CreateClient().WithTestAuth(_factory, "invalid.permission");
+        var client = _factory.CreateClient().WithTestAuth(_factory, "Permission:invalid.permission");
 
         var response = await client.PostAsJsonAsync("/country/v1/admin/countries", request);
 
@@ -74,7 +74,7 @@ public class AuthorizationTests : IntegrationTestBase
     [Fact]
     public async Task BulkImport_WithoutPermission_ShouldBeForbidden()
     {
-        var client = _factory.CreateClient().WithTestAuth(_factory, "wrong.permission");
+        var client = _factory.CreateClient().WithTestAuth(_factory, "Permission:wrong.permission");
         var response = await client.PostAsJsonAsync("/country/v1/admin/bulk-import/00000000-0000-0000-0000-000000000000/process", new { });
 
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);

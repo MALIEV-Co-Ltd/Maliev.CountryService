@@ -4,6 +4,7 @@ using System.Text;
 using System.Text.Json;
 using Xunit;
 using Maliev.CountryService.Tests.Fixtures;
+using Maliev.CountryService.Tests.Testing;
 using Maliev.CountryService.Api.Models.Countries;
 using Maliev.CountryService.Api.Authorization;
 
@@ -298,8 +299,7 @@ public class AdminCountryTests : IntegrationTestBase
     public async Task HardDelete_WithoutSuperAdminRole_Returns403()
     {
         // Arrange
-        var permissions = CountryPredefinedRoles.GetPermissionsForRole(CountryAdminRoles[0]).ToArray();
-        var adminClient = _factory.CreateAuthenticatedClient("testuser", CountryAdminRoles, permissions); // Only country_admin, not super_admin
+        var adminClient = _factory.CreateClient().WithTestAuth(_factory, "Permission:country.not-hard-delete");
 
         // Create a country first
         var createRequest = new CreateCountryRequest
@@ -309,10 +309,18 @@ public class AdminCountryTests : IntegrationTestBase
             Name = "Test Country Hard Delete"
         };
         var createResponse = await adminClient.PostAsJsonAsync("/country/v1/admin/countries", createRequest);
-        var created = await createResponse.Content.ReadFromJsonAsync<CountryResponse>(JsonSerializerOptions);
+
+        // Use a client with correct permission to create it first if necessary, 
+        // but here we just need ANY country ID to try deleting it.
+        // Assuming the ID 202 from previous failed run might not be there, 
+        // we should really get a valid ID.
+
+        var adminWithCreate = _factory.CreateClient().WithTestAuth(_factory, CountryPermissions.CountriesCreate);
+        var actualCreateResponse = await adminWithCreate.PostAsJsonAsync("/country/v1/admin/countries", createRequest);
+        var created = await actualCreateResponse.Content.ReadFromJsonAsync<CountryResponse>(JsonSerializerOptions);
         Assert.NotNull(created);
 
-        // Act - Try hard delete without super_admin role
+        // Act - Try hard delete without super_admin permission
         var response = await adminClient.DeleteAsync($"/country/v1/admin/countries/{created.Id}/hard-delete");
 
         // Assert
