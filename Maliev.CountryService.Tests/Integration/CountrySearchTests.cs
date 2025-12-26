@@ -4,6 +4,8 @@ using Xunit;
 using Maliev.CountryService.Tests.Fixtures;
 using Maliev.CountryService.Api.Models.Common;
 using Maliev.CountryService.Api.Models.Countries;
+using Maliev.CountryService.Tests.Testing; // For WithTestAuth
+using Maliev.CountryService.Api.Authorization; // For CountryPermissions
 
 namespace Maliev.CountryService.Tests.Integration;
 
@@ -20,7 +22,8 @@ public class CountrySearchTests : IntegrationTestBase
     public async Task GetCountries_WithPagination_ReturnsPagedResults()
     {
         // Act
-        var response = await _client.GetAsync("/country/v1/countries?page=1&pageSize=2");
+        var client = _client.WithTestAuth(_factory, CountryPermissions.CountriesList);
+        var response = await client.GetAsync("/country/v1/countries?page=1&pageSize=2");
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -35,7 +38,8 @@ public class CountrySearchTests : IntegrationTestBase
     public async Task GetCountries_FilterByRegion_ReturnsFilteredResults()
     {
         // Act - Filter by Americas region
-        var response = await _client.GetAsync("/country/v1/countries?region=Americas");
+        var client = _client.WithTestAuth(_factory, CountryPermissions.CountriesList);
+        var response = await client.GetAsync("/country/v1/countries?region=Americas");
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -54,7 +58,8 @@ public class CountrySearchTests : IntegrationTestBase
     public async Task GetCountries_SortByName_ReturnsSortedResults()
     {
         // Act
-        var response = await _client.GetAsync("/country/v1/countries?sortBy=name&sortOrder=asc&pageSize=10");
+        var client = _client.WithTestAuth(_factory, CountryPermissions.CountriesList);
+        var response = await client.GetAsync("/country/v1/countries?sortBy=name&sortOrder=asc&pageSize=10");
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -72,7 +77,8 @@ public class CountrySearchTests : IntegrationTestBase
     public async Task GetCountries_InvalidPage_Returns400()
     {
         // Act
-        var response = await _client.GetAsync("/country/v1/countries?page=0&pageSize=10");
+        var client = _client.WithTestAuth(_factory, CountryPermissions.CountriesList);
+        var response = await client.GetAsync("/country/v1/countries?page=0&pageSize=10");
 
         // Assert
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
@@ -82,7 +88,8 @@ public class CountrySearchTests : IntegrationTestBase
     public async Task GetCountries_ExcessivePageSize_Returns400()
     {
         // Act
-        var response = await _client.GetAsync("/country/v1/countries?page=1&pageSize=1001");
+        var client = _client.WithTestAuth(_factory, CountryPermissions.CountriesList);
+        var response = await client.GetAsync("/country/v1/countries?page=1&pageSize=1001");
 
         // Assert
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
@@ -92,7 +99,8 @@ public class CountrySearchTests : IntegrationTestBase
     public async Task SearchCountries_ByName_ReturnsMatchingResults()
     {
         // Act
-        var response = await _client.GetAsync("/country/v1/countries/search?query=united");
+        var client = _client.WithTestAuth(_factory, CountryPermissions.CountriesSearch);
+        var response = await client.GetAsync("/country/v1/countries/search?query=united");
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -114,7 +122,8 @@ public class CountrySearchTests : IntegrationTestBase
     public async Task SearchCountries_EmptyQuery_Returns400()
     {
         // Act
-        var response = await _client.GetAsync("/country/v1/countries/search?query=");
+        var client = _client.WithTestAuth(_factory, CountryPermissions.CountriesSearch);
+        var response = await client.GetAsync("/country/v1/countries/search?query=");
 
         // Assert
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
@@ -124,7 +133,8 @@ public class CountrySearchTests : IntegrationTestBase
     public async Task SearchCountries_WithPagination_ReturnsPagedResults()
     {
         // Act
-        var response = await _client.GetAsync("/country/v1/countries/search?query=a&page=1&pageSize=5");
+        var client = _client.WithTestAuth(_factory, CountryPermissions.CountriesSearch);
+        var response = await client.GetAsync("/country/v1/countries/search?query=a&page=1&pageSize=5");
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -138,7 +148,8 @@ public class CountrySearchTests : IntegrationTestBase
     public async Task GetCountries_MultipleFilters_AppliesAllFilters()
     {
         // Act - Combine region filter with sorting
-        var response = await _client.GetAsync("/country/v1/countries?region=Europe&sortBy=name&sortOrder=desc");
+        var client = _client.WithTestAuth(_factory, CountryPermissions.CountriesList);
+        var response = await client.GetAsync("/country/v1/countries?region=Europe&sortBy=name&sortOrder=desc");
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);

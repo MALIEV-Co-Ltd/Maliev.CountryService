@@ -26,6 +26,6 @@ public abstract class IntegrationTestBase
         _logger = factory.Services.GetRequiredService<ILoggerFactory>().CreateLogger(GetType());
     }
 
-    protected static readonly string[] CountryAdminRoles = { "CountryAdmin" };
-    protected static readonly string[] SuperAdminRoles = { "SuperAdmin" };
+    protected static readonly string[] CountryAdminRoles = { "roles.country.admin" };
+    protected static readonly string[] SuperAdminRoles = { "roles.country.superadmin" };
 }

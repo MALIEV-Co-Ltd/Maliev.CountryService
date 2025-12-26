@@ -21,23 +21,40 @@ public class AuthorizationTests : IntegrationTestBase
     [Fact]
     public async Task CreateCountry_WithPermission_ShouldSucceed()
     {
-        var request = new CreateCountryRequest { Name = "AuthTest1", Iso2 = "A1", Iso3 = "AA1" };
+        // Use a fixed valid ISO code or a deterministic generator that ensures [A-Z]
+        var iso2 = "ZZ"; // User-assigned code element
+        var iso3 = "ZZZ";
+        var request = new CreateCountryRequest { Name = $"AuthTest-{Guid.NewGuid()}", Iso2 = iso2, Iso3 = iso3 };
+        
+        // Ensure we don't conflict with existing data if possible, or handle conflict
+        // Ideally we should use a random string of LETTERS
+        
         var client = _factory.CreateClient().WithTestAuth(_factory, CountryPermissions.CountriesCreate);
 
         var response = await client.PostAsJsonAsync("/country/v1/admin/countries", request);
         
-        // This will be HttpStatusCode.Created once T009 is implemented
+        // If it already exists, we might get Conflict (409), which is technically a success for Authorization (not Forbidden)
+        // But for this test we want 201.
+        if (response.StatusCode == HttpStatusCode.Conflict)
+        {
+             // Try one more time with different code
+             request.Iso2 = "YY";
+             request.Iso3 = "YYY";
+             response = await client.PostAsJsonAsync("/country/v1/admin/countries", request);
+        }
+
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
     }
 
     [Fact]
     public async Task CreateCountry_WithoutPermission_ShouldFail()
     {
-        var request = new CreateCountryRequest { Name = "AuthTest2", Iso2 = "A2", Iso3 = "AA2" };
+        var request = new CreateCountryRequest { Name = "AuthTest2", Iso2 = "AU", Iso3 = "AUS" };
         var client = _factory.CreateClient().WithTestAuth(_factory, "invalid.permission");
 
         var response = await client.PostAsJsonAsync("/country/v1/admin/countries", request);
         
-        // This will be HttpStatusCode.Forbidden once T009 is implemented
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
 
     #endregion
@@ -48,9 +65,9 @@ public class AuthorizationTests : IntegrationTestBase
     public async Task BulkImport_WithPermission_ShouldSucceed()
     {
         var client = _factory.CreateClient().WithTestAuth(_factory, CountryPermissions.ImportExecute);
-        var response = await client.PostAsJsonAsync("/country/v1/bulk-import/execute", new { jobId = Guid.NewGuid() });
+        var response = await client.PostAsJsonAsync("/country/v1/admin/bulk-import/00000000-0000-0000-0000-000000000000/process", new { });
         
-        // Should not be Forbidden
+        // Should not be Forbidden (might be NotFound if job doesn't exist, but auth passed)
         Assert.NotEqual(HttpStatusCode.Forbidden, response.StatusCode);
     }
 
@@ -58,7 +75,7 @@ public class AuthorizationTests : IntegrationTestBase
     public async Task BulkImport_WithoutPermission_ShouldBeForbidden()
     {
         var client = _factory.CreateClient().WithTestAuth(_factory, "wrong.permission");
-        var response = await client.PostAsJsonAsync("/country/v1/bulk-import/execute", new { jobId = Guid.NewGuid() });
+        var response = await client.PostAsJsonAsync("/country/v1/admin/bulk-import/00000000-0000-0000-0000-000000000000/process", new { });
         
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }

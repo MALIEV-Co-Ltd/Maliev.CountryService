@@ -118,6 +118,10 @@ public class BaseIntegrationTestFactory<TProgram, TDbContext> : WebApplicationFa
         var rsaParams = _testRsa.ExportParameters(false);
         Environment.SetEnvironmentVariable("JWT_PUBLIC_KEY_MODULUS", Convert.ToBase64String(rsaParams.Modulus!));
         Environment.SetEnvironmentVariable("JWT_PUBLIC_KEY_EXPONENT", Convert.ToBase64String(rsaParams.Exponent!));
+        
+        // Also set the format expected by some Aspire helpers (raw base64 of public key info)
+        var keyBytes = _testRsa.ExportSubjectPublicKeyInfo();
+        Environment.SetEnvironmentVariable("Authentication__Jwt__PublicKey", Convert.ToBase64String(keyBytes));
 
         // Allow derived classes to set additional environment variables
         ConfigureEnvironmentVariables();
@@ -130,8 +134,11 @@ public class BaseIntegrationTestFactory<TProgram, TDbContext> : WebApplicationFa
         builder.ConfigureTestServices(services =>
         {
             // Configure JWT Bearer authentication with test RSA key
-            services.PostConfigureAll<Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerOptions>(options =>
+            services.PostConfigureAll<JwtBearerOptions>(options =>
             {
+                // Disable claim type mapping to keep original claim names like "sub" instead of URIs
+                options.MapInboundClaims = false;
+
                 options.TokenValidationParameters = new TokenValidationParameters
                 {
                     ValidateIssuer = true,
@@ -141,7 +148,9 @@ public class BaseIntegrationTestFactory<TProgram, TDbContext> : WebApplicationFa
                     ValidIssuer = "test-issuer",
                     ValidAudience = "test-audience",
                     IssuerSigningKey = new RsaSecurityKey(_testRsa),
-                    ClockSkew = TimeSpan.Zero // No clock skew for tests
+                    ClockSkew = TimeSpan.Zero, // No clock skew for tests
+                    NameClaimType = "sub",
+                    RoleClaimType = "role"
                 };
             });
 
@@ -218,7 +227,7 @@ public class BaseIntegrationTestFactory<TProgram, TDbContext> : WebApplicationFa
                   FROM information_schema.tables
                   WHERE table_schema = 'public'
                   AND table_type = 'BASE TABLE'
-                  AND table_name != '__EFMigrationsHistory'
+                  AND table_name != '__EFMigrationsHistory' 
                   ORDER BY table_name")
             .ToListAsync();
 
@@ -276,7 +285,19 @@ public class BaseIntegrationTestFactory<TProgram, TDbContext> : WebApplicationFa
     public string CreateTestJwtToken(
         string userId = "test-user",
         string[]? roles = null,
-        IEnumerable<Claim>? additionalClaims = null)
+        Dictionary<string, string>? additionalClaims = null)
+    {
+        return CreateTestJwtToken(userId, roles, null, additionalClaims);
+    }
+
+    /// <summary>
+    /// Creates a test JWT token with support for multi-value claims like permissions.
+    /// </summary>
+    public string CreateTestJwtToken(
+        string userId,
+        string[]? roles,
+        string[]? permissions,
+        Dictionary<string, string>? additionalClaims = null)
     {
         var claims = new List<Claim>
         {
@@ -288,13 +309,24 @@ public class BaseIntegrationTestFactory<TProgram, TDbContext> : WebApplicationFa
         {
             foreach (var role in roles)
             {
-                claims.Add(new Claim(ClaimTypes.Role, role));
+                claims.Add(new Claim("role", role));
+            }
+        }
+
+        if (permissions != null)
+        {
+            foreach (var permission in permissions)
+            {
+                claims.Add(new Claim("permissions", permission));
             }
         }
 
         if (additionalClaims != null)
         {
-            claims.AddRange(additionalClaims);
+            foreach (var (key, value) in additionalClaims)
+            {
+                claims.Add(new Claim(key, value));
+            }
         }
 
         var rsaSecurityKey = new RsaSecurityKey(_testRsa);
@@ -321,13 +353,13 @@ public class BaseIntegrationTestFactory<TProgram, TDbContext> : WebApplicationFa
     }
 
     /// <summary>
-    /// Creates an HTTP client with authenticated user and specified roles.
+    /// Creates an HTTP client with authenticated user and specified roles and permissions.
     /// </summary>
-    public HttpClient CreateAuthenticatedClient(string userId = "test-user", string[]? roles = null)
+    public HttpClient CreateAuthenticatedClient(string userId = "test-user", string[]? roles = null, string[]? permissions = null)
     {
-        var token = CreateTestJwtToken(userId, roles);
+        var token = CreateTestJwtToken(userId, roles, permissions);
         var client = CreateClient();
-        client.DefaultRequestHeaders.Add("Authorization", $"Bearer {token}");
+        client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
         return client;
     }
 }

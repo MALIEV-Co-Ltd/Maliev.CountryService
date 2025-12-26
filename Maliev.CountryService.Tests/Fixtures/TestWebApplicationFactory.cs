@@ -7,6 +7,13 @@ namespace Maliev.CountryService.Tests;
 
 public class TestWebApplicationFactory : BaseIntegrationTestFactory<Program, CountryDbContext>
 {
+    protected override void ConfigureEnvironmentVariables()
+    {
+        base.ConfigureEnvironmentVariables();
+        // Enable permission-based auth in tests
+        Environment.SetEnvironmentVariable("Features__PermissionBasedAuthEnabled", "true");
+    }
+
     protected override void ConfigureAdditionalServices(IServiceCollection services)
     {
         // Remove background services by default to prevent interference with regular tests

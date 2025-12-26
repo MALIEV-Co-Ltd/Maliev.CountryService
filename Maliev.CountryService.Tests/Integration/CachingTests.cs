@@ -4,6 +4,8 @@ using Microsoft.Extensions.Logging;
 using Xunit;
 using Maliev.CountryService.Tests.Fixtures;
 using Maliev.CountryService.Api.Models.Countries;
+using Maliev.CountryService.Api.Authorization; // Added
+using Maliev.CountryService.Tests.Testing; // Added
 
 namespace Maliev.CountryService.Tests.Integration;
 
@@ -20,7 +22,8 @@ public class CachingTests : IntegrationTestBase
     public async Task GetById_ReturnsETagHeader()
     {
         // Act
-        var response = await _client.GetAsync("/country/1");
+        var client = _client.WithTestAuth(_factory, CountryPermissions.CountriesRead);
+        var response = await client.GetAsync("/country/v1/countries/1");
 
         // Assert
         if (response.StatusCode == HttpStatusCode.OK)
@@ -33,7 +36,8 @@ public class CachingTests : IntegrationTestBase
     public async Task GetById_WithIfNoneMatch_Returns304WhenNotModified()
     {
         // Arrange - First request to get ETag
-        var firstResponse = await _client.GetAsync("/country/1");
+        var client = _client.WithTestAuth(_factory, CountryPermissions.CountriesRead);
+        var firstResponse = await client.GetAsync("/country/v1/countries/1");
 
         if (firstResponse.StatusCode != HttpStatusCode.OK)
         {
@@ -46,10 +50,16 @@ public class CachingTests : IntegrationTestBase
         var etag = country.ETag;
 
         // Act - Second request with If-None-Match
-        var request = new HttpRequestMessage(HttpMethod.Get, "/country/1");
+        var request = new HttpRequestMessage(HttpMethod.Get, "/country/v1/countries/1");
         request.Headers.Add("If-None-Match", etag);
-
-        var secondResponse = await _client.SendAsync(request);
+        
+        // Need to add auth to the request message or use the authenticated client
+        // With HttpRequestMessage, we need to set the Authorization header manually if not using the client's defaults
+        // But since we are using client.SendAsync, client's defaults should apply? No, request headers override/merge.
+        // But client.DefaultRequestHeaders applies to all requests.
+        // Let's reuse the authenticated client.
+        
+        var secondResponse = await client.SendAsync(request);
 
         // Assert
         Assert.Equal(HttpStatusCode.NotModified, secondResponse.StatusCode);
@@ -60,12 +70,13 @@ public class CachingTests : IntegrationTestBase
     {
         // Arrange
         var countryId = 1;
+        var client = _client.WithTestAuth(_factory, CountryPermissions.CountriesRead);
 
         // Act - Make multiple calls and measure average time
         var stopwatch = System.Diagnostics.Stopwatch.StartNew();
         for (int i = 0; i < 10; i++)
         {
-            var response = await _client.GetAsync($"/country/v1/countries/{countryId}");
+            var response = await client.GetAsync($"/country/v1/countries/{countryId}");
             if (response.StatusCode == HttpStatusCode.OK)
             {
                 await response.Content.ReadAsStringAsync();
@@ -86,10 +97,11 @@ public class CachingTests : IntegrationTestBase
     {
         // Arrange
         var iso2 = "US";
+        var client = _client.WithTestAuth(_factory, CountryPermissions.CountriesRead);
 
         // Act - Make two consecutive calls
-        var response1 = await _client.GetAsync($"/country/v1/countries/iso2/{iso2}");
-        var response2 = await _client.GetAsync($"/country/v1/countries/iso2/{iso2}");
+        var response1 = await client.GetAsync($"/country/v1/countries/iso2/{iso2}");
+        var response2 = await client.GetAsync($"/country/v1/countries/iso2/{iso2}");
 
         // Assert - Results should be consistent
         if (response1.StatusCode == HttpStatusCode.OK && response2.StatusCode == HttpStatusCode.OK)
@@ -110,11 +122,12 @@ public class CachingTests : IntegrationTestBase
     {
         // Arrange
         var queryString = "?page=1&pageSize=10&sortBy=name";
+        var client = _client.WithTestAuth(_factory, CountryPermissions.CountriesList);
 
         // Act - Make two consecutive calls with same parameters
-        var response1 = await _client.GetAsync($"/country/v1/countries{queryString}");
+        var response1 = await client.GetAsync($"/country/v1/countries{queryString}");
         await Task.Delay(100); // Small delay
-        var response2 = await _client.GetAsync($"/country/v1/countries{queryString}");
+        var response2 = await client.GetAsync($"/country/v1/countries{queryString}");
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, response1.StatusCode);
@@ -133,7 +146,8 @@ public class CachingTests : IntegrationTestBase
     public async Task CacheHeaders_PresentInResponse()
     {
         // Act
-        var response = await _client.GetAsync("/country/1");
+        var client = _client.WithTestAuth(_factory, CountryPermissions.CountriesRead);
+        var response = await client.GetAsync("/country/v1/countries/1");
 
         // Assert
         if (response.StatusCode == HttpStatusCode.OK)
@@ -154,7 +168,9 @@ public class CachingTests : IntegrationTestBase
     public async Task AfterModification_CacheIsInvalidated()
     {
         // Arrange
-        var adminClient = _factory.CreateAuthenticatedClient("cachetest", CountryAdminRoles);
+        var adminPermissions = CountryPredefinedRoles.GetPermissionsForRole(CountryAdminRoles[0]).ToArray();
+        var adminClient = _factory.CreateAuthenticatedClient("cachetest", CountryAdminRoles, adminPermissions);
+        var client = _client.WithTestAuth(_factory, CountryPermissions.CountriesRead);
 
         // Create a country
         var createRequest = new CreateCountryRequest
@@ -165,6 +181,17 @@ public class CachingTests : IntegrationTestBase
         };
 
         var createResponse = await adminClient.PostAsJsonAsync("/country/v1/admin/countries", createRequest);
+        
+        // Handle potential conflict from previous runs
+        if (createResponse.StatusCode == HttpStatusCode.Conflict)
+        {
+             // Use random ISOs
+             var random = new Random().Next(1000, 9999).ToString();
+             createRequest.Iso2 = "R" + random.Substring(0, 1); // 2 chars
+             createRequest.Iso3 = "R" + random.Substring(0, 2); // 3 chars
+             createResponse = await adminClient.PostAsJsonAsync("/country/v1/admin/countries", createRequest);
+        }
+
         if (createResponse.StatusCode != HttpStatusCode.Created)
         {
             // Creation failed, skip test
@@ -175,15 +202,15 @@ public class CachingTests : IntegrationTestBase
         Assert.NotNull(created);
 
         // Read the country to populate cache
-        var readResponse1 = await _client.GetAsync($"/country/v1/countries/{created.Id}");
+        var readResponse1 = await client.GetAsync($"/country/v1/countries/{created.Id}");
         Assert.Equal(HttpStatusCode.OK, readResponse1.StatusCode);
         var country1 = await readResponse1.Content.ReadFromJsonAsync<CountryResponse>(JsonSerializerOptions);
 
         // Act - Update the country
         var updateRequest = new UpdateCountryRequest
         {
-            Iso2 = "XY",
-            Iso3 = "XYZ",
+            Iso2 = createRequest.Iso2,
+            Iso3 = createRequest.Iso3,
             Name = "Updated Cache Test Country"
         };
 
@@ -196,7 +223,7 @@ public class CachingTests : IntegrationTestBase
         var updateResponse = await adminClient.SendAsync(updateMessage);
 
         // Read again to verify cache was invalidated
-        var readResponse2 = await _client.GetAsync($"/country/v1/countries/{created.Id}");
+        var readResponse2 = await client.GetAsync($"/country/v1/countries/{created.Id}");
         var country2 = await readResponse2.Content.ReadFromJsonAsync<CountryResponse>(JsonSerializerOptions);
 
         // Assert - Name should be updated (cache was invalidated)
