@@ -5,6 +5,7 @@ using System.Text.Json;
 using Xunit;
 using Maliev.CountryService.Tests.Fixtures;
 using Maliev.CountryService.Api.Models.Countries;
+using Maliev.CountryService.Api.Authorization;
 
 namespace Maliev.CountryService.Tests.Integration;
 
@@ -39,7 +40,8 @@ public class AdminCountryTests : IntegrationTestBase
     public async Task Create_WithAuthentication_Returns201()
     {
         // Arrange
-        var adminClient = _factory.CreateAuthenticatedClient("testuser", CountryAdminRoles);
+        var permissions = CountryPredefinedRoles.GetPermissionsForRole(CountryAdminRoles[0]).ToArray();
+        var adminClient = _factory.CreateAuthenticatedClient("testuser", CountryAdminRoles, permissions);
         var request = new CreateCountryRequest
         {
             Iso2 = "TA",
@@ -52,6 +54,11 @@ public class AdminCountryTests : IntegrationTestBase
         var response = await adminClient.PostAsJsonAsync("/country/v1/admin/countries", request);
 
         // Assert
+        if (response.StatusCode != HttpStatusCode.Created)
+        {
+            var content = await response.Content.ReadAsStringAsync();
+            throw new Exception($"Expected Created but got {response.StatusCode}. Content: {content}");
+        }
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
         Assert.True(response.Headers.Contains("Location"));
         Assert.True(response.Headers.Contains("ETag"));
@@ -68,7 +75,8 @@ public class AdminCountryTests : IntegrationTestBase
     public async Task Create_WithDuplicateIso2_Returns409()
     {
         // Arrange
-        var adminClient = _factory.CreateAuthenticatedClient("testuser", CountryAdminRoles);
+        var permissions = CountryPredefinedRoles.GetPermissionsForRole(CountryAdminRoles[0]).ToArray();
+        var adminClient = _factory.CreateAuthenticatedClient("testuser", CountryAdminRoles, permissions);
         var request1 = new CreateCountryRequest
         {
             Iso2 = "TB",
@@ -98,7 +106,8 @@ public class AdminCountryTests : IntegrationTestBase
     public async Task Update_WithoutIfMatch_Returns428()
     {
         // Arrange
-        var adminClient = _factory.CreateAuthenticatedClient("testuser", CountryAdminRoles);
+        var permissions = CountryPredefinedRoles.GetPermissionsForRole(CountryAdminRoles[0]).ToArray();
+        var adminClient = _factory.CreateAuthenticatedClient("testuser", CountryAdminRoles, permissions);
 
         // Create a country first
         var createRequest = new CreateCountryRequest
@@ -130,7 +139,8 @@ public class AdminCountryTests : IntegrationTestBase
     public async Task Update_WithValidIfMatch_Returns200()
     {
         // Arrange
-        var adminClient = _factory.CreateAuthenticatedClient("testuser", CountryAdminRoles);
+        var permissions = CountryPredefinedRoles.GetPermissionsForRole(CountryAdminRoles[0]).ToArray();
+        var adminClient = _factory.CreateAuthenticatedClient("testuser", CountryAdminRoles, permissions);
 
         // Create a country first
         var createRequest = new CreateCountryRequest
@@ -176,7 +186,8 @@ public class AdminCountryTests : IntegrationTestBase
     public async Task Update_WithWrongIfMatch_Returns412()
     {
         // Arrange
-        var adminClient = _factory.CreateAuthenticatedClient("testuser", CountryAdminRoles);
+        var permissions = CountryPredefinedRoles.GetPermissionsForRole(CountryAdminRoles[0]).ToArray();
+        var adminClient = _factory.CreateAuthenticatedClient("testuser", CountryAdminRoles, permissions);
 
         // Create a country first
         var createRequest = new CreateCountryRequest
@@ -214,7 +225,8 @@ public class AdminCountryTests : IntegrationTestBase
     public async Task Patch_WithValidIfMatch_Returns200()
     {
         // Arrange
-        var adminClient = _factory.CreateAuthenticatedClient("testuser", CountryAdminRoles);
+        var permissions = CountryPredefinedRoles.GetPermissionsForRole(CountryAdminRoles[0]).ToArray();
+        var adminClient = _factory.CreateAuthenticatedClient("testuser", CountryAdminRoles, permissions);
 
         // Create a country first
         var createRequest = new CreateCountryRequest
@@ -256,7 +268,8 @@ public class AdminCountryTests : IntegrationTestBase
     public async Task SoftDelete_WithAuthentication_Returns204()
     {
         // Arrange
-        var adminClient = _factory.CreateAuthenticatedClient("testuser", CountryAdminRoles);
+        var permissions = CountryPredefinedRoles.GetPermissionsForRole(CountryAdminRoles[0]).ToArray();
+        var adminClient = _factory.CreateAuthenticatedClient("testuser", CountryAdminRoles, permissions);
 
         // Create a country first
         var createRequest = new CreateCountryRequest
@@ -285,7 +298,8 @@ public class AdminCountryTests : IntegrationTestBase
     public async Task HardDelete_WithoutSuperAdminRole_Returns403()
     {
         // Arrange
-        var adminClient = _factory.CreateAuthenticatedClient("testuser", CountryAdminRoles); // Only country_admin, not super_admin
+        var permissions = CountryPredefinedRoles.GetPermissionsForRole(CountryAdminRoles[0]).ToArray();
+        var adminClient = _factory.CreateAuthenticatedClient("testuser", CountryAdminRoles, permissions); // Only country_admin, not super_admin
 
         // Create a country first
         var createRequest = new CreateCountryRequest
@@ -309,10 +323,12 @@ public class AdminCountryTests : IntegrationTestBase
     public async Task HardDelete_WithSuperAdminRole_Returns204()
     {
         // Arrange - Try with both possible role names
-        var superAdminClient = _factory.CreateAuthenticatedClient("superadmin", SuperAdminRoles);
+        var superAdminPerms = CountryPredefinedRoles.GetPermissionsForRole(SuperAdminRoles[0]).ToArray();
+        var superAdminClient = _factory.CreateAuthenticatedClient("superadmin", SuperAdminRoles, superAdminPerms);
 
         // Create a country first using country_admin client
-        var adminClient = _factory.CreateAuthenticatedClient("testuser", CountryAdminRoles);
+        var adminPerms = CountryPredefinedRoles.GetPermissionsForRole(CountryAdminRoles[0]).ToArray();
+        var adminClient = _factory.CreateAuthenticatedClient("testuser", CountryAdminRoles, adminPerms);
         var createRequest = new CreateCountryRequest
         {
             Iso2 = "TI",
@@ -326,13 +342,6 @@ public class AdminCountryTests : IntegrationTestBase
         // Act - Hard delete with super_admin role
         var response = await superAdminClient.DeleteAsync($"/country/v1/admin/countries/{created.Id}/hard-delete");
 
-        // If still forbidden, the SuperAdmin policy may not be configured correctly in test environment
-        if (response.StatusCode == HttpStatusCode.Forbidden)
-        {
-            // Skip test - SuperAdmin authorization not properly configured in test environment
-            return;
-        }
-
         // Assert
         Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
 
@@ -345,7 +354,8 @@ public class AdminCountryTests : IntegrationTestBase
     public async Task Create_WithInvalidData_Returns400()
     {
         // Arrange
-        var adminClient = _factory.CreateAuthenticatedClient("testuser", CountryAdminRoles);
+        var permissions = CountryPredefinedRoles.GetPermissionsForRole(CountryAdminRoles[0]).ToArray();
+        var adminClient = _factory.CreateAuthenticatedClient("testuser", CountryAdminRoles, permissions);
         var request = new CreateCountryRequest
         {
             Iso2 = "", // Invalid - empty
@@ -363,7 +373,8 @@ public class AdminCountryTests : IntegrationTestBase
     public async Task Update_NonExistentCountry_Returns404()
     {
         // Arrange
-        var adminClient = _factory.CreateAuthenticatedClient("testuser", CountryAdminRoles);
+        var permissions = CountryPredefinedRoles.GetPermissionsForRole(CountryAdminRoles[0]).ToArray();
+        var adminClient = _factory.CreateAuthenticatedClient("testuser", CountryAdminRoles, permissions);
         var updateRequest = new UpdateCountryRequest
         {
             Iso2 = "XX",

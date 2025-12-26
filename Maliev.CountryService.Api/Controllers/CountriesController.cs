@@ -1,8 +1,10 @@
 using Asp.Versioning;
+using Maliev.CountryService.Api.Authorization;
 using Maliev.CountryService.Api.Models.Common;
 using Maliev.CountryService.Api.Models.Countries;
 using Maliev.CountryService.Api.Services;
-using Microsoft.AspNetCore.Authorization; // Added
+using Maliev.Aspire.ServiceDefaults.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Maliev.CountryService.Api.Controllers;
@@ -35,6 +37,7 @@ public class CountriesController : ControllerBase
     /// <param name="cancellationToken">A token to cancel the operation.</param>
     /// <returns>A single country by ID.</returns>
     [HttpGet("{id}")]
+    [RequirePermission(CountryPermissions.CountriesRead)]
     [ProducesResponseType(typeof(CountryResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status304NotModified)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -45,6 +48,12 @@ public class CountriesController : ControllerBase
         {
             return NotFound();
         }
+
+        if (!string.IsNullOrEmpty(ifNoneMatch) && ifNoneMatch == country.ETag)
+        {
+            return StatusCode(StatusCodes.Status304NotModified);
+        }
+
         Response.Headers.ETag = country.ETag;
         Response.Headers.LastModified = country.LastModifiedUtc.ToString("R");
         if (country.XServedFromCache)
@@ -66,6 +75,7 @@ public class CountriesController : ControllerBase
     /// <param name="cancellationToken">A token to cancel the operation.</param>
     /// <returns>A single country by ISO2 code.</returns>
     [HttpGet("iso2/{iso2}")]
+    [RequirePermission(CountryPermissions.CountriesRead)]
     [ProducesResponseType(typeof(CountryResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status304NotModified)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -76,7 +86,7 @@ public class CountriesController : ControllerBase
         {
             return NotFound();
         }
-        
+
         if (!string.IsNullOrEmpty(ifNoneMatch) && ifNoneMatch == country.ETag)
         {
             return StatusCode(StatusCodes.Status304NotModified);
@@ -103,6 +113,7 @@ public class CountriesController : ControllerBase
     /// <param name="cancellationToken">A token to cancel the operation.</param>
     /// <returns>A single country by ISO3 code.</returns>
     [HttpGet("iso3/{iso3}")]
+    [RequirePermission(CountryPermissions.CountriesRead)]
     [ProducesResponseType(typeof(CountryResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status304NotModified)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -113,7 +124,7 @@ public class CountriesController : ControllerBase
         {
             return NotFound();
         }
-        
+
         if (!string.IsNullOrEmpty(ifNoneMatch) && ifNoneMatch == country.ETag)
         {
             return StatusCode(StatusCodes.Status304NotModified);
@@ -139,7 +150,7 @@ public class CountriesController : ControllerBase
     /// <param name="cancellationToken">A token to cancel the operation.</param>
     /// <returns>A paginated list of countries.</returns>
     [HttpGet]
-    [AllowAnonymous] // Add this attribute
+    [RequirePermission(CountryPermissions.CountriesList)]
     [ProducesResponseType(typeof(PaginatedResponse<CountryResponse>), StatusCodes.Status200OK)]
     public async Task<IActionResult> List([FromQuery] CountryListRequest request, CancellationToken cancellationToken)
     {
@@ -161,6 +172,7 @@ public class CountriesController : ControllerBase
     /// <param name="cancellationToken">A token to cancel the operation.</param>
     /// <returns>A paginated list of countries matching the search query.</returns>
     [HttpGet("search")]
+    [RequirePermission(CountryPermissions.CountriesSearch)]
     [ProducesResponseType(typeof(PaginatedResponse<CountryResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> Search([FromQuery] string query, [FromQuery] int page = 1, [FromQuery] int pageSize = 20, CancellationToken cancellationToken = default)

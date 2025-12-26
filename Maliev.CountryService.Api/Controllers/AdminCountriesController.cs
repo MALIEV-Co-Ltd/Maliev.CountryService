@@ -1,7 +1,9 @@
 using Asp.Versioning;
+using Maliev.CountryService.Api.Authorization;
 using Maliev.CountryService.Api.Metrics;
 using Maliev.CountryService.Api.Models.Countries;
 using Maliev.CountryService.Api.Services;
+using Maliev.Aspire.ServiceDefaults.Authorization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
@@ -14,10 +16,9 @@ namespace Maliev.CountryService.Api.Controllers;
 /// All modifications are logged with full audit trail including user context and ETag-based optimistic concurrency control.
 /// </summary>
 [ApiController]
-[ApiVersion("1.0")]
+[ApiVersion(1.0)]
 [Route("country/v{version:apiVersion}/admin/countries")]
 [EnableRateLimiting("admin-endpoints")]
-[Authorize(Policy = "CountryAdmin")]
 public class AdminCountriesController : ControllerBase
 {
     private readonly ICountryService _countryService;
@@ -51,6 +52,7 @@ public class AdminCountriesController : ControllerBase
     /// <response code="400">Validation failed - missing or invalid required fields.</response>
     /// <response code="409">Conflict - ISO2 or ISO3 code already exists for another country.</response>
     [HttpPost]
+    [RequirePermission(CountryPermissions.CountriesCreate)]
     [ProducesResponseType(StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
@@ -102,6 +104,7 @@ public class AdminCountriesController : ControllerBase
     /// <response code="412">Precondition failed - ETag mismatch, country was modified by another user.</response>
     /// <response code="428">Precondition required - If-Match header is missing.</response>
     [HttpPut("{id:long}")]
+    [RequirePermission(CountryPermissions.CountriesUpdate)]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -176,6 +179,7 @@ public class AdminCountriesController : ControllerBase
     /// <response code="412">Precondition failed - ETag mismatch.</response>
     /// <response code="428">Precondition required - If-Match header is missing.</response>
     [HttpPatch("{id:long}")]
+    [RequirePermission(CountryPermissions.CountriesUpdate)]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -242,6 +246,7 @@ public class AdminCountriesController : ControllerBase
     /// <response code="204">Country soft deleted successfully.</response>
     /// <response code="404">Country not found.</response>
     [HttpDelete("{id:long}")]
+    [RequirePermission(CountryPermissions.CountriesDelete)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> SoftDelete(long id, CancellationToken cancellationToken)
@@ -283,7 +288,7 @@ public class AdminCountriesController : ControllerBase
     /// <response code="204">Country permanently deleted.</response>
     /// <response code="404">Country not found.</response>
     [HttpDelete("{id:long}/hard-delete")]
-    [Authorize(Policy = "SuperAdmin")]
+    [RequirePermission(CountryPermissions.CountriesHardDelete)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> HardDelete(long id, CancellationToken cancellationToken)
@@ -315,24 +320,114 @@ public class AdminCountriesController : ControllerBase
     }
 
     /// <summary>
+    /// Restores a soft-deleted country.
+    /// Sets IsActive to true and removes DeletedAt timestamp.
+    /// </summary>
+    /// <param name="id">The ID of the country to restore.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>No content on success.</returns>
+    /// <response code="204">Country restored successfully.</response>
+    /// <response code="404">Country not found.</response>
+    [HttpPost("{id:long}/restore")]
+    [RequirePermission(CountryPermissions.CountriesRestore)]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> Restore(long id, CancellationToken cancellationToken)
+    {
+        var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+        var userId = GetUserId();
+
+        try
+        {
+            await _countryService.RestoreAsync(id, userId, cancellationToken);
+
+            _logger.LogInformation("Country restored: ID {Id} by user {UserId} with correlationId {CorrelationId}",
+                id, userId, HttpContext.TraceIdentifier);
+
+            _businessMetrics.RecordRequestDuration(stopwatch.Elapsed.TotalSeconds, "Restore", "POST", "204");
+            return NoContent();
+        }
+        catch (KeyNotFoundException ex)
+        {
+            _businessMetrics.RecordRequestDuration(stopwatch.Elapsed.TotalSeconds, "Restore", "POST", "404");
+            return NotFound(new { error = "NOT_FOUND", message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Country restore failed for ID {Id} by user {UserId}", id, userId);
+            _businessMetrics.RecordRequestDuration(stopwatch.Elapsed.TotalSeconds, "Restore", "POST", "500");
+            return StatusCode(500, new { error = "INTERNAL_ERROR", message = "An error occurred while restoring the country" });
+        }
+    }
+
+    /// <summary>
+    /// Rebuilds the country cache from database.
+    /// </summary>
+    [HttpPost("rebuild-cache")]
+    [RequirePermission(CountryPermissions.SystemRebuildCache)]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    public async Task<IActionResult> RebuildCache(CancellationToken cancellationToken)
+    {
+        var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+        var userId = GetUserId();
+
+        try
+        {
+            await _countryService.InvalidateListCachesAsync(cancellationToken);
+            _logger.LogInformation("Cache rebuild triggered by user {UserId}", userId);
+            _businessMetrics.RecordRequestDuration(stopwatch.Elapsed.TotalSeconds, "RebuildCache", "POST", "204");
+            return NoContent();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Cache rebuild failed for user {UserId}", userId);
+            _businessMetrics.RecordRequestDuration(stopwatch.Elapsed.TotalSeconds, "RebuildCache", "POST", "500");
+            return StatusCode(500, new { error = "INTERNAL_ERROR", message = "An error occurred while rebuilding the cache" });
+        }
+    }
+
+    /// <summary>
+    /// Exports all country data as JSON.
+    /// </summary>
+    [HttpGet("export")]
+    [RequirePermission(CountryPermissions.SystemExport)]
+    [ProducesResponseType(typeof(IEnumerable<CountryResponse>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> ExportAll(CancellationToken cancellationToken)
+    {
+        var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+        var userId = GetUserId();
+
+        try
+        {
+            var result = await _countryService.ListAsync(new CountryListRequest { PageSize = 1000 }, cancellationToken);
+            _logger.LogInformation("Data export triggered by user {UserId}", userId);
+            _businessMetrics.RecordRequestDuration(stopwatch.Elapsed.TotalSeconds, "ExportAll", "GET", "200");
+            return Ok(result.Data);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Data export failed for user {UserId}", userId);
+            _businessMetrics.RecordRequestDuration(stopwatch.Elapsed.TotalSeconds, "ExportAll", "GET", "500");
+            return StatusCode(500, new { error = "INTERNAL_ERROR", message = "An error occurred while exporting data" });
+        }
+    }
+
+
+
+    /// <summary>
     /// Extracts the user identifier from JWT token claims for audit logging.
     /// Tries multiple claim types in order: 'sub', 'email', Identity.Name, or returns 'anonymous' if none found.
     /// </summary>
-            /// <returns>The user identifier string.</returns>
-        private string GetUserId()
-        {
-            var userId = User.FindFirst("sub")?.Value
-                ?? User.FindFirst("email")?.Value
-                ?? User.Identity?.Name
-                ?? "anonymous";
-    
-            _logger.LogDebug("Detected UserId: {UserId}", userId);
-            foreach (var claim in User.Claims)
-            {
-                _logger.LogDebug("Claim: {Type} = {Value}", claim.Type, claim.Value);
-            }
-            _logger.LogDebug("User IsAuthenticated: {IsAuthenticated}", User.Identity?.IsAuthenticated);
-            _logger.LogDebug("User IsInRole('country_admin'): {IsInRole}", User.IsInRole("country_admin"));
-            
-            return userId;
-        }}
+    /// <returns>The user identifier string.</returns>
+    private string GetUserId()
+    {
+        var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
+            ?? User.FindFirst("sub")?.Value
+            ?? User.FindFirst("email")?.Value
+            ?? User.Identity?.Name
+            ?? "anonymous";
+
+        _logger.LogDebug("Detected UserId: {UserId}", userId);
+        return userId;
+    }
+}

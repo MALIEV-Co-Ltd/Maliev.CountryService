@@ -13,18 +13,18 @@ public class CountryResponse
     /// Gets or sets the unique identifier of the country.
     /// </summary>
     public long Id { get; set; }
-    
+
     /// <summary>
     /// Gets or sets the ISO 3166-1 alpha-2 code (2-letter code).
     /// </summary>
     [Required]
     public string Iso2 { get; set; } = string.Empty;
-    
+
     /// <summary>
     /// Gets or sets the ISO 3166-1 alpha-3 code (3-letter code).
     /// </summary>
     public string? Iso3 { get; set; }
-    
+
     /// <summary>
     /// Gets or sets the common English name of the country.
     /// </summary>
@@ -85,7 +85,7 @@ public class CountryResponse
     /// Gets or sets the Gini coefficient, a measure of income inequality.
     /// </summary>
     public double? GiniCoefficient { get; set; }
-    
+
     /// <summary>
     /// Gets or sets the list of IANA timezone identifiers as a JSON array.
     /// </summary>
@@ -130,7 +130,7 @@ public class CountryResponse
     /// Gets or sets the coat of arms URLs (SVG and PNG) as a JSON object.
     /// </summary>
     public JsonElement? CoatOfArms { get; set; }
-    
+
     /// <summary>
     /// Gets or sets a value indicating whether the country is independent.
     /// </summary>
@@ -150,7 +150,7 @@ public class CountryResponse
     /// Gets or sets a value indicating whether the country record is active.
     /// </summary>
     public bool IsActive { get; set; }
-    
+
     /// <summary>
     /// Gets or sets the UTC timestamp when the country record was created.
     /// </summary>

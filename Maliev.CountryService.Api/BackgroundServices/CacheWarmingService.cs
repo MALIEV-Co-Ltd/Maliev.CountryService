@@ -34,7 +34,7 @@ public class CacheWarmingService : IHostedService
         {
             // Load top 50 ISO2 codes from configuration file
             var iso2Codes = await LoadTop50CountryCodesAsync(cancellationToken);
-            
+
             _logger.LogInformation("Warming cache for {Count} top countries (Thailand prioritized)", iso2Codes.Count);
 
             // Prioritize Thailand (TH) - cache it first since the app is served in Thailand region
@@ -44,7 +44,7 @@ public class CacheWarmingService : IHostedService
                 {
                     using var scope = _scopeFactory.CreateScope();
                     var countryService = scope.ServiceProvider.GetRequiredService<ICountryService>();
-                    
+
                     var thailand = await countryService.GetByIso2Async("TH", cancellationToken);
                     if (thailand != null)
                     {
@@ -59,7 +59,7 @@ public class CacheWarmingService : IHostedService
 
             // Cache remaining countries in parallel (excluding TH since it's already cached)
             var remainingCodes = iso2Codes.Where(code => code != "TH").ToList();
-            
+
             // Each parallel task needs its own scope to avoid DbContext threading issues
             var tasks = remainingCodes.Select(async iso2 =>
             {
@@ -68,7 +68,7 @@ public class CacheWarmingService : IHostedService
                     // Create a new scope for each country to ensure thread-safe DbContext usage
                     using var scope = _scopeFactory.CreateScope();
                     var countryService = scope.ServiceProvider.GetRequiredService<ICountryService>();
-                    
+
                     var country = await countryService.GetByIso2Async(iso2, cancellationToken);
                     if (country != null)
                     {
@@ -107,7 +107,7 @@ public class CacheWarmingService : IHostedService
     private async Task<List<string>> LoadTop50CountryCodesAsync(CancellationToken cancellationToken)
     {
         var filePath = Path.Combine(AppContext.BaseDirectory, "Configuration", "Top50PopulousCountries.json");
-        
+
         if (!File.Exists(filePath))
         {
             _logger.LogWarning("Top50PopulousCountries.json not found at {FilePath}", filePath);
@@ -116,7 +116,7 @@ public class CacheWarmingService : IHostedService
 
         var json = await File.ReadAllTextAsync(filePath, cancellationToken);
         var codes = JsonSerializer.Deserialize<List<string>>(json);
-        
+
         return codes ?? new List<string>();
     }
 }

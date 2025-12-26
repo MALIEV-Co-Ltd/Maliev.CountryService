@@ -37,6 +37,9 @@ Thumbs.db
 *.log
 *.tmp
 
+.claude/settings.local.json
+.gemini/settings.local.json
+
 # Temporary/debug files
 *.bak
 *.log
@@ -54,3 +57,21 @@ docker-compose.dev.yml
 *SUMMARY*.md
 *AUDIT*.md
 *.Improvements.md
+
+# Test Outputs
+*test-output.txt
+*_error.txt
+
+
+# Test Outputs
+*test-output.txt
+*_error.txt
+
+
+# Build results
+[Bb]in/
+[Oo]bj/
+# Test Outputs
+*test-output.txt
+*_error.txt
+

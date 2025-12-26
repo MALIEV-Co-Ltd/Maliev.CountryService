@@ -46,10 +46,10 @@ public class CountryDbContext : DbContext
             foreach (var index in entity.GetIndexes())
             {
                 index.SetDatabaseName(index.GetDatabaseName()?.ToSnakeCase());
-        
-        // Apply PostgreSQL snake_case naming convention globally
-        SnakeCaseNamingHelper.ApplySnakeCaseNaming(modelBuilder);
-    }
+
+                // Apply PostgreSQL snake_case naming convention globally
+                SnakeCaseNamingHelper.ApplySnakeCaseNaming(modelBuilder);
+            }
         }
 
         modelBuilder.Entity<Country>(entity =>
@@ -91,7 +91,7 @@ public class CountryDbContext : DbContext
             entity.Property(e => e.CreatedAtUtc).HasColumnType("timestamp with time zone");
             entity.Property(e => e.LastModifiedUtc).HasColumnType("timestamp with time zone");
             entity.Property(e => e.DeletedAt).HasColumnType("timestamp with time zone");
-            
+
             entity.Property(e => e.IsActive).IsRequired();
 
             entity.Property(e => e.Version).IsConcurrencyToken(); // Optimistic concurrency

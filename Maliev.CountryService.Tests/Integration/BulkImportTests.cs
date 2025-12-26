@@ -4,6 +4,7 @@ using Xunit;
 using Maliev.CountryService.Tests.Fixtures;
 using Maliev.CountryService.Api.Models.BulkImport;
 using Maliev.CountryService.Api.Models.Countries;
+using Maliev.CountryService.Api.Authorization; // Added
 
 namespace Maliev.CountryService.Tests.Integration;
 
@@ -39,7 +40,8 @@ public class BulkImportTests : IntegrationTestBase
     public async Task BulkImport_WithValidData_Returns202()
     {
         // Arrange
-        var adminClient = _factory.CreateAuthenticatedClient("testuser", CountryAdminRoles);
+        var adminPermissions = CountryPredefinedRoles.GetPermissionsForRole(CountryAdminRoles[0]).ToArray();
+        var adminClient = _factory.CreateAuthenticatedClient("testuser", CountryAdminRoles, adminPermissions);
         var request = new BulkImportRequest
         {
             Countries = new List<CreateCountryRequest>
@@ -76,7 +78,8 @@ public class BulkImportTests : IntegrationTestBase
     public async Task BulkImport_WithInvalidData_Returns400()
     {
         // Arrange
-        var adminClient = _factory.CreateAuthenticatedClient("testuser", CountryAdminRoles);
+        var adminPermissions = CountryPredefinedRoles.GetPermissionsForRole(CountryAdminRoles[0]).ToArray();
+        var adminClient = _factory.CreateAuthenticatedClient("testuser", CountryAdminRoles, adminPermissions);
         var request = new BulkImportRequest
         {
             Countries = new List<CreateCountryRequest>
@@ -100,7 +103,8 @@ public class BulkImportTests : IntegrationTestBase
     public async Task BulkImport_ExceedsLimit_Returns413()
     {
         // Arrange
-        var adminClient = _factory.CreateAuthenticatedClient("testuser", CountryAdminRoles);
+        var adminPermissions = CountryPredefinedRoles.GetPermissionsForRole(CountryAdminRoles[0]).ToArray();
+        var adminClient = _factory.CreateAuthenticatedClient("testuser", CountryAdminRoles, adminPermissions);
         var countries = new List<CreateCountryRequest>();
 
         // Create 1001 countries to exceed the 1000 limit
@@ -137,7 +141,8 @@ public class BulkImportTests : IntegrationTestBase
     public async Task BulkImport_EmptyList_Returns400()
     {
         // Arrange
-        var adminClient = _factory.CreateAuthenticatedClient("testuser", CountryAdminRoles);
+        var adminPermissions = CountryPredefinedRoles.GetPermissionsForRole(CountryAdminRoles[0]).ToArray();
+        var adminClient = _factory.CreateAuthenticatedClient("testuser", CountryAdminRoles, adminPermissions);
         var request = new BulkImportRequest { Countries = new List<CreateCountryRequest>() };
 
         // Act
@@ -151,7 +156,8 @@ public class BulkImportTests : IntegrationTestBase
     public async Task GetJobStatus_ValidJob_Returns200()
     {
         // Arrange
-        var adminClient = _factory.CreateAuthenticatedClient("testuser", CountryAdminRoles);
+        var adminPermissions = CountryPredefinedRoles.GetPermissionsForRole(CountryAdminRoles[0]).ToArray();
+        var adminClient = _factory.CreateAuthenticatedClient("testuser", CountryAdminRoles, adminPermissions);
 
         // Create a bulk import job first
         var createRequest = new BulkImportRequest
@@ -181,7 +187,8 @@ public class BulkImportTests : IntegrationTestBase
     public async Task GetJobStatus_NonExistentJob_Returns404()
     {
         // Arrange
-        var adminClient = _factory.CreateAuthenticatedClient("testuser", CountryAdminRoles);
+        var adminPermissions = CountryPredefinedRoles.GetPermissionsForRole(CountryAdminRoles[0]).ToArray();
+        var adminClient = _factory.CreateAuthenticatedClient("testuser", CountryAdminRoles, adminPermissions);
         var nonExistentJobId = Guid.NewGuid();
 
         // Act
@@ -195,7 +202,8 @@ public class BulkImportTests : IntegrationTestBase
     public async Task ProcessJob_ValidatedJob_Returns202()
     {
         // Arrange
-        var adminClient = _factory.CreateAuthenticatedClient("testuser", CountryAdminRoles);
+        var adminPermissions = CountryPredefinedRoles.GetPermissionsForRole(CountryAdminRoles[0]).ToArray();
+        var adminClient = _factory.CreateAuthenticatedClient("testuser", CountryAdminRoles, adminPermissions);
 
         // Create a validated job first
         var createRequest = new BulkImportRequest
@@ -227,7 +235,8 @@ public class BulkImportTests : IntegrationTestBase
     public async Task ProcessJob_NonExistentJob_Returns404()
     {
         // Arrange
-        var adminClient = _factory.CreateAuthenticatedClient("testuser", CountryAdminRoles);
+        var adminPermissions = CountryPredefinedRoles.GetPermissionsForRole(CountryAdminRoles[0]).ToArray();
+        var adminClient = _factory.CreateAuthenticatedClient("testuser", CountryAdminRoles, adminPermissions);
         var nonExistentJobId = Guid.NewGuid();
 
         // Act
@@ -241,7 +250,8 @@ public class BulkImportTests : IntegrationTestBase
     public async Task BulkImport_WithDuplicateInBatch_FailsValidation()
     {
         // Arrange
-        var adminClient = _factory.CreateAuthenticatedClient("testuser", CountryAdminRoles);
+        var adminPermissions = CountryPredefinedRoles.GetPermissionsForRole(CountryAdminRoles[0]).ToArray();
+        var adminClient = _factory.CreateAuthenticatedClient("testuser", CountryAdminRoles, adminPermissions);
         var request = new BulkImportRequest
         {
             Countries = new List<CreateCountryRequest>
@@ -262,7 +272,8 @@ public class BulkImportTests : IntegrationTestBase
     public async Task BulkImport_CompleteFlow_ValidateProcessCheck()
     {
         // Arrange
-        var adminClient = _factory.CreateAuthenticatedClient("testuser", CountryAdminRoles);
+        var adminPermissions = CountryPredefinedRoles.GetPermissionsForRole(CountryAdminRoles[0]).ToArray();
+        var adminClient = _factory.CreateAuthenticatedClient("testuser", CountryAdminRoles, adminPermissions);
         var request = new BulkImportRequest
         {
             Countries = new List<CreateCountryRequest>
@@ -317,7 +328,8 @@ public class BulkImportTests : IntegrationTestBase
     public async Task BulkImport_MultipleJobs_CanBeTrackedIndependently()
     {
         // Arrange
-        var adminClient = _factory.CreateAuthenticatedClient("testuser", CountryAdminRoles);
+        var adminPermissions = CountryPredefinedRoles.GetPermissionsForRole(CountryAdminRoles[0]).ToArray();
+        var adminClient = _factory.CreateAuthenticatedClient("testuser", CountryAdminRoles, adminPermissions);
 
         var request1 = new BulkImportRequest
         {

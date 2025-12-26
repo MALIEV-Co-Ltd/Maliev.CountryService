@@ -60,7 +60,7 @@ public class TestDatabaseFixture : IAsyncLifetime
         await context.Database.EnsureDeletedAsync(); // Ensure clean database
         await context.Database.EnsureCreatedAsync(); // Create schema from model
         Console.WriteLine("Database schema created using EnsureCreatedAsync().");
-        
+
         // Seed initial data for tests
         var countries = new List<Maliev.CountryService.Data.Entities.Country>
         {

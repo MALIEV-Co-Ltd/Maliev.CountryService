@@ -6,19 +6,21 @@ using Maliev.CountryService.Api.Models.Common;
 using Maliev.CountryService.Api.Models.Countries;
 using Maliev.CountryService.Tests.Fixtures;
 using Xunit;
+using Maliev.CountryService.Tests.Testing; // For WithTestAuth
+using Maliev.CountryService.Api.Authorization; // For CountryPermissions and PredefinedRoles
 
 namespace Maliev.CountryService.Tests.Integration;
 
 [Collection("TestDatabase")]
 public class CountryListTests : IntegrationTestBase
 {
-    public CountryListTests(TestWebApplicationFactory factory) : base(factory) { } 
+    public CountryListTests(TestWebApplicationFactory factory) : base(factory) { }
 
     [Fact]
     public async Task ListCountries_ReturnsPaginatedResults_SortedByNameAscendingByDefault()
     {
         // Arrange
-        var client = _client;
+        var client = _client.WithTestAuth(_factory, CountryPermissions.CountriesList);
 
 
         // Act
@@ -43,7 +45,7 @@ public class CountryListTests : IntegrationTestBase
     public async Task ListCountries_WithPageAndPageSize_ReturnsCorrectPagination()
     {
         // Arrange
-        var client = _client;
+        var client = _client.WithTestAuth(_factory, CountryPermissions.CountriesList);
         var pageSize = 5;
         var page = 2;
 
@@ -65,7 +67,7 @@ public class CountryListTests : IntegrationTestBase
     public async Task ListCountries_SortedByPopulationDescending_ReturnsCorrectOrder()
     {
         // Arrange
-        var client = _client;
+        var client = _client.WithTestAuth(_factory, CountryPermissions.CountriesList);
 
         // Act
         var response = await client.GetAsync("/country/v1/countries?sortBy=population&sortOrder=desc");
@@ -95,7 +97,7 @@ public class CountryListTests : IntegrationTestBase
     public async Task ListCountries_FilteredByRegion_ReturnsCorrectCountries()
     {
         // Arrange
-        var client = _client;
+        var client = _client.WithTestAuth(_factory, CountryPermissions.CountriesList);
         var region = "Europe"; // Assuming some countries in Europe exist
 
         // Act
@@ -114,7 +116,7 @@ public class CountryListTests : IntegrationTestBase
     public async Task ListCountries_FilteredBySubregion_ReturnsCorrectCountries()
     {
         // Arrange
-        var client = _client;
+        var client = _client.WithTestAuth(_factory, CountryPermissions.CountriesList);
         var subregion = "Western Europe"; // Assuming some countries in Western Europe exist
 
         // Act
@@ -133,7 +135,7 @@ public class CountryListTests : IntegrationTestBase
     public async Task ListCountries_SearchByName_ReturnsMatchingCountries()
     {
         // Arrange
-        var client = _client;
+        var client = _client.WithTestAuth(_factory, CountryPermissions.CountriesSearch);
         var searchTerm = "United"; // e.g., United States, United Kingdom
 
         // Act
@@ -154,7 +156,7 @@ public class CountryListTests : IntegrationTestBase
     public async Task SearchCountries_WithShortQuery_ReturnsEmptyList()
     {
         // Arrange
-        var client = _client;
+        var client = _client.WithTestAuth(_factory, CountryPermissions.CountriesSearch);
         var shortQuery = "a";
 
         // Act
@@ -173,7 +175,7 @@ public class CountryListTests : IntegrationTestBase
     public async Task SearchCountries_WithNoMatch_ReturnsEmptyList()
     {
         // Arrange
-        var client = _client;
+        var client = _client.WithTestAuth(_factory, CountryPermissions.CountriesSearch);
         var noMatchQuery = "NonExistentCountryName";
 
         // Act
@@ -192,11 +194,12 @@ public class CountryListTests : IntegrationTestBase
     public async Task ListCountries_IncludesInactive_ReturnsActiveAndInactiveCountries()
     {
         // Arrange
-        var client = _client;
+        var client = _client.WithTestAuth(_factory, CountryPermissions.CountriesList, CountryPermissions.CountriesRead);
         var inactiveCountryIso2 = "XZ"; // Test country code
 
         // First, create an inactive country for testing
-        var adminClient = _factory.CreateAuthenticatedClient("testuser", CountryAdminRoles); // Admin client with country_admin role
+        var adminPermissions = CountryPredefinedRoles.GetPermissionsForRole(CountryAdminRoles[0]).ToArray();
+        var adminClient = _factory.CreateAuthenticatedClient("testuser", CountryAdminRoles, adminPermissions); // Admin client with country_admin role
         var createRequest = new CreateCountryRequest
         {
             Iso2 = inactiveCountryIso2,
@@ -223,18 +226,34 @@ public class CountryListTests : IntegrationTestBase
         };
 
         var createResponse = await adminClient.PostAsJsonAsync("/country/v1/admin/countries", createRequest);
-        createResponse.EnsureSuccessStatusCode();
-        var createdCountry = await createResponse.Content.ReadFromJsonAsync<CountryResponse>(JsonSerializerOptions);
 
-        // Soft delete the country to make it inactive
-        var softDeleteResponse = await adminClient.DeleteAsync($"/country/v1/admin/countries/{createdCountry!.Id}");
-        Assert.Equal(HttpStatusCode.NoContent, softDeleteResponse.StatusCode);
+        // Handle case where it already exists (from previous run)
+        if (createResponse.StatusCode == HttpStatusCode.Conflict)
+        {
+            // Try to delete first? No, hard to delete if we don't have ID.
+            // Just assume it exists and try to soft delete it below.
+            // But we need the ID.
+            // Let's assume it was created or exists.
+            // We can get it by ISO2.
+            var getResp = await adminClient.GetAsync($"/country/v1/countries/iso2/{inactiveCountryIso2}");
+            if (getResp.IsSuccessStatusCode)
+            {
+                var country = await getResp.Content.ReadFromJsonAsync<CountryResponse>(JsonSerializerOptions);
+                var softDelete = await adminClient.DeleteAsync($"/country/v1/admin/countries/{country!.Id}");
+            }
+        }
+        else
+        {
+            createResponse.EnsureSuccessStatusCode();
+            var createdCountry = await createResponse.Content.ReadFromJsonAsync<CountryResponse>(JsonSerializerOptions);
+
+            // Soft delete the country to make it inactive
+            var softDeleteResponse = await adminClient.DeleteAsync($"/country/v1/admin/countries/{createdCountry!.Id}");
+            Assert.Equal(HttpStatusCode.NoContent, softDeleteResponse.StatusCode);
+        }
 
         // Give cache and database more time
         await Task.Delay(1000);
-
-        // Verify the country was soft-deleted by trying to get it directly (should still return it but as inactive)
-        var checkResponse = await client.GetAsync($"/country/v1/countries/{createdCountry.Id}");
 
         // Act - Request including inactive countries (with large page size to ensure we get all countries)
         // Use lowercase parameter names to match model binding conventions
@@ -261,8 +280,8 @@ public class CountryListTests : IntegrationTestBase
             var inactiveCount = paginatedResponse.Data.Count(c => !c.IsActive);
 
             // Log details for debugging
-            _logger.LogWarning("Inactive country {Iso2} not found. Total countries: {Total}, Inactive in response: {Inactive}, Check response: {Status}",
-                inactiveCountryIso2, paginatedResponse.TotalCount, inactiveCount, checkResponse.StatusCode);
+            _logger.LogWarning("Inactive country {Iso2} not found. Total countries: {Total}, Inactive in response: {Inactive}",
+                inactiveCountryIso2, paginatedResponse.TotalCount, inactiveCount);
 
             // The test may be flaky due to caching or timing issues
             // Skip if no inactive countries are returned at all (might be a caching issue)
@@ -273,7 +292,7 @@ public class CountryListTests : IntegrationTestBase
             }
 
             // Otherwise fail - we should have found our test country
-            Assert.Fail($"Expected to find inactive country {inactiveCountryIso2} in list of {paginatedResponse.TotalCount} countries ({inactiveCount} inactive). Check response status: {checkResponse.StatusCode}");
+            Assert.Fail($"Expected to find inactive country {inactiveCountryIso2} in list of {paginatedResponse.TotalCount} countries ({inactiveCount} inactive).");
         }
     }
 }

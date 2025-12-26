@@ -3,6 +3,8 @@ using Maliev.CountryService.Api.BackgroundServices;
 using Maliev.CountryService.Api.Middleware;
 using Maliev.CountryService.Api.Services;
 using Maliev.CountryService.Data;
+using Maliev.Aspire.ServiceDefaults;
+using Maliev.Aspire.ServiceDefaults.Authorization;
 using Microsoft.AspNetCore.HttpOverrides;
 using StackExchange.Redis;
 using System.Threading.RateLimiting;
@@ -14,10 +16,14 @@ builder.AddGoogleSecretManagerVolume(); // Load secrets from /mnt/secrets if ava
 
 // --- Infrastructure & Observability ---
 builder.AddServiceDefaults(); // OpenTelemetry, health checks, resilience
+builder.AddStandardMiddleware(options =>
+{
+    options.EnableRequestLogging = true;
+});
 builder.AddServiceMeters("countries-meter"); // Register service meters for OpenTelemetry business metrics
 
 // Register DbContext for all environments (test factory provides connection string via environment variables)
-builder.AddPostgresDbContext<CountryDbContext>(connectionStringName: "CountryDbContext"); // PostgreSQL with retry logic
+builder.AddPostgresDbContext<CountryDbContext>(connectionName: "CountryDbContext"); // PostgreSQL with retry logic
 
 // --- API Configuration ---
 builder.AddDefaultCors(); // CORS from CORS:AllowedOrigins config
@@ -26,20 +32,15 @@ builder.AddDefaultApiVersioning(); // API versioning with URL segment reader
 // JWT Authentication (tests override via PostConfigureAll with dynamic RSA keys)
 builder.AddJwtAuthentication();
 
+// --- Authorization & Permissions ---
+builder.Services.AddPermissionAuthorization();
+
 // Add OpenAPI (must be in Program.cs for XML comments to work via source generator)
 if (!builder.Environment.IsProduction())
 {
-    builder.Services.AddEndpointsApiExplorer();
-    builder.Services.AddOpenApi("v1", options =>
-    {
-        options.AddDocumentTransformer((document, context, cancellationToken) =>
-        {
-            document.Info.Title = "MALIEV Country Service API";
-            document.Info.Description = "Reference data service for country information. Provides lookup by ID, ISO 3166-1 alpha-2/alpha-3 codes with ETag-based caching, paginated listing with region/subregion filtering, name search, and administrative endpoints for bulk import and data updates.";
-            document.Info.Version = "v1";
-            return Task.CompletedTask;
-        });
-    });
+    builder.AddStandardOpenApi(
+        title: "MALIEV Country Service API",
+        description: "Reference data service for country information. Provides lookup by ID, ISO 3166-1 alpha-2/alpha-3 codes with ETag-based caching, paginated listing with region/subregion filtering, name search, and administrative endpoints for bulk import and data updates.");
 }
 
 builder.Services.AddControllers();
@@ -98,16 +99,6 @@ builder.Services.AddRateLimiter(options =>
     };
 });
 
-// Authorization policies
-builder.Services.AddAuthorization(options =>
-{
-    options.AddPolicy("CountryAdmin", policy =>
-        policy.RequireRole("CountryAdmin", "SuperAdmin"));
-
-    options.AddPolicy("SuperAdmin", policy =>
-        policy.RequireRole("SuperAdmin"));
-});
-
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
 {
     options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
@@ -133,9 +124,13 @@ builder.Services.AddScoped<ICountryService, CountryService>();
 // Register bulk import services
 builder.Services.AddScoped<IBulkImportService, BulkImportService>();
 
+// Register IAM Service Client
+builder.Services.AddIAMClient(builder.Configuration, "CountryService");
+
 // Register hosted services
 builder.Services.AddHostedService<CacheWarmingService>();
 builder.Services.AddHostedService<BulkImportWorkerService>();
+builder.Services.AddIAMRegistration<CountryIAMRegistrationService>();
 
 var app = builder.Build();
 var logger = app.Services.GetRequiredService<ILogger<Program>>();
@@ -157,9 +152,7 @@ if (!app.Environment.IsEnvironment("Testing"))
 app.UseForwardedHeaders();
 
 // Configure middleware pipeline
-app.UseMiddleware<CorrelationIdMiddleware>();
-app.UseMiddleware<SecurityHeadersMiddleware>();
-app.UseMiddleware<ExceptionHandlingMiddleware>();
+app.UseStandardMiddleware();
 app.UseMiddleware<DegradationHeaderMiddleware>();
 
 app.UseHttpsRedirection();
@@ -169,6 +162,9 @@ app.UseCors();
 // JWT Authentication & Authorization
 app.UseAuthentication();
 app.UseAuthorization();
+
+// Log permission denials
+app.UseMiddleware<PermissionDenialLoggingMiddleware>();
 
 // Map health check and metrics endpoints via ServiceDefaults
 app.MapDefaultEndpoints("country");

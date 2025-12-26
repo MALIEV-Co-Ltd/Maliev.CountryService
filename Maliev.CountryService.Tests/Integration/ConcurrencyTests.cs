@@ -5,6 +5,8 @@ using System.Text.Json;
 using Xunit;
 using Maliev.CountryService.Tests.Fixtures;
 using Maliev.CountryService.Api.Models.Countries;
+using Maliev.CountryService.Api.Authorization; // Added
+using Maliev.CountryService.Tests.Testing; // Added for WithTestAuth
 
 namespace Maliev.CountryService.Tests.Integration;
 
@@ -21,7 +23,8 @@ public class ConcurrencyTests : IntegrationTestBase
     public async Task ConcurrentUpdate_SecondUpdateWithOldETag_Returns412()
     {
         // Arrange
-        var adminClient = _factory.CreateAuthenticatedClient("user1", CountryAdminRoles);
+        var adminPermissions = CountryPredefinedRoles.GetPermissionsForRole(CountryAdminRoles[0]).ToArray();
+        var adminClient = _factory.CreateAuthenticatedClient("user1", CountryAdminRoles, adminPermissions);
 
         // Create a country
         var createRequest = new CreateCountryRequest
@@ -82,7 +85,8 @@ public class ConcurrencyTests : IntegrationTestBase
     public async Task ConcurrentPatch_SecondPatchWithOldETag_Returns412()
     {
         // Arrange
-        var adminClient = _factory.CreateAuthenticatedClient("user2", CountryAdminRoles);
+        var adminPermissions = CountryPredefinedRoles.GetPermissionsForRole(CountryAdminRoles[0]).ToArray();
+        var adminClient = _factory.CreateAuthenticatedClient("user2", CountryAdminRoles, adminPermissions);
 
         // Create a country
         var createRequest = new CreateCountryRequest
@@ -135,7 +139,8 @@ public class ConcurrencyTests : IntegrationTestBase
     public async Task SequentialUpdates_WithCorrectETags_AllSucceed()
     {
         // Arrange
-        var adminClient = _factory.CreateAuthenticatedClient("user3", CountryAdminRoles);
+        var adminPermissions = CountryPredefinedRoles.GetPermissionsForRole(CountryAdminRoles[0]).ToArray();
+        var adminClient = _factory.CreateAuthenticatedClient("user3", CountryAdminRoles, adminPermissions);
 
         // Create a country
         var createRequest = new CreateCountryRequest
@@ -182,7 +187,8 @@ public class ConcurrencyTests : IntegrationTestBase
     public async Task ETag_ChangesOnEveryModification()
     {
         // Arrange
-        var adminClient = _factory.CreateAuthenticatedClient("user4", CountryAdminRoles);
+        var adminPermissions = CountryPredefinedRoles.GetPermissionsForRole(CountryAdminRoles[0]).ToArray();
+        var adminClient = _factory.CreateAuthenticatedClient("user4", CountryAdminRoles, adminPermissions);
 
         // Create a country
         var createRequest = new CreateCountryRequest
@@ -242,7 +248,8 @@ public class ConcurrencyTests : IntegrationTestBase
     public async Task GetById_ReturnsETag()
     {
         // Arrange
-        var adminClient = _factory.CreateAuthenticatedClient("user5", CountryAdminRoles);
+        var adminPermissions = CountryPredefinedRoles.GetPermissionsForRole(CountryAdminRoles[0]).ToArray();
+        var adminClient = _factory.CreateAuthenticatedClient("user5", CountryAdminRoles, adminPermissions);
 
         // Create a country
         var createRequest = new CreateCountryRequest
@@ -257,7 +264,9 @@ public class ConcurrencyTests : IntegrationTestBase
         var originalETag = created.ETag;
 
         // Act - Get the country by ID
-        var getResponse = await _client.GetAsync($"/country/v1/countries/{created.Id}");
+        // Auth required for GetById
+        var client = _client.WithTestAuth(_factory, CountryPermissions.CountriesRead);
+        var getResponse = await client.GetAsync($"/country/v1/countries/{created.Id}");
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, getResponse.StatusCode);
@@ -272,8 +281,9 @@ public class ConcurrencyTests : IntegrationTestBase
     public async Task SimulateConcurrentUsers_OnlyOneUpdateSucceeds()
     {
         // Arrange
-        var admin1 = _factory.CreateAuthenticatedClient("user6a", CountryAdminRoles);
-        var admin2 = _factory.CreateAuthenticatedClient("user6b", CountryAdminRoles);
+        var adminPermissions = CountryPredefinedRoles.GetPermissionsForRole(CountryAdminRoles[0]).ToArray();
+        var admin1 = _factory.CreateAuthenticatedClient("user6a", CountryAdminRoles, adminPermissions);
+        var admin2 = _factory.CreateAuthenticatedClient("user6b", CountryAdminRoles, adminPermissions);
 
         // Create a country
         var createRequest = new CreateCountryRequest
