@@ -14,7 +14,7 @@ namespace Maliev.CountryService.Tests.Integration;
 [Collection("TestDatabase")]
 public class CountryListTests : IntegrationTestBase
 {
-    public CountryListTests(TestWebApplicationFactory factory) : base(factory) { } 
+    public CountryListTests(TestWebApplicationFactory factory) : base(factory) { }
 
     [Fact]
     public async Task ListCountries_ReturnsPaginatedResults_SortedByNameAscendingByDefault()
@@ -226,21 +226,21 @@ public class CountryListTests : IntegrationTestBase
         };
 
         var createResponse = await adminClient.PostAsJsonAsync("/country/v1/admin/countries", createRequest);
-        
+
         // Handle case where it already exists (from previous run)
         if (createResponse.StatusCode == HttpStatusCode.Conflict)
         {
-             // Try to delete first? No, hard to delete if we don't have ID.
-             // Just assume it exists and try to soft delete it below.
-             // But we need the ID.
-             // Let's assume it was created or exists.
-             // We can get it by ISO2.
-             var getResp = await adminClient.GetAsync($"/country/v1/countries/iso2/{inactiveCountryIso2}");
-             if (getResp.IsSuccessStatusCode)
-             {
-                 var country = await getResp.Content.ReadFromJsonAsync<CountryResponse>(JsonSerializerOptions);
-                 var softDelete = await adminClient.DeleteAsync($"/country/v1/admin/countries/{country!.Id}");
-             }
+            // Try to delete first? No, hard to delete if we don't have ID.
+            // Just assume it exists and try to soft delete it below.
+            // But we need the ID.
+            // Let's assume it was created or exists.
+            // We can get it by ISO2.
+            var getResp = await adminClient.GetAsync($"/country/v1/countries/iso2/{inactiveCountryIso2}");
+            if (getResp.IsSuccessStatusCode)
+            {
+                var country = await getResp.Content.ReadFromJsonAsync<CountryResponse>(JsonSerializerOptions);
+                var softDelete = await adminClient.DeleteAsync($"/country/v1/admin/countries/{country!.Id}");
+            }
         }
         else
         {

@@ -86,7 +86,7 @@ public class CountriesController : ControllerBase
         {
             return NotFound();
         }
-        
+
         if (!string.IsNullOrEmpty(ifNoneMatch) && ifNoneMatch == country.ETag)
         {
             return StatusCode(StatusCodes.Status304NotModified);
@@ -124,7 +124,7 @@ public class CountriesController : ControllerBase
         {
             return NotFound();
         }
-        
+
         if (!string.IsNullOrEmpty(ifNoneMatch) && ifNoneMatch == country.ETag)
         {
             return StatusCode(StatusCodes.Status304NotModified);

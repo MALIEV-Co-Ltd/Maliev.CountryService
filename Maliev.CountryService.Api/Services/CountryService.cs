@@ -277,7 +277,7 @@ public class CountryService : ICountryService
                 ? query.OrderByDescending(c => c.Name)
                 : query.OrderBy(c => c.Name)
         };
-        
+
         // Default sorting - commented out as switch handles default
         // var orderedQuery = query.OrderBy(c => c.Name ?? string.Empty);
 
@@ -495,7 +495,7 @@ public class CountryService : ICountryService
             if (element.ValueKind == JsonValueKind.String)
             {
                 var innerJson = element.GetString();
-                if (!string.IsNullOrWhiteSpace(innerJson) && 
+                if (!string.IsNullOrWhiteSpace(innerJson) &&
                     (innerJson.TrimStart().StartsWith("[") || innerJson.TrimStart().StartsWith("{")))
                 {
                     try
@@ -663,8 +663,8 @@ public class CountryService : ICountryService
         country.Currencies = request.Currencies ?? "{}";
         country.Languages = request.Languages ?? "{}";
         country.Translations = request.Translations ?? "{}";
-        country.Flags = request.Flags ?? "{}";        
-        country.CoatOfArms = request.CoatOfArms ?? "{}" ;
+        country.Flags = request.Flags ?? "{}";
+        country.CoatOfArms = request.CoatOfArms ?? "{}";
         country.Independent = request.Independent ?? false;
         country.UnMember = request.UnMember ?? false;
         country.Landlocked = request.Landlocked ?? false;

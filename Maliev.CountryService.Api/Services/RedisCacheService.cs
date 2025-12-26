@@ -224,13 +224,13 @@ public class RedisCacheService : ICacheService
                 var server = _redis.GetServer(endpoint);
                 var keys = server.Keys(pattern: pattern);
                 var db = _redis.GetDatabase();
-                
+
                 foreach (var key in keys)
                 {
                     await db.KeyDeleteAsync(key);
                 }
             }
-            
+
             await _fallbackCache.RemovePatternAsync(pattern, cancellationToken);
         }
         catch (Exception ex)

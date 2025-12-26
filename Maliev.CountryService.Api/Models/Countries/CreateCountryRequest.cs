@@ -96,55 +96,55 @@ public class CreateCountryRequest
     /// </summary>
     [Range(0.0, 100.0, ErrorMessage = "Gini coefficient must be between 0 and 100.")]
     public double? GiniCoefficient { get; set; }
-    
+
     /// <summary>
     /// Gets or sets the list of IANA timezone identifiers as a JSON array string. Required.
     /// </summary>
     [Required(ErrorMessage = "Timezones are required.")]
     public string Timezones { get; set; } = "[]"; // Non-nullable, default empty JSON array
-    
+
     /// <summary>
     /// Gets or sets the ISO 3166-1 alpha-3 codes of bordering countries as a JSON array string. Required.
     /// </summary>
     [Required(ErrorMessage = "Borders are required.")]
     public string Borders { get; set; } = "[]"; // Non-nullable, default empty JSON array
-    
+
     /// <summary>
     /// Gets or sets the list of international direct dialing codes as a JSON array string. Required.
     /// </summary>
     [Required(ErrorMessage = "Calling codes are required.")]
     public string CallingCodes { get; set; } = "[]"; // Non-nullable, default empty JSON array
-    
+
     /// <summary>
     /// Gets or sets the list of top-level domains as a JSON array string. Required.
     /// </summary>
     [Required(ErrorMessage = "Top level domains are required.")]
     public string TopLevelDomains { get; set; } = "[]"; // Non-nullable, default empty JSON array
-    
+
     /// <summary>
     /// Gets or sets the currencies used in the country as a JSON object string. Required.
     /// </summary>
     [Required(ErrorMessage = "Currencies are required.")]
     public string Currencies { get; set; } = "{}"; // Non-nullable, default empty JSON object
-    
+
     /// <summary>
     /// Gets or sets the languages spoken in the country as a JSON object string. Required.
     /// </summary>
     [Required(ErrorMessage = "Languages are required.")]
     public string Languages { get; set; } = "{}"; // Non-nullable, default empty JSON object
-    
+
     /// <summary>
     /// Gets or sets the country name translations as a JSON object string. Required.
     /// </summary>
     [Required(ErrorMessage = "Translations are required.")]
     public string Translations { get; set; } = "{}"; // Non-nullable, default empty JSON object
-    
+
     /// <summary>
     /// Gets or sets the flag URLs (SVG and PNG) as a JSON object string. Required.
     /// </summary>
     [Required(ErrorMessage = "Flags are required.")]
     public string Flags { get; set; } = "{}"; // Non-nullable, default empty JSON object
-    
+
     /// <summary>
     /// Gets or sets the coat of arms URLs (SVG and PNG) as a JSON object string. Optional.
     /// </summary>

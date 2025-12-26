@@ -52,13 +52,13 @@ public class CachingTests : IntegrationTestBase
         // Act - Second request with If-None-Match
         var request = new HttpRequestMessage(HttpMethod.Get, "/country/v1/countries/1");
         request.Headers.Add("If-None-Match", etag);
-        
+
         // Need to add auth to the request message or use the authenticated client
         // With HttpRequestMessage, we need to set the Authorization header manually if not using the client's defaults
         // But since we are using client.SendAsync, client's defaults should apply? No, request headers override/merge.
         // But client.DefaultRequestHeaders applies to all requests.
         // Let's reuse the authenticated client.
-        
+
         var secondResponse = await client.SendAsync(request);
 
         // Assert
@@ -181,15 +181,15 @@ public class CachingTests : IntegrationTestBase
         };
 
         var createResponse = await adminClient.PostAsJsonAsync("/country/v1/admin/countries", createRequest);
-        
+
         // Handle potential conflict from previous runs
         if (createResponse.StatusCode == HttpStatusCode.Conflict)
         {
-             // Use random ISOs
-             var random = new Random().Next(1000, 9999).ToString();
-             createRequest.Iso2 = "R" + random.Substring(0, 1); // 2 chars
-             createRequest.Iso3 = "R" + random.Substring(0, 2); // 3 chars
-             createResponse = await adminClient.PostAsJsonAsync("/country/v1/admin/countries", createRequest);
+            // Use random ISOs
+            var random = new Random().Next(1000, 9999).ToString();
+            createRequest.Iso2 = "R" + random.Substring(0, 1); // 2 chars
+            createRequest.Iso3 = "R" + random.Substring(0, 2); // 3 chars
+            createResponse = await adminClient.PostAsJsonAsync("/country/v1/admin/countries", createRequest);
         }
 
         if (createResponse.StatusCode != HttpStatusCode.Created)

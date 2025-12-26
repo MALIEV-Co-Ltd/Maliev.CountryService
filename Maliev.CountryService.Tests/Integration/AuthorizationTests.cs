@@ -25,22 +25,22 @@ public class AuthorizationTests : IntegrationTestBase
         var iso2 = "ZZ"; // User-assigned code element
         var iso3 = "ZZZ";
         var request = new CreateCountryRequest { Name = $"AuthTest-{Guid.NewGuid()}", Iso2 = iso2, Iso3 = iso3 };
-        
+
         // Ensure we don't conflict with existing data if possible, or handle conflict
         // Ideally we should use a random string of LETTERS
-        
+
         var client = _factory.CreateClient().WithTestAuth(_factory, CountryPermissions.CountriesCreate);
 
         var response = await client.PostAsJsonAsync("/country/v1/admin/countries", request);
-        
+
         // If it already exists, we might get Conflict (409), which is technically a success for Authorization (not Forbidden)
         // But for this test we want 201.
         if (response.StatusCode == HttpStatusCode.Conflict)
         {
-             // Try one more time with different code
-             request.Iso2 = "YY";
-             request.Iso3 = "YYY";
-             response = await client.PostAsJsonAsync("/country/v1/admin/countries", request);
+            // Try one more time with different code
+            request.Iso2 = "YY";
+            request.Iso3 = "YYY";
+            response = await client.PostAsJsonAsync("/country/v1/admin/countries", request);
         }
 
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
@@ -53,7 +53,7 @@ public class AuthorizationTests : IntegrationTestBase
         var client = _factory.CreateClient().WithTestAuth(_factory, "invalid.permission");
 
         var response = await client.PostAsJsonAsync("/country/v1/admin/countries", request);
-        
+
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
 
@@ -66,7 +66,7 @@ public class AuthorizationTests : IntegrationTestBase
     {
         var client = _factory.CreateClient().WithTestAuth(_factory, CountryPermissions.ImportExecute);
         var response = await client.PostAsJsonAsync("/country/v1/admin/bulk-import/00000000-0000-0000-0000-000000000000/process", new { });
-        
+
         // Should not be Forbidden (might be NotFound if job doesn't exist, but auth passed)
         Assert.NotEqual(HttpStatusCode.Forbidden, response.StatusCode);
     }
@@ -76,7 +76,7 @@ public class AuthorizationTests : IntegrationTestBase
     {
         var client = _factory.CreateClient().WithTestAuth(_factory, "wrong.permission");
         var response = await client.PostAsJsonAsync("/country/v1/admin/bulk-import/00000000-0000-0000-0000-000000000000/process", new { });
-        
+
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
 
@@ -88,23 +88,23 @@ public class AuthorizationTests : IntegrationTestBase
     public async Task Authorization_Latency_ShouldBeUnder5ms()
     {
         var client = _factory.CreateClient().WithTestAuth(_factory, CountryPermissions.CountriesRead);
-        
+
         // Warm up
         await client.GetAsync("/country/v1/countries");
 
         var stopwatch = System.Diagnostics.Stopwatch.StartNew();
-        
+
         for (int i = 0; i < 100; i++)
         {
             await client.GetAsync("/country/v1/countries");
         }
-        
+
         stopwatch.Stop();
         var averageLatencyMs = stopwatch.Elapsed.TotalMilliseconds / 100;
-        
+
         _logger.LogInformation("Average authorization latency: {Latency}ms", averageLatencyMs);
-        
-        Assert.True(averageLatencyMs < 10); 
+
+        Assert.True(averageLatencyMs < 10);
     }
 
     #endregion

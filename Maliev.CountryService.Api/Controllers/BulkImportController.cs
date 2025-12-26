@@ -27,12 +27,12 @@ public class BulkImportController : ControllerBase
     private readonly IBulkImportService _bulkImportService;
     private readonly ILogger<BulkImportController> _logger;
     private readonly BusinessMetrics _businessMetrics;
-    
+
     /// <summary>
     /// Initializes a new instance of the <see cref="BulkImportController"/> class.
     /// </summary>
     public BulkImportController(
-        IBulkImportService bulkImportService, 
+        IBulkImportService bulkImportService,
         ILogger<BulkImportController> logger,
         BusinessMetrics businessMetrics)
     {

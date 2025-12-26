@@ -18,10 +18,10 @@ public class PermissionDenialLoggingMiddleware(RequestDelegate next)
 
         if (context.Response.StatusCode == StatusCodes.Status403Forbidden)
         {
-            var userId = context.User.FindFirst(ClaimTypes.NameIdentifier)?.Value 
-                         ?? context.User.FindFirst("sub")?.Value 
+            var userId = context.User.FindFirst(ClaimTypes.NameIdentifier)?.Value
+                         ?? context.User.FindFirst("sub")?.Value
                          ?? "anonymous";
-            
+
             var path = context.Request.Path;
             var method = context.Request.Method;
 

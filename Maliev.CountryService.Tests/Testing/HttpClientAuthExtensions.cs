@@ -19,10 +19,10 @@ public static class HttpClientAuthExtensions
     public static HttpClient WithTestAuth(this HttpClient client, TestWebApplicationFactory factory, params string[] permissions)
     {
         var token = factory.CreateTestJwtToken(
-            userId: "test-admin", 
-            roles: null, 
+            userId: "test-admin",
+            roles: null,
             permissions: permissions);
-        
+
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
         return client;
     }

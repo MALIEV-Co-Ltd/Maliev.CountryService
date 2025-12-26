@@ -118,7 +118,7 @@ public class BaseIntegrationTestFactory<TProgram, TDbContext> : WebApplicationFa
         var rsaParams = _testRsa.ExportParameters(false);
         Environment.SetEnvironmentVariable("JWT_PUBLIC_KEY_MODULUS", Convert.ToBase64String(rsaParams.Modulus!));
         Environment.SetEnvironmentVariable("JWT_PUBLIC_KEY_EXPONENT", Convert.ToBase64String(rsaParams.Exponent!));
-        
+
         // Also set the format expected by some Aspire helpers (raw base64 of public key info)
         var keyBytes = _testRsa.ExportSubjectPublicKeyInfo();
         Environment.SetEnvironmentVariable("Authentication__Jwt__PublicKey", Convert.ToBase64String(keyBytes));

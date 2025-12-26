@@ -418,7 +418,7 @@ public class AdminCountriesController : ControllerBase
     /// Extracts the user identifier from JWT token claims for audit logging.
     /// Tries multiple claim types in order: 'sub', 'email', Identity.Name, or returns 'anonymous' if none found.
     /// </summary>
-            /// <returns>The user identifier string.</returns>
+    /// <returns>The user identifier string.</returns>
     private string GetUserId()
     {
         var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
@@ -429,4 +429,5 @@ public class AdminCountriesController : ControllerBase
 
         _logger.LogDebug("Detected UserId: {UserId}", userId);
         return userId;
-    }}
+    }
+}

@@ -236,7 +236,7 @@ public class ResilienceTests : IntegrationTestBase
         // Arrange - Make initial request
         var countryId = 187; // US from seed data (United States is at ID 187)
         var client = _client.WithTestAuth(_factory, CountryPermissions.CountriesRead);
-        
+
         var initialResponse = await client.GetAsync($"/country/v1/countries/{countryId}");
         Assert.Equal(HttpStatusCode.OK, initialResponse.StatusCode);
 
@@ -253,7 +253,7 @@ public class ResilienceTests : IntegrationTestBase
 
             // Verify degraded mode (serving from cache or failing)
             var degradedResponse = await client.GetAsync($"/country/v1/countries/{countryId}");
-            
+
             // Act - Restart DB
             if (dbFixture?.PostgresContainer != null)
             {
