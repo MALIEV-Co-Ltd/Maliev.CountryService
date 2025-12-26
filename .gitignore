@@ -67,3 +67,11 @@ docker-compose.dev.yml
 *test-output.txt
 *_error.txt
 
+
+# Build results
+[Bb]in/
+[Oo]bj/
+# Test Outputs
+*test-output.txt
+*_error.txt
+
