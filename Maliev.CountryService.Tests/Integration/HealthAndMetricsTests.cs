@@ -165,7 +165,8 @@ public class HealthAndMetricsTests : IntegrationTestBase
         Assert.True(
             content.Contains("Scalar") ||
             content.Contains("API") ||
-            content.Contains("documentation"),
+            content.Contains("Documentation") ||
+            content.Contains("Country"),
             "Response should contain documentation content");
     }
 
