@@ -1,83 +1,45 @@
-using System.Net.Http.Json;
+using Maliev.Aspire.ServiceDefaults.IAM;
 using Maliev.CountryService.Api.Authorization;
 
 namespace Maliev.CountryService.Api.Services;
 
 /// <summary>
 /// Background service to register permissions and roles with the IAM service on startup.
+/// Uses the standard IAMRegistrationService base class.
 /// </summary>
-public class CountryIAMRegistrationService(
-    IHttpClientFactory httpClientFactory,
-    ILogger<CountryIAMRegistrationService> logger,
-    IConfiguration configuration) : IHostedService
+public class CountryIAMRegistrationService : IAMRegistrationService
 {
-    /// <inheritdoc />
-    public async Task StartAsync(CancellationToken cancellationToken)
+    /// <summary>
+    /// Initializes a new instance of the <see cref="CountryIAMRegistrationService"/> class.
+    /// </summary>
+    /// <param name="httpClientFactory">The HTTP client factory.</param>
+    /// <param name="logger">The logger.</param>
+    public CountryIAMRegistrationService(
+        IHttpClientFactory httpClientFactory,
+        ILogger<CountryIAMRegistrationService> logger)
+        : base(httpClientFactory, logger, "country")
     {
-        var iamEnabled = configuration.GetValue<bool>("Features:PermissionBasedAuthEnabled");
-        if (!iamEnabled)
-        {
-            logger.LogInformation("IAM registration skipped (PermissionBasedAuthEnabled=false)");
-            return;
-        }
-
-        try
-        {
-            var client = httpClientFactory.CreateClient("IAMService");
-
-            // Register permissions using idempotent merge strategy
-            var permissionResponse = await client.PostAsJsonAsync("/api/v1/permissions/register", new
-            {
-                ServiceName = "CountryService",
-                Permissions = CountryPermissions.All.Select(p => new
-                {
-                    PermissionId = p,
-                    Description = $"Permission for {p}",
-                    IsCritical = p == CountryPermissions.CountriesHardDelete
-                })
-            }, cancellationToken);
-
-            if (!permissionResponse.IsSuccessStatusCode)
-            {
-                var error = await permissionResponse.Content.ReadAsStringAsync(cancellationToken);
-                logger.LogError("Failed to register permissions with IAM. Status: {Status}, Error: {Error}", 
-                    permissionResponse.StatusCode, error);
-                // We continue to try roles even if permissions failed, or handle as degraded mode
-            }
-
-            // Register roles using idempotent merge strategy
-            var roleResponse = await client.PostAsJsonAsync("/api/v1/roles/register", new
-            {
-                ServiceName = "CountryService",
-                Roles = CountryPredefinedRoles.All.Select(r => new
-                {
-                    r.RoleId,
-                    r.RoleName,
-                    r.Description,
-                    r.Permissions
-                })
-            }, cancellationToken);
-
-            if (!roleResponse.IsSuccessStatusCode)
-            {
-                var error = await roleResponse.Content.ReadAsStringAsync(cancellationToken);
-                logger.LogError("Failed to register roles with IAM. Status: {Status}, Error: {Error}", 
-                    roleResponse.StatusCode, error);
-            }
-
-            if (permissionResponse.IsSuccessStatusCode && roleResponse.IsSuccessStatusCode)
-            {
-                logger.LogInformation("Successfully registered {Count} permissions and {RoleCount} roles with IAM",
-                    CountryPermissions.All.Length, CountryPredefinedRoles.All.Length);
-            }
-        }
-        catch (Exception ex)
-        {
-            // Degraded mode: Log the error and continue startup
-            logger.LogCritical(ex, "IAM registration failed. Service will start in DEGRADED mode.");
-        }
     }
 
-    /// <inheritdoc />
-    public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+    /// <inheritdoc/>
+    protected override IEnumerable<PermissionRegistration> GetPermissions()
+    {
+        return CountryPermissions.All.Select(p => new PermissionRegistration
+        {
+            PermissionId = p,
+            Description = $"Permission for {p}"
+        });
+    }
+
+    /// <inheritdoc/>
+    protected override IEnumerable<Maliev.Aspire.ServiceDefaults.IAM.RoleRegistration> GetPredefinedRoles()
+    {
+        return CountryPredefinedRoles.All.Select(r => new Maliev.Aspire.ServiceDefaults.IAM.RoleRegistration
+        {
+            RoleId = r.RoleId,
+            Description = r.Description,
+            PermissionIds = r.Permissions.ToList(),
+            IsCustom = false
+        });
+    }
 }

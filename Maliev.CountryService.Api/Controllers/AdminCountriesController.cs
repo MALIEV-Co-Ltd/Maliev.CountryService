@@ -16,7 +16,7 @@ namespace Maliev.CountryService.Api.Controllers;
 /// All modifications are logged with full audit trail including user context and ETag-based optimistic concurrency control.
 /// </summary>
 [ApiController]
-[ApiVersion("1.0")]
+[ApiVersion(1.0)]
 [Route("country/v{version:apiVersion}/admin/countries")]
 [EnableRateLimiting("admin-endpoints")]
 public class AdminCountriesController : ControllerBase
@@ -419,20 +419,14 @@ public class AdminCountriesController : ControllerBase
     /// Tries multiple claim types in order: 'sub', 'email', Identity.Name, or returns 'anonymous' if none found.
     /// </summary>
             /// <returns>The user identifier string.</returns>
-        private string GetUserId()
-        {
-            var userId = User.FindFirst("sub")?.Value
-                ?? User.FindFirst("email")?.Value
-                ?? User.Identity?.Name
-                ?? "anonymous";
-    
-            _logger.LogDebug("Detected UserId: {UserId}", userId);
-            foreach (var claim in User.Claims)
-            {
-                _logger.LogDebug("Claim: {Type} = {Value}", claim.Type, claim.Value);
-            }
-            _logger.LogDebug("User IsAuthenticated: {IsAuthenticated}", User.Identity?.IsAuthenticated);
-            _logger.LogDebug("User IsInRole('country_admin'): {IsInRole}", User.IsInRole("country_admin"));
-            
-            return userId;
-        }}
+    private string GetUserId()
+    {
+        var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
+            ?? User.FindFirst("sub")?.Value
+            ?? User.FindFirst("email")?.Value
+            ?? User.Identity?.Name
+            ?? "anonymous";
+
+        _logger.LogDebug("Detected UserId: {UserId}", userId);
+        return userId;
+    }}

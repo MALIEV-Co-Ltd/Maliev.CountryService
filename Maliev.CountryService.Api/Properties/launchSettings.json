@@ -9,7 +9,7 @@
       "dotnetRunMessages": true,
       "launchBrowser": true,
       "launchUrl": "country/scalar",
-      "applicationUrl": "http://localhost:62759"
+      "applicationUrl": "http://localhost:5400"
     },
     "https": {
       "commandName": "Project",
@@ -19,7 +19,7 @@
       "dotnetRunMessages": true,
       "launchBrowser": true,
       "launchUrl": "country/scalar",
-      "applicationUrl": "https://localhost:62758;http://localhost:62759"
+      "applicationUrl": "https://localhost:7400;http://localhost:5400"
     }
   }
 }
