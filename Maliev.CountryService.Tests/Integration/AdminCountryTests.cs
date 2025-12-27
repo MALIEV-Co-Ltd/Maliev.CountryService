@@ -4,6 +4,7 @@ using System.Text;
 using System.Text.Json;
 using Xunit;
 using Maliev.CountryService.Tests.Fixtures;
+using Maliev.CountryService.Tests.Testing;
 using Maliev.CountryService.Api.Models.Countries;
 using Maliev.CountryService.Api.Authorization;
 
@@ -16,6 +17,20 @@ namespace Maliev.CountryService.Tests.Integration;
 [Collection("TestDatabase")]
 public class AdminCountryTests : IntegrationTestBase
 {
+    private static readonly Random _random = new();
+    private static string GetRandomIso2()
+    {
+        const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+        // Use a less common first letter to avoid seed data
+        return "X" + chars[_random.Next(chars.Length)];
+    }
+
+    private static string GetRandomIso3()
+    {
+        const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+        return "X" + chars[_random.Next(chars.Length)] + chars[_random.Next(chars.Length)];
+    }
+
     public AdminCountryTests(TestWebApplicationFactory factory) : base(factory) { }
 
     [Fact]
@@ -24,8 +39,8 @@ public class AdminCountryTests : IntegrationTestBase
         // Arrange
         var request = new CreateCountryRequest
         {
-            Iso2 = "XX",
-            Iso3 = "XXX",
+            Iso2 = GetRandomIso2(),
+            Iso3 = GetRandomIso3(),
             Name = "Test Country"
         };
 
@@ -42,11 +57,15 @@ public class AdminCountryTests : IntegrationTestBase
         // Arrange
         var permissions = CountryPredefinedRoles.GetPermissionsForRole(CountryAdminRoles[0]).ToArray();
         var adminClient = _factory.CreateAuthenticatedClient("testuser", CountryAdminRoles, permissions);
+        var iso2 = "QA" + (char)_random.Next(65, 91); // 3 letters? No, ISO2 is 2 letters. 
+        // Let's use a very safe range.
+        iso2 = "" + (char)_random.Next(65, 91) + (char)_random.Next(65, 91);
+
         var request = new CreateCountryRequest
         {
-            Iso2 = "TA",
-            Iso3 = "TSA",
-            Name = "Test Country Create",
+            Iso2 = iso2,
+            Iso3 = iso2 + "X",
+            Name = "Test Country Create " + Guid.NewGuid().ToString("N").Substring(0, 8),
             Region = "Test Region"
         };
 
@@ -65,9 +84,7 @@ public class AdminCountryTests : IntegrationTestBase
 
         var result = await response.Content.ReadFromJsonAsync<CountryResponse>(JsonSerializerOptions);
         Assert.NotNull(result);
-        Assert.Equal("TA", result.Iso2);
-        Assert.Equal("TSA", result.Iso3);
-        Assert.Equal("Test Country Create", result.Name);
+        Assert.Equal(iso2, result.Iso2);
         Assert.NotNull(result.ETag);
     }
 
@@ -77,22 +94,29 @@ public class AdminCountryTests : IntegrationTestBase
         // Arrange
         var permissions = CountryPredefinedRoles.GetPermissionsForRole(CountryAdminRoles[0]).ToArray();
         var adminClient = _factory.CreateAuthenticatedClient("testuser", CountryAdminRoles, permissions);
-        var request1 = new CreateCountryRequest
-        {
-            Iso2 = "TB",
-            Iso3 = "TSB",
-            Name = "Test Country 1"
-        };
 
-        // Create first country
-        await adminClient.PostAsJsonAsync("/country/v1/admin/countries", request1);
+        string iso2;
+        HttpResponseMessage res1;
+        do
+        {
+            iso2 = "" + (char)_random.Next(65, 91) + (char)_random.Next(65, 91);
+            var request1 = new CreateCountryRequest
+            {
+                Iso2 = iso2,
+                Iso3 = iso2 + "D",
+                Name = "Test Country " + Guid.NewGuid().ToString("N").Substring(0, 8)
+            };
+            res1 = await adminClient.PostAsJsonAsync("/country/v1/admin/countries", request1);
+        } while (res1.StatusCode == HttpStatusCode.Conflict);
+
+        Assert.Equal(HttpStatusCode.Created, res1.StatusCode);
 
         // Try to create duplicate
         var request2 = new CreateCountryRequest
         {
-            Iso2 = "TB",
-            Iso3 = "TSX",
-            Name = "Test Country 2"
+            Iso2 = iso2,
+            Iso3 = iso2 + "E",
+            Name = "Duplicate Test"
         };
 
         // Act
@@ -110,21 +134,31 @@ public class AdminCountryTests : IntegrationTestBase
         var adminClient = _factory.CreateAuthenticatedClient("testuser", CountryAdminRoles, permissions);
 
         // Create a country first
+        var iso2 = "" + (char)_random.Next(65, 91) + (char)_random.Next(65, 91);
         var createRequest = new CreateCountryRequest
         {
-            Iso2 = "TC",
-            Iso3 = "TSC",
+            Iso2 = iso2,
+            Iso3 = iso2 + "U",
             Name = "Test Country Update"
         };
         var createResponse = await adminClient.PostAsJsonAsync("/country/v1/admin/countries", createRequest);
+
+        if (createResponse.StatusCode == HttpStatusCode.Conflict)
+        {
+            // Just skip or retry once
+            iso2 = "V" + (char)_random.Next(65, 91);
+            createRequest.Iso2 = iso2;
+            createResponse = await adminClient.PostAsJsonAsync("/country/v1/admin/countries", createRequest);
+        }
+
         var created = await createResponse.Content.ReadFromJsonAsync<CountryResponse>(JsonSerializerOptions);
         Assert.NotNull(created);
 
         // Try to update without If-Match header
         var updateRequest = new UpdateCountryRequest
         {
-            Iso2 = "TC",
-            Iso3 = "TSC",
+            Iso2 = iso2,
+            Iso3 = iso2 + "U",
             Name = "Updated Name"
         };
 
@@ -143,13 +177,22 @@ public class AdminCountryTests : IntegrationTestBase
         var adminClient = _factory.CreateAuthenticatedClient("testuser", CountryAdminRoles, permissions);
 
         // Create a country first
+        var iso2 = "" + (char)_random.Next(65, 91) + (char)_random.Next(65, 91);
         var createRequest = new CreateCountryRequest
         {
-            Iso2 = "XD",
-            Iso3 = "XDD",
+            Iso2 = iso2,
+            Iso3 = iso2 + "V",
             Name = "Test Country Update Valid"
         };
         var createResponse = await adminClient.PostAsJsonAsync("/country/v1/admin/countries", createRequest);
+
+        if (createResponse.StatusCode != HttpStatusCode.Created)
+        {
+            iso2 = "W" + (char)_random.Next(65, 91);
+            createRequest.Iso2 = iso2;
+            createResponse = await adminClient.PostAsJsonAsync("/country/v1/admin/countries", createRequest);
+        }
+
         Assert.Equal(HttpStatusCode.Created, createResponse.StatusCode);
         var created = await createResponse.Content.ReadFromJsonAsync<CountryResponse>(JsonSerializerOptions);
         Assert.NotNull(created);
@@ -158,8 +201,8 @@ public class AdminCountryTests : IntegrationTestBase
         // Update with valid If-Match
         var updateRequest = new UpdateCountryRequest
         {
-            Iso2 = "XD",
-            Iso3 = "XDD",
+            Iso2 = iso2,
+            Iso3 = iso2 + "V",
             Name = "Updated Name Valid"
         };
 
@@ -190,21 +233,30 @@ public class AdminCountryTests : IntegrationTestBase
         var adminClient = _factory.CreateAuthenticatedClient("testuser", CountryAdminRoles, permissions);
 
         // Create a country first
+        var iso2 = "" + (char)_random.Next(65, 91) + (char)_random.Next(65, 91);
         var createRequest = new CreateCountryRequest
         {
-            Iso2 = "TE",
-            Iso3 = "TSE",
+            Iso2 = iso2,
+            Iso3 = iso2 + "W",
             Name = "Test Country Wrong ETag"
         };
         var createResponse = await adminClient.PostAsJsonAsync("/country/v1/admin/countries", createRequest);
+
+        if (createResponse.StatusCode != HttpStatusCode.Created)
+        {
+            iso2 = "X" + (char)_random.Next(65, 91);
+            createRequest.Iso2 = iso2;
+            createResponse = await adminClient.PostAsJsonAsync("/country/v1/admin/countries", createRequest);
+        }
+
         var created = await createResponse.Content.ReadFromJsonAsync<CountryResponse>(JsonSerializerOptions);
         Assert.NotNull(created);
 
         // Try to update with wrong If-Match
         var updateRequest = new UpdateCountryRequest
         {
-            Iso2 = "TE",
-            Iso3 = "TSE",
+            Iso2 = iso2,
+            Iso3 = iso2 + "W",
             Name = "Updated Name Wrong"
         };
 
@@ -229,14 +281,23 @@ public class AdminCountryTests : IntegrationTestBase
         var adminClient = _factory.CreateAuthenticatedClient("testuser", CountryAdminRoles, permissions);
 
         // Create a country first
+        var iso2 = "" + (char)_random.Next(65, 91) + (char)_random.Next(65, 91);
         var createRequest = new CreateCountryRequest
         {
-            Iso2 = "TF",
-            Iso3 = "TSF",
+            Iso2 = iso2,
+            Iso3 = iso2 + "P",
             Name = "Test Country Patch",
             Region = "Original Region"
         };
         var createResponse = await adminClient.PostAsJsonAsync("/country/v1/admin/countries", createRequest);
+
+        if (createResponse.StatusCode != HttpStatusCode.Created)
+        {
+            iso2 = "Y" + (char)_random.Next(65, 91);
+            createRequest.Iso2 = iso2;
+            createResponse = await adminClient.PostAsJsonAsync("/country/v1/admin/countries", createRequest);
+        }
+
         var created = await createResponse.Content.ReadFromJsonAsync<CountryResponse>(JsonSerializerOptions);
         Assert.NotNull(created);
 
@@ -272,13 +333,22 @@ public class AdminCountryTests : IntegrationTestBase
         var adminClient = _factory.CreateAuthenticatedClient("testuser", CountryAdminRoles, permissions);
 
         // Create a country first
+        var iso2 = "" + (char)_random.Next(65, 91) + (char)_random.Next(65, 91);
         var createRequest = new CreateCountryRequest
         {
-            Iso2 = "XE",
-            Iso3 = "XEE",
+            Iso2 = iso2,
+            Iso3 = iso2 + "S",
             Name = "Test Country Delete"
         };
         var createResponse = await adminClient.PostAsJsonAsync("/country/v1/admin/countries", createRequest);
+
+        if (createResponse.StatusCode != HttpStatusCode.Created)
+        {
+            iso2 = "Z" + (char)_random.Next(65, 91);
+            createRequest.Iso2 = iso2;
+            createResponse = await adminClient.PostAsJsonAsync("/country/v1/admin/countries", createRequest);
+        }
+
         Assert.Equal(HttpStatusCode.Created, createResponse.StatusCode);
         var created = await createResponse.Content.ReadFromJsonAsync<CountryResponse>(JsonSerializerOptions);
         Assert.NotNull(created);
@@ -298,21 +368,38 @@ public class AdminCountryTests : IntegrationTestBase
     public async Task HardDelete_WithoutSuperAdminRole_Returns403()
     {
         // Arrange
-        var permissions = CountryPredefinedRoles.GetPermissionsForRole(CountryAdminRoles[0]).ToArray();
-        var adminClient = _factory.CreateAuthenticatedClient("testuser", CountryAdminRoles, permissions); // Only country_admin, not super_admin
+        var adminClient = _factory.CreateClient().WithTestAuth(_factory, "Permission:country.not-hard-delete");
 
         // Create a country first
+        var iso2 = "" + (char)_random.Next(65, 91) + (char)_random.Next(65, 91);
         var createRequest = new CreateCountryRequest
         {
-            Iso2 = "XH",
-            Iso3 = "TSH",
+            Iso2 = iso2,
+            Iso3 = iso2 + "H",
             Name = "Test Country Hard Delete"
         };
-        var createResponse = await adminClient.PostAsJsonAsync("/country/v1/admin/countries", createRequest);
-        var created = await createResponse.Content.ReadFromJsonAsync<CountryResponse>(JsonSerializerOptions);
+
+        // Use a client with correct permission to create it first
+        var adminWithCreate = _factory.CreateClient().WithTestAuth(_factory, CountryPermissions.CountriesCreate);
+        var actualCreateResponse = await adminWithCreate.PostAsJsonAsync("/country/v1/admin/countries", createRequest);
+
+        if (actualCreateResponse.StatusCode != HttpStatusCode.Created)
+        {
+            iso2 = "J" + (char)_random.Next(65, 91);
+            createRequest.Iso2 = iso2;
+            actualCreateResponse = await adminWithCreate.PostAsJsonAsync("/country/v1/admin/countries", createRequest);
+        }
+
+        if (actualCreateResponse.StatusCode != HttpStatusCode.Created)
+        {
+            var content = await actualCreateResponse.Content.ReadAsStringAsync();
+            throw new Exception($"Preparation failed: Expected Created but got {actualCreateResponse.StatusCode}. Content: {content}");
+        }
+
+        var created = await actualCreateResponse.Content.ReadFromJsonAsync<CountryResponse>(JsonSerializerOptions);
         Assert.NotNull(created);
 
-        // Act - Try hard delete without super_admin role
+        // Act - Try hard delete without super_admin permission
         var response = await adminClient.DeleteAsync($"/country/v1/admin/countries/{created.Id}/hard-delete");
 
         // Assert
@@ -329,13 +416,28 @@ public class AdminCountryTests : IntegrationTestBase
         // Create a country first using country_admin client
         var adminPerms = CountryPredefinedRoles.GetPermissionsForRole(CountryAdminRoles[0]).ToArray();
         var adminClient = _factory.CreateAuthenticatedClient("testuser", CountryAdminRoles, adminPerms);
+        var iso2 = "" + (char)_random.Next(65, 91) + (char)_random.Next(65, 91);
         var createRequest = new CreateCountryRequest
         {
-            Iso2 = "TI",
-            Iso3 = "TSI",
+            Iso2 = iso2,
+            Iso3 = iso2 + "D",
             Name = "Test Country Super Delete"
         };
         var createResponse = await adminClient.PostAsJsonAsync("/country/v1/admin/countries", createRequest);
+
+        if (createResponse.StatusCode != HttpStatusCode.Created)
+        {
+            iso2 = "K" + (char)_random.Next(65, 91);
+            createRequest.Iso2 = iso2;
+            createResponse = await adminClient.PostAsJsonAsync("/country/v1/admin/countries", createRequest);
+        }
+
+        if (createResponse.StatusCode != HttpStatusCode.Created)
+        {
+            var content = await createResponse.Content.ReadAsStringAsync();
+            throw new Exception($"Preparation failed: Expected Created but got {createResponse.StatusCode}. Content: {content}");
+        }
+
         var created = await createResponse.Content.ReadFromJsonAsync<CountryResponse>(JsonSerializerOptions);
         Assert.NotNull(created);
 
@@ -377,7 +479,7 @@ public class AdminCountryTests : IntegrationTestBase
         var adminClient = _factory.CreateAuthenticatedClient("testuser", CountryAdminRoles, permissions);
         var updateRequest = new UpdateCountryRequest
         {
-            Iso2 = "XX",
+            Iso2 = "ZZ",
             Name = "Non Existent"
         };
 

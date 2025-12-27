@@ -26,8 +26,8 @@ public class CountryIAMRegistrationService : IAMRegistrationService
     {
         return CountryPermissions.All.Select(p => new PermissionRegistration
         {
-            PermissionId = p,
-            Description = $"Permission for {p}"
+            PermissionId = p.Replace("Permission:", ""),
+            Description = $"Permission for {p.Replace("Permission:", "")}"
         });
     }
 
@@ -38,7 +38,7 @@ public class CountryIAMRegistrationService : IAMRegistrationService
         {
             RoleId = r.RoleId,
             Description = r.Description,
-            PermissionIds = r.Permissions.ToList(),
+            PermissionIds = r.Permissions.Select(p => p.Replace("Permission:", "")).ToList(),
             IsCustom = false
         });
     }

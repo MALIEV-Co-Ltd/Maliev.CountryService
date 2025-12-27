@@ -12,6 +12,9 @@ namespace Maliev.CountryService.Tests.Integration;
 [Collection("TestDatabase")]
 public class AuthorizationTests : IntegrationTestBase
 {
+    private static readonly Random _random = new();
+    private static string GetRandomIso2(char prefix) => $"{prefix}{(char)_random.Next(65, 91)}";
+
     public AuthorizationTests(TestWebApplicationFactory factory) : base(factory)
     {
     }
@@ -21,25 +24,18 @@ public class AuthorizationTests : IntegrationTestBase
     [Fact]
     public async Task CreateCountry_WithPermission_ShouldSucceed()
     {
-        // Use a fixed valid ISO code or a deterministic generator that ensures [A-Z]
-        var iso2 = "ZZ"; // User-assigned code element
+        var iso2 = GetRandomIso2('C');
         var iso3 = "ZZZ";
         var request = new CreateCountryRequest { Name = $"AuthTest-{Guid.NewGuid()}", Iso2 = iso2, Iso3 = iso3 };
-
-        // Ensure we don't conflict with existing data if possible, or handle conflict
-        // Ideally we should use a random string of LETTERS
 
         var client = _factory.CreateClient().WithTestAuth(_factory, CountryPermissions.CountriesCreate);
 
         var response = await client.PostAsJsonAsync("/country/v1/admin/countries", request);
 
-        // If it already exists, we might get Conflict (409), which is technically a success for Authorization (not Forbidden)
-        // But for this test we want 201.
         if (response.StatusCode == HttpStatusCode.Conflict)
         {
-            // Try one more time with different code
-            request.Iso2 = "YY";
-            request.Iso3 = "YYY";
+            iso2 = GetRandomIso2('D');
+            request.Iso2 = iso2;
             response = await client.PostAsJsonAsync("/country/v1/admin/countries", request);
         }
 
@@ -49,8 +45,9 @@ public class AuthorizationTests : IntegrationTestBase
     [Fact]
     public async Task CreateCountry_WithoutPermission_ShouldFail()
     {
-        var request = new CreateCountryRequest { Name = "AuthTest2", Iso2 = "AU", Iso3 = "AUS" };
-        var client = _factory.CreateClient().WithTestAuth(_factory, "invalid.permission");
+        var iso2 = GetRandomIso2('E');
+        var request = new CreateCountryRequest { Name = "AuthTest2", Iso2 = iso2, Iso3 = "AUS" };
+        var client = _factory.CreateClient().WithTestAuth(_factory, "Permission:invalid.permission");
 
         var response = await client.PostAsJsonAsync("/country/v1/admin/countries", request);
 
@@ -74,7 +71,7 @@ public class AuthorizationTests : IntegrationTestBase
     [Fact]
     public async Task BulkImport_WithoutPermission_ShouldBeForbidden()
     {
-        var client = _factory.CreateClient().WithTestAuth(_factory, "wrong.permission");
+        var client = _factory.CreateClient().WithTestAuth(_factory, "Permission:wrong.permission");
         var response = await client.PostAsJsonAsync("/country/v1/admin/bulk-import/00000000-0000-0000-0000-000000000000/process", new { });
 
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
