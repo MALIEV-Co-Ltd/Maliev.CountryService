@@ -16,6 +16,30 @@ public class CountryListTests : IntegrationTestBase
 {
     public CountryListTests(TestWebApplicationFactory factory) : base(factory) { }
 
+    private async Task<HttpClient> CreateAdminClient()
+    {
+        return _factory.CreateAuthenticatedClient(
+            "test-admin",
+            CountryAdminRoles,
+            CountryPredefinedRoles.GetPermissionsForRole(CountryAdminRoles[0]).ToArray());
+    }
+
+    private async Task<CountryResponse> CreateTestCountry(HttpClient client, string iso2, string iso3, string name, string? region = null, string? subregion = null, long? population = null)
+    {
+        var request = new CreateCountryRequest
+        {
+            Iso2 = iso2,
+            Iso3 = iso3,
+            Name = name,
+            Region = region,
+            Subregion = subregion,
+            Population = population
+        };
+        var response = await client.PostAsJsonAsync("/country/v1/admin/countries", request);
+        response.EnsureSuccessStatusCode();
+        return (await response.Content.ReadFromJsonAsync<CountryResponse>(JsonSerializerOptions))!;
+    }
+
     [Fact]
     public async Task ListCountries_ReturnsPaginatedResults_SortedByNameAscendingByDefault()
     {
@@ -44,7 +68,15 @@ public class CountryListTests : IntegrationTestBase
     [Fact]
     public async Task ListCountries_WithPageAndPageSize_ReturnsCorrectPagination()
     {
-        // Arrange
+        await _factory.CleanDatabaseAsync();
+
+        // Arrange - Create 12 test countries so we can test pagination
+        var adminClient = await CreateAdminClient();
+        for (int i = 1; i <= 12; i++)
+        {
+            await CreateTestCountry(adminClient, $"C{i:D2}", $"CT{i}", $"Country {i:D2}");
+        }
+
         var client = _client.WithTestAuth(_factory, CountryPermissions.CountriesList);
         var pageSize = 5;
         var page = 2;
@@ -60,13 +92,22 @@ public class CountryListTests : IntegrationTestBase
         Assert.Equal(pageSize, paginatedResponse.Data.Count());
         Assert.Equal(page, paginatedResponse.Page);
         Assert.Equal(pageSize, paginatedResponse.PageSize);
-        Assert.True(paginatedResponse.TotalCount > 0);
+        Assert.Equal(12, paginatedResponse.TotalCount);
     }
 
     [Fact]
     public async Task ListCountries_SortedByPopulationDescending_ReturnsCorrectOrder()
     {
-        // Arrange
+        await _factory.CleanDatabaseAsync();
+
+        // Arrange - Create test countries with different populations
+        var adminClient = await CreateAdminClient();
+        await CreateTestCountry(adminClient, "IN", "IND", "India", population: 1393409038);
+        await CreateTestCountry(adminClient, "US", "USA", "United States", population: 331002651);
+        await CreateTestCountry(adminClient, "ID", "IDN", "Indonesia", population: 273523615);
+        await CreateTestCountry(adminClient, "BR", "BRA", "Brazil", population: 212559417);
+        await CreateTestCountry(adminClient, "PK", "PAK", "Pakistan", population: 220892340);
+
         var client = _client.WithTestAuth(_factory, CountryPermissions.CountriesList);
 
         // Act
@@ -78,27 +119,31 @@ public class CountryListTests : IntegrationTestBase
         // Assert
         Assert.NotNull(paginatedResponse);
         Assert.NotEmpty(paginatedResponse.Data);
+        Assert.Equal(5, paginatedResponse.TotalCount);
 
         // Verify descending order by population
-        var populations = paginatedResponse.Data.Select(c => c.Population).ToList();
+        var populations = paginatedResponse.Data.Select(c => c.Population!.Value).ToList();
+        var sortedPopulations = populations.OrderByDescending(p => p).ToList();
+        Assert.Equal(sortedPopulations, populations);
 
-        // Filter out nulls for sorting comparison (nullable populations are valid)
-        var nonNullPopulations = populations.Where(p => p.HasValue).Select(p => p!.Value).ToList();
-
-        // Should have at least some countries with population data
-        Assert.True(nonNullPopulations.Count > 0, "Expected at least some countries to have population data");
-
-        // Verify the non-null populations are in descending order
-        var sortedNonNullPopulations = nonNullPopulations.OrderByDescending(p => p).ToList();
-        Assert.Equal(sortedNonNullPopulations, nonNullPopulations);
+        // Verify first country is India (highest population)
+        Assert.Equal("India", paginatedResponse.Data.First().Name);
     }
 
     [Fact]
     public async Task ListCountries_FilteredByRegion_ReturnsCorrectCountries()
     {
-        // Arrange
+        await _factory.CleanDatabaseAsync();
+
+        // Arrange - Create test countries in different regions
+        var adminClient = await CreateAdminClient();
+        await CreateTestCountry(adminClient, "FR", "FRA", "France", region: "Europe", subregion: "Western Europe");
+        await CreateTestCountry(adminClient, "DE", "DEU", "Germany", region: "Europe", subregion: "Western Europe");
+        await CreateTestCountry(adminClient, "US", "USA", "United States", region: "Americas", subregion: "North America");
+        await CreateTestCountry(adminClient, "CN", "CHN", "China", region: "Asia", subregion: "Eastern Asia");
+
         var client = _client.WithTestAuth(_factory, CountryPermissions.CountriesList);
-        var region = "Europe"; // Assuming some countries in Europe exist
+        var region = "Europe";
 
         // Act
         var response = await client.GetAsync($"/country/v1/countries?region={region}");
@@ -108,16 +153,24 @@ public class CountryListTests : IntegrationTestBase
 
         // Assert
         Assert.NotNull(paginatedResponse);
-        Assert.NotEmpty(paginatedResponse.Data);
+        Assert.Equal(2, paginatedResponse.TotalCount);
         Assert.All(paginatedResponse.Data, c => Assert.Equal(region, c.Region));
     }
 
     [Fact]
     public async Task ListCountries_FilteredBySubregion_ReturnsCorrectCountries()
     {
-        // Arrange
+        await _factory.CleanDatabaseAsync();
+
+        // Arrange - Create test countries in different subregions
+        var adminClient = await CreateAdminClient();
+        await CreateTestCountry(adminClient, "FR", "FRA", "France", region: "Europe", subregion: "Western Europe");
+        await CreateTestCountry(adminClient, "DE", "DEU", "Germany", region: "Europe", subregion: "Western Europe");
+        await CreateTestCountry(adminClient, "PL", "POL", "Poland", region: "Europe", subregion: "Eastern Europe");
+        await CreateTestCountry(adminClient, "US", "USA", "United States", region: "Americas", subregion: "North America");
+
         var client = _client.WithTestAuth(_factory, CountryPermissions.CountriesList);
-        var subregion = "Western Europe"; // Assuming some countries in Western Europe exist
+        var subregion = "Western Europe";
 
         // Act
         var response = await client.GetAsync($"/country/v1/countries?subregion={subregion}");
@@ -127,16 +180,25 @@ public class CountryListTests : IntegrationTestBase
 
         // Assert
         Assert.NotNull(paginatedResponse);
-        Assert.NotEmpty(paginatedResponse.Data);
+        Assert.Equal(2, paginatedResponse.TotalCount);
         Assert.All(paginatedResponse.Data, c => Assert.Equal(subregion, c.Subregion));
     }
 
     [Fact]
     public async Task ListCountries_SearchByName_ReturnsMatchingCountries()
     {
-        // Arrange
+        await _factory.CleanDatabaseAsync();
+
+        // Arrange - Create test countries with different names
+        var adminClient = await CreateAdminClient();
+        await CreateTestCountry(adminClient, "US", "USA", "United States");
+        await CreateTestCountry(adminClient, "GB", "GBR", "United Kingdom");
+        await CreateTestCountry(adminClient, "AE", "ARE", "United Arab Emirates");
+        await CreateTestCountry(adminClient, "FR", "FRA", "France");
+        await CreateTestCountry(adminClient, "DE", "DEU", "Germany");
+
         var client = _client.WithTestAuth(_factory, CountryPermissions.CountriesSearch);
-        var searchTerm = "United"; // e.g., United States, United Kingdom
+        var searchTerm = "United";
 
         // Act
         var response = await client.GetAsync($"/country/v1/countries/search?query={searchTerm}");
@@ -146,7 +208,7 @@ public class CountryListTests : IntegrationTestBase
 
         // Assert
         Assert.NotNull(paginatedResponse);
-        Assert.NotEmpty(paginatedResponse.Data);
+        Assert.Equal(3, paginatedResponse.TotalCount);
         Assert.All(paginatedResponse.Data, c =>
             Assert.True(c.Name.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
                        (c.OfficialName ?? string.Empty).Contains(searchTerm, StringComparison.OrdinalIgnoreCase)));
