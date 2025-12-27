@@ -262,6 +262,8 @@ public class ResilienceTests : IntegrationTestBase
     [Fact]
     public async Task DatabaseRecovery_AfterRestart_NormalOperationsResume()
     {
+        await _factory.CleanDatabaseAsync();
+
         // Arrange - Create test country first
         var adminClient = _factory.CreateAuthenticatedClient(
             "test-admin",
