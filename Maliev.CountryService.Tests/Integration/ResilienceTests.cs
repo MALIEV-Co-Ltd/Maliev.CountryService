@@ -31,9 +31,9 @@ public class ResilienceTests : IntegrationTestBase
 
         var createRequest = new CreateCountryRequest
         {
-            Iso2 = "US",
-            Iso3 = "USA",
-            Name = "United States"
+            Iso2 = "T1",
+            Iso3 = "TS1",
+            Name = "Test Country Resilience 1"
         };
         var createResponse = await adminClient.PostAsJsonAsync("/country/v1/admin/countries", createRequest);
         var created = await createResponse.Content.ReadFromJsonAsync<CountryResponse>(JsonSerializerOptions);
@@ -48,7 +48,7 @@ public class ResilienceTests : IntegrationTestBase
 
         var initialCountry = await initialResponse.Content.ReadFromJsonAsync<CountryResponse>(JsonSerializerOptions);
         Assert.NotNull(initialCountry);
-        Assert.Equal("US", initialCountry.Iso2);
+        Assert.Equal("T1", initialCountry.Iso2);
 
         // Wait a moment to ensure cache is written
         await Task.Delay(500);
@@ -121,14 +121,14 @@ public class ResilienceTests : IntegrationTestBase
 
         var createRequest = new CreateCountryRequest
         {
-            Iso2 = "CA",
-            Iso3 = "CAN",
-            Name = "Canada"
+            Iso2 = "T2",
+            Iso3 = "TS2",
+            Name = "Test Country Resilience 2"
         };
         var createResponse = await adminClient.PostAsJsonAsync("/country/v1/admin/countries", createRequest);
         Assert.Equal(HttpStatusCode.Created, createResponse.StatusCode);
 
-        var iso2 = "CA";
+        var iso2 = "T2";
         var client = _client.WithTestAuth(_factory, CountryPermissions.CountriesRead);
 
         var initialResponse = await client.GetAsync($"/country/v1/countries/iso2/{iso2}");
@@ -136,7 +136,7 @@ public class ResilienceTests : IntegrationTestBase
 
         var initialCountry = await initialResponse.Content.ReadFromJsonAsync<CountryResponse>(JsonSerializerOptions);
         Assert.NotNull(initialCountry);
-        Assert.Equal("CA", initialCountry.Iso2);
+        Assert.Equal("T2", initialCountry.Iso2);
 
         await Task.Delay(500);
 
@@ -172,7 +172,7 @@ public class ResilienceTests : IntegrationTestBase
         {
             var cachedCountry = await degradedResponse.Content.ReadFromJsonAsync<CountryResponse>(JsonSerializerOptions);
             Assert.NotNull(cachedCountry);
-            Assert.Equal("CA", cachedCountry.Iso2);
+            Assert.Equal("T2", cachedCountry.Iso2);
         }
 
         // Cleanup
@@ -276,9 +276,9 @@ public class ResilienceTests : IntegrationTestBase
 
         var createRequest = new CreateCountryRequest
         {
-            Iso2 = "US",
-            Iso3 = "USA",
-            Name = "United States"
+            Iso2 = "T3",
+            Iso3 = "TS3",
+            Name = "Test Country Resilience 3"
         };
         var createResponse = await adminClient.PostAsJsonAsync("/country/v1/admin/countries", createRequest);
         var created = await createResponse.Content.ReadFromJsonAsync<CountryResponse>(JsonSerializerOptions);
@@ -319,7 +319,7 @@ public class ResilienceTests : IntegrationTestBase
 
             var country = await recoveredResponse.Content.ReadFromJsonAsync<CountryResponse>(JsonSerializerOptions);
             Assert.NotNull(country);
-            Assert.Equal("US", country.Iso2);
+            Assert.Equal("T3", country.Iso2);
         }
         finally
         {
