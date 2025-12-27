@@ -58,4 +58,5 @@ jobs:
         run: dotnet test Maliev.CountryService.sln --no-build --configuration Release --verbosity normal
         env:
           ConnectionStrings__CountryDbContext: "Server=localhost;Port=5432;Database=country_test_db;User Id=postgres;Password=postgres;"
+          Features__PermissionBasedAuthEnabled: "true"
 
