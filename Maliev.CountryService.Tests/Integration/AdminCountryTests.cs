@@ -59,7 +59,7 @@ public class AdminCountryTests : IntegrationTestBase
         var adminClient = _factory.CreateAuthenticatedClient("testuser", CountryAdminRoles, permissions);
         var iso2 = "QA" + (char)_random.Next(65, 91); // 3 letters? No, ISO2 is 2 letters. 
         // Let's use a very safe range.
-        iso2 = "" + (char)_random.Next(65, 91) + (char)_random.Next(65, 91);
+        iso2 = GetRandomIso2();
 
         var request = new CreateCountryRequest
         {
@@ -99,7 +99,7 @@ public class AdminCountryTests : IntegrationTestBase
         HttpResponseMessage res1;
         do
         {
-            iso2 = "" + (char)_random.Next(65, 91) + (char)_random.Next(65, 91);
+            iso2 = GetRandomIso2();
             var request1 = new CreateCountryRequest
             {
                 Iso2 = iso2,
@@ -134,7 +134,7 @@ public class AdminCountryTests : IntegrationTestBase
         var adminClient = _factory.CreateAuthenticatedClient("testuser", CountryAdminRoles, permissions);
 
         // Create a country first
-        var iso2 = "" + (char)_random.Next(65, 91) + (char)_random.Next(65, 91);
+        var iso2 = GetRandomIso2();
         var createRequest = new CreateCountryRequest
         {
             Iso2 = iso2,
@@ -146,7 +146,7 @@ public class AdminCountryTests : IntegrationTestBase
         if (createResponse.StatusCode == HttpStatusCode.Conflict)
         {
             // Just skip or retry once
-            iso2 = "V" + (char)_random.Next(65, 91);
+            iso2 = GetRandomIso2();
             createRequest.Iso2 = iso2;
             createResponse = await adminClient.PostAsJsonAsync("/country/v1/admin/countries", createRequest);
         }
@@ -177,7 +177,7 @@ public class AdminCountryTests : IntegrationTestBase
         var adminClient = _factory.CreateAuthenticatedClient("testuser", CountryAdminRoles, permissions);
 
         // Create a country first
-        var iso2 = "" + (char)_random.Next(65, 91) + (char)_random.Next(65, 91);
+        var iso2 = GetRandomIso2();
         var createRequest = new CreateCountryRequest
         {
             Iso2 = iso2,
@@ -188,7 +188,7 @@ public class AdminCountryTests : IntegrationTestBase
 
         if (createResponse.StatusCode != HttpStatusCode.Created)
         {
-            iso2 = "W" + (char)_random.Next(65, 91);
+            iso2 = GetRandomIso2();
             createRequest.Iso2 = iso2;
             createResponse = await adminClient.PostAsJsonAsync("/country/v1/admin/countries", createRequest);
         }
@@ -233,7 +233,7 @@ public class AdminCountryTests : IntegrationTestBase
         var adminClient = _factory.CreateAuthenticatedClient("testuser", CountryAdminRoles, permissions);
 
         // Create a country first
-        var iso2 = "" + (char)_random.Next(65, 91) + (char)_random.Next(65, 91);
+        var iso2 = GetRandomIso2();
         var createRequest = new CreateCountryRequest
         {
             Iso2 = iso2,
@@ -244,7 +244,7 @@ public class AdminCountryTests : IntegrationTestBase
 
         if (createResponse.StatusCode != HttpStatusCode.Created)
         {
-            iso2 = "X" + (char)_random.Next(65, 91);
+            iso2 = GetRandomIso2();
             createRequest.Iso2 = iso2;
             createResponse = await adminClient.PostAsJsonAsync("/country/v1/admin/countries", createRequest);
         }
@@ -281,7 +281,7 @@ public class AdminCountryTests : IntegrationTestBase
         var adminClient = _factory.CreateAuthenticatedClient("testuser", CountryAdminRoles, permissions);
 
         // Create a country first
-        var iso2 = "" + (char)_random.Next(65, 91) + (char)_random.Next(65, 91);
+        var iso2 = GetRandomIso2();
         var createRequest = new CreateCountryRequest
         {
             Iso2 = iso2,
@@ -293,7 +293,7 @@ public class AdminCountryTests : IntegrationTestBase
 
         if (createResponse.StatusCode != HttpStatusCode.Created)
         {
-            iso2 = "Y" + (char)_random.Next(65, 91);
+            iso2 = GetRandomIso2();
             createRequest.Iso2 = iso2;
             createResponse = await adminClient.PostAsJsonAsync("/country/v1/admin/countries", createRequest);
         }
@@ -333,7 +333,7 @@ public class AdminCountryTests : IntegrationTestBase
         var adminClient = _factory.CreateAuthenticatedClient("testuser", CountryAdminRoles, permissions);
 
         // Create a country first
-        var iso2 = "" + (char)_random.Next(65, 91) + (char)_random.Next(65, 91);
+        var iso2 = GetRandomIso2();
         var createRequest = new CreateCountryRequest
         {
             Iso2 = iso2,
@@ -344,7 +344,7 @@ public class AdminCountryTests : IntegrationTestBase
 
         if (createResponse.StatusCode != HttpStatusCode.Created)
         {
-            iso2 = "Z" + (char)_random.Next(65, 91);
+            iso2 = GetRandomIso2();
             createRequest.Iso2 = iso2;
             createResponse = await adminClient.PostAsJsonAsync("/country/v1/admin/countries", createRequest);
         }
@@ -371,11 +371,11 @@ public class AdminCountryTests : IntegrationTestBase
         var adminClient = _factory.CreateClient().WithTestAuth(_factory, "Permission:country.not-hard-delete");
 
         // Create a country first
-        var iso2 = "" + (char)_random.Next(65, 91) + (char)_random.Next(65, 91);
+        var iso2 = GetRandomIso2();
         var createRequest = new CreateCountryRequest
         {
             Iso2 = iso2,
-            Iso3 = iso2 + "H",
+            Iso3 = GetRandomIso3(),
             Name = "Test Country Hard Delete"
         };
 
@@ -385,8 +385,9 @@ public class AdminCountryTests : IntegrationTestBase
 
         if (actualCreateResponse.StatusCode != HttpStatusCode.Created)
         {
-            iso2 = "J" + (char)_random.Next(65, 91);
+            iso2 = GetRandomIso2();
             createRequest.Iso2 = iso2;
+            createRequest.Iso3 = GetRandomIso3();
             actualCreateResponse = await adminWithCreate.PostAsJsonAsync("/country/v1/admin/countries", createRequest);
         }
 
@@ -416,19 +417,20 @@ public class AdminCountryTests : IntegrationTestBase
         // Create a country first using country_admin client
         var adminPerms = CountryPredefinedRoles.GetPermissionsForRole(CountryAdminRoles[0]).ToArray();
         var adminClient = _factory.CreateAuthenticatedClient("testuser", CountryAdminRoles, adminPerms);
-        var iso2 = "" + (char)_random.Next(65, 91) + (char)_random.Next(65, 91);
+        var iso2 = GetRandomIso2();
         var createRequest = new CreateCountryRequest
         {
             Iso2 = iso2,
-            Iso3 = iso2 + "D",
+            Iso3 = GetRandomIso3(),
             Name = "Test Country Super Delete"
         };
         var createResponse = await adminClient.PostAsJsonAsync("/country/v1/admin/countries", createRequest);
 
         if (createResponse.StatusCode != HttpStatusCode.Created)
         {
-            iso2 = "K" + (char)_random.Next(65, 91);
+            iso2 = GetRandomIso2();
             createRequest.Iso2 = iso2;
+            createRequest.Iso3 = GetRandomIso3();
             createResponse = await adminClient.PostAsJsonAsync("/country/v1/admin/countries", createRequest);
         }
 
