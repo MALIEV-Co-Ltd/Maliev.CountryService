@@ -31,9 +31,9 @@ public class ResilienceTests : IntegrationTestBase
 
         var createRequest = new CreateCountryRequest
         {
-            Iso2 = "T1",
-            Iso3 = "TS1",
-            Name = "Test Country Resilience 1",
+            Iso2 = "TA",
+            Iso3 = "TSA",
+            Name = "Test Country Resilience A",
             Timezones = "[]",
             Borders = "[]",
             CallingCodes = "[]",
@@ -47,7 +47,7 @@ public class ResilienceTests : IntegrationTestBase
         if (createResponse.StatusCode != HttpStatusCode.Created)
         {
             var errorContent = await createResponse.Content.ReadAsStringAsync();
-            throw new Exception($"Failed to create country T1. Status: {createResponse.StatusCode}, Error: {errorContent}");
+            throw new Exception($"Failed to create country TA. Status: {createResponse.StatusCode}, Error: {errorContent}");
         }
         var created = await createResponse.Content.ReadFromJsonAsync<CountryResponse>(JsonSerializerOptions);
         Assert.NotNull(created);
@@ -61,7 +61,7 @@ public class ResilienceTests : IntegrationTestBase
 
         var initialCountry = await initialResponse.Content.ReadFromJsonAsync<CountryResponse>(JsonSerializerOptions);
         Assert.NotNull(initialCountry);
-        Assert.Equal("T1", initialCountry.Iso2);
+        Assert.Equal("TA", initialCountry.Iso2);
 
         // Wait a moment to ensure cache is written
         await Task.Delay(500);
@@ -134,9 +134,9 @@ public class ResilienceTests : IntegrationTestBase
 
         var createRequest = new CreateCountryRequest
         {
-            Iso2 = "T2",
-            Iso3 = "TS2",
-            Name = "Test Country Resilience 2",
+            Iso2 = "TB",
+            Iso3 = "TSB",
+            Name = "Test Country Resilience B",
             Timezones = "[]",
             Borders = "[]",
             CallingCodes = "[]",
@@ -150,11 +150,11 @@ public class ResilienceTests : IntegrationTestBase
         if (createResponse.StatusCode != HttpStatusCode.Created)
         {
             var errorContent = await createResponse.Content.ReadAsStringAsync();
-            throw new Exception($"Failed to create country. Status: {createResponse.StatusCode}, Error: {errorContent}");
+            throw new Exception($"Failed to create country TB. Status: {createResponse.StatusCode}, Error: {errorContent}");
         }
         Assert.Equal(HttpStatusCode.Created, createResponse.StatusCode);
 
-        var iso2 = "T2";
+        var iso2 = "TB";
         var client = _client.WithTestAuth(_factory, CountryPermissions.CountriesRead);
 
         var initialResponse = await client.GetAsync($"/country/v1/countries/iso2/{iso2}");
@@ -162,7 +162,7 @@ public class ResilienceTests : IntegrationTestBase
 
         var initialCountry = await initialResponse.Content.ReadFromJsonAsync<CountryResponse>(JsonSerializerOptions);
         Assert.NotNull(initialCountry);
-        Assert.Equal("T2", initialCountry.Iso2);
+        Assert.Equal("TB", initialCountry.Iso2);
 
         await Task.Delay(500);
 
@@ -198,7 +198,7 @@ public class ResilienceTests : IntegrationTestBase
         {
             var cachedCountry = await degradedResponse.Content.ReadFromJsonAsync<CountryResponse>(JsonSerializerOptions);
             Assert.NotNull(cachedCountry);
-            Assert.Equal("T2", cachedCountry.Iso2);
+            Assert.Equal("TB", cachedCountry.Iso2);
         }
 
         // Cleanup
@@ -302,9 +302,9 @@ public class ResilienceTests : IntegrationTestBase
 
         var createRequest = new CreateCountryRequest
         {
-            Iso2 = "T3",
-            Iso3 = "TS3",
-            Name = "Test Country Resilience 3",
+            Iso2 = "TC",
+            Iso3 = "TSC",
+            Name = "Test Country Resilience C",
             Timezones = "[]",
             Borders = "[]",
             CallingCodes = "[]",
@@ -318,7 +318,7 @@ public class ResilienceTests : IntegrationTestBase
         if (createResponse.StatusCode != HttpStatusCode.Created)
         {
             var errorContent = await createResponse.Content.ReadAsStringAsync();
-            throw new Exception($"Failed to create country T3. Status: {createResponse.StatusCode}, Error: {errorContent}");
+            throw new Exception($"Failed to create country TC. Status: {createResponse.StatusCode}, Error: {errorContent}");
         }
         var created = await createResponse.Content.ReadFromJsonAsync<CountryResponse>(JsonSerializerOptions);
         Assert.NotNull(created);
@@ -358,7 +358,7 @@ public class ResilienceTests : IntegrationTestBase
 
             var country = await recoveredResponse.Content.ReadFromJsonAsync<CountryResponse>(JsonSerializerOptions);
             Assert.NotNull(country);
-            Assert.Equal("T3", country.Iso2);
+            Assert.Equal("TC", country.Iso2);
         }
         finally
         {
