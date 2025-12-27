@@ -33,7 +33,15 @@ public class ResilienceTests : IntegrationTestBase
         {
             Iso2 = "T1",
             Iso3 = "TS1",
-            Name = "Test Country Resilience 1"
+            Name = "Test Country Resilience 1",
+            Timezones = "[]",
+            Borders = "[]",
+            CallingCodes = "[]",
+            TopLevelDomains = "[]",
+            Currencies = "{}",
+            Languages = "{}",
+            Translations = "{}",
+            Flags = "{}"
         };
         var createResponse = await adminClient.PostAsJsonAsync("/country/v1/admin/countries", createRequest);
         var created = await createResponse.Content.ReadFromJsonAsync<CountryResponse>(JsonSerializerOptions);
@@ -123,7 +131,15 @@ public class ResilienceTests : IntegrationTestBase
         {
             Iso2 = "T2",
             Iso3 = "TS2",
-            Name = "Test Country Resilience 2"
+            Name = "Test Country Resilience 2",
+            Timezones = "[]",
+            Borders = "[]",
+            CallingCodes = "[]",
+            TopLevelDomains = "[]",
+            Currencies = "{}",
+            Languages = "{}",
+            Translations = "{}",
+            Flags = "{}"
         };
         var createResponse = await adminClient.PostAsJsonAsync("/country/v1/admin/countries", createRequest);
         Assert.Equal(HttpStatusCode.Created, createResponse.StatusCode);
@@ -278,7 +294,15 @@ public class ResilienceTests : IntegrationTestBase
         {
             Iso2 = "T3",
             Iso3 = "TS3",
-            Name = "Test Country Resilience 3"
+            Name = "Test Country Resilience 3",
+            Timezones = "[]",
+            Borders = "[]",
+            CallingCodes = "[]",
+            TopLevelDomains = "[]",
+            Currencies = "{}",
+            Languages = "{}",
+            Translations = "{}",
+            Flags = "{}"
         };
         var createResponse = await adminClient.PostAsJsonAsync("/country/v1/admin/countries", createRequest);
         var created = await createResponse.Content.ReadFromJsonAsync<CountryResponse>(JsonSerializerOptions);
