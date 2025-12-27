@@ -44,6 +44,11 @@ public class ResilienceTests : IntegrationTestBase
             Flags = "{}"
         };
         var createResponse = await adminClient.PostAsJsonAsync("/country/v1/admin/countries", createRequest);
+        if (createResponse.StatusCode != HttpStatusCode.Created)
+        {
+            var errorContent = await createResponse.Content.ReadAsStringAsync();
+            throw new Exception($"Failed to create country T1. Status: {createResponse.StatusCode}, Error: {errorContent}");
+        }
         var created = await createResponse.Content.ReadFromJsonAsync<CountryResponse>(JsonSerializerOptions);
         Assert.NotNull(created);
         var countryId = created.Id;
@@ -142,6 +147,11 @@ public class ResilienceTests : IntegrationTestBase
             Flags = "{}"
         };
         var createResponse = await adminClient.PostAsJsonAsync("/country/v1/admin/countries", createRequest);
+        if (createResponse.StatusCode != HttpStatusCode.Created)
+        {
+            var errorContent = await createResponse.Content.ReadAsStringAsync();
+            throw new Exception($"Failed to create country. Status: {createResponse.StatusCode}, Error: {errorContent}");
+        }
         Assert.Equal(HttpStatusCode.Created, createResponse.StatusCode);
 
         var iso2 = "T2";
@@ -305,6 +315,11 @@ public class ResilienceTests : IntegrationTestBase
             Flags = "{}"
         };
         var createResponse = await adminClient.PostAsJsonAsync("/country/v1/admin/countries", createRequest);
+        if (createResponse.StatusCode != HttpStatusCode.Created)
+        {
+            var errorContent = await createResponse.Content.ReadAsStringAsync();
+            throw new Exception($"Failed to create country T3. Status: {createResponse.StatusCode}, Error: {errorContent}");
+        }
         var created = await createResponse.Content.ReadFromJsonAsync<CountryResponse>(JsonSerializerOptions);
         Assert.NotNull(created);
         var countryId = created.Id;
