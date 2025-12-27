@@ -36,6 +36,8 @@ public class AdminCountryTests : IntegrationTestBase
     [Fact]
     public async Task Create_WithoutAuthentication_Returns401()
     {
+        await _factory.CleanDatabaseAsync();
+
         // Arrange
         var request = new CreateCountryRequest
         {
@@ -54,6 +56,8 @@ public class AdminCountryTests : IntegrationTestBase
     [Fact]
     public async Task Create_WithAuthentication_Returns201()
     {
+        await _factory.CleanDatabaseAsync();
+
         // Arrange
         var permissions = CountryPredefinedRoles.GetPermissionsForRole(CountryAdminRoles[0]).ToArray();
         var adminClient = _factory.CreateAuthenticatedClient("testuser", CountryAdminRoles, permissions);
@@ -91,6 +95,8 @@ public class AdminCountryTests : IntegrationTestBase
     [Fact]
     public async Task Create_WithDuplicateIso2_Returns409()
     {
+        await _factory.CleanDatabaseAsync();
+
         // Arrange
         var permissions = CountryPredefinedRoles.GetPermissionsForRole(CountryAdminRoles[0]).ToArray();
         var adminClient = _factory.CreateAuthenticatedClient("testuser", CountryAdminRoles, permissions);
@@ -129,6 +135,8 @@ public class AdminCountryTests : IntegrationTestBase
     [Fact]
     public async Task Update_WithoutIfMatch_Returns428()
     {
+        await _factory.CleanDatabaseAsync();
+
         // Arrange
         var permissions = CountryPredefinedRoles.GetPermissionsForRole(CountryAdminRoles[0]).ToArray();
         var adminClient = _factory.CreateAuthenticatedClient("testuser", CountryAdminRoles, permissions);
@@ -172,6 +180,8 @@ public class AdminCountryTests : IntegrationTestBase
     [Fact]
     public async Task Update_WithValidIfMatch_Returns200()
     {
+        await _factory.CleanDatabaseAsync();
+
         // Arrange
         var permissions = CountryPredefinedRoles.GetPermissionsForRole(CountryAdminRoles[0]).ToArray();
         var adminClient = _factory.CreateAuthenticatedClient("testuser", CountryAdminRoles, permissions);
@@ -228,6 +238,8 @@ public class AdminCountryTests : IntegrationTestBase
     [Fact]
     public async Task Update_WithWrongIfMatch_Returns412()
     {
+        await _factory.CleanDatabaseAsync();
+
         // Arrange
         var permissions = CountryPredefinedRoles.GetPermissionsForRole(CountryAdminRoles[0]).ToArray();
         var adminClient = _factory.CreateAuthenticatedClient("testuser", CountryAdminRoles, permissions);
@@ -276,6 +288,8 @@ public class AdminCountryTests : IntegrationTestBase
     [Fact]
     public async Task Patch_WithValidIfMatch_Returns200()
     {
+        await _factory.CleanDatabaseAsync();
+
         // Arrange
         var permissions = CountryPredefinedRoles.GetPermissionsForRole(CountryAdminRoles[0]).ToArray();
         var adminClient = _factory.CreateAuthenticatedClient("testuser", CountryAdminRoles, permissions);
@@ -328,6 +342,8 @@ public class AdminCountryTests : IntegrationTestBase
     [Fact]
     public async Task SoftDelete_WithAuthentication_Returns204()
     {
+        await _factory.CleanDatabaseAsync();
+
         // Arrange
         var permissions = CountryPredefinedRoles.GetPermissionsForRole(CountryAdminRoles[0]).ToArray();
         var adminClient = _factory.CreateAuthenticatedClient("testuser", CountryAdminRoles, permissions);
@@ -367,6 +383,8 @@ public class AdminCountryTests : IntegrationTestBase
     [Fact]
     public async Task HardDelete_WithoutSuperAdminRole_Returns403()
     {
+        await _factory.CleanDatabaseAsync();
+
         // Arrange
         var adminClient = _factory.CreateClient().WithTestAuth(_factory, "Permission:country.not-hard-delete");
 
@@ -410,6 +428,8 @@ public class AdminCountryTests : IntegrationTestBase
     [Fact]
     public async Task HardDelete_WithSuperAdminRole_Returns204()
     {
+        await _factory.CleanDatabaseAsync();
+
         // Arrange - Try with both possible role names
         var superAdminPerms = CountryPredefinedRoles.GetPermissionsForRole(SuperAdminRoles[0]).ToArray();
         var superAdminClient = _factory.CreateAuthenticatedClient("superadmin", SuperAdminRoles, superAdminPerms);
@@ -457,6 +477,8 @@ public class AdminCountryTests : IntegrationTestBase
     [Fact]
     public async Task Create_WithInvalidData_Returns400()
     {
+        await _factory.CleanDatabaseAsync();
+
         // Arrange
         var permissions = CountryPredefinedRoles.GetPermissionsForRole(CountryAdminRoles[0]).ToArray();
         var adminClient = _factory.CreateAuthenticatedClient("testuser", CountryAdminRoles, permissions);
@@ -476,6 +498,8 @@ public class AdminCountryTests : IntegrationTestBase
     [Fact]
     public async Task Update_NonExistentCountry_Returns404()
     {
+        await _factory.CleanDatabaseAsync();
+
         // Arrange
         var permissions = CountryPredefinedRoles.GetPermissionsForRole(CountryAdminRoles[0]).ToArray();
         var adminClient = _factory.CreateAuthenticatedClient("testuser", CountryAdminRoles, permissions);

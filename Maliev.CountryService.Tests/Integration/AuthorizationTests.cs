@@ -24,6 +24,8 @@ public class AuthorizationTests : IntegrationTestBase
     [Fact]
     public async Task CreateCountry_WithPermission_ShouldSucceed()
     {
+        await _factory.CleanDatabaseAsync();
+
         var iso2 = GetRandomIso2('C');
         var iso3 = "ZZZ";
         var request = new CreateCountryRequest { Name = $"AuthTest-{Guid.NewGuid()}", Iso2 = iso2, Iso3 = iso3 };
@@ -45,6 +47,8 @@ public class AuthorizationTests : IntegrationTestBase
     [Fact]
     public async Task CreateCountry_WithoutPermission_ShouldFail()
     {
+        await _factory.CleanDatabaseAsync();
+
         var iso2 = GetRandomIso2('E');
         var request = new CreateCountryRequest { Name = "AuthTest2", Iso2 = iso2, Iso3 = "AUS" };
         var client = _factory.CreateClient().WithTestAuth(_factory, "Permission:invalid.permission");
@@ -61,6 +65,8 @@ public class AuthorizationTests : IntegrationTestBase
     [Fact]
     public async Task BulkImport_WithPermission_ShouldSucceed()
     {
+        await _factory.CleanDatabaseAsync();
+
         var client = _factory.CreateClient().WithTestAuth(_factory, CountryPermissions.ImportExecute);
         var response = await client.PostAsJsonAsync("/country/v1/admin/bulk-import/00000000-0000-0000-0000-000000000000/process", new { });
 
@@ -71,6 +77,8 @@ public class AuthorizationTests : IntegrationTestBase
     [Fact]
     public async Task BulkImport_WithoutPermission_ShouldBeForbidden()
     {
+        await _factory.CleanDatabaseAsync();
+
         var client = _factory.CreateClient().WithTestAuth(_factory, "Permission:wrong.permission");
         var response = await client.PostAsJsonAsync("/country/v1/admin/bulk-import/00000000-0000-0000-0000-000000000000/process", new { });
 
@@ -84,6 +92,8 @@ public class AuthorizationTests : IntegrationTestBase
     [Fact]
     public async Task Authorization_Latency_ShouldBeUnder5ms()
     {
+        await _factory.CleanDatabaseAsync();
+
         var client = _factory.CreateClient().WithTestAuth(_factory, CountryPermissions.CountriesRead);
 
         // Warm up
