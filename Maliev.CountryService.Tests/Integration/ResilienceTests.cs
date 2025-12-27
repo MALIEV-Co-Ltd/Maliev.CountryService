@@ -21,6 +21,8 @@ public class ResilienceTests : IntegrationTestBase
     [Fact]
     public async Task GetById_AfterCacheWarming_ThenDbStop_ServesFromCache()
     {
+        await _factory.CleanDatabaseAsync();
+
         // Arrange - Create test country first
         var adminClient = _factory.CreateAuthenticatedClient(
             "test-admin",
@@ -109,6 +111,8 @@ public class ResilienceTests : IntegrationTestBase
     [Fact]
     public async Task GetByIso2_AfterCacheWarming_ThenDbStop_ServesFromCache()
     {
+        await _factory.CleanDatabaseAsync();
+
         // Arrange - Create test country first
         var adminClient = _factory.CreateAuthenticatedClient(
             "test-admin",
