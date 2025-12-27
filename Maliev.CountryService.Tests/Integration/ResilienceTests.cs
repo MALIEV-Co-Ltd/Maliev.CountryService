@@ -21,8 +21,23 @@ public class ResilienceTests : IntegrationTestBase
     [Fact]
     public async Task GetById_AfterCacheWarming_ThenDbStop_ServesFromCache()
     {
-        // Arrange - First, ensure the data is cached by making a successful request
-        var countryId = 187; // US from seed data (United States is at ID 187)
+        // Arrange - Create test country first
+        var adminClient = _factory.CreateAuthenticatedClient(
+            "test-admin",
+            CountryAdminRoles,
+            CountryPredefinedRoles.GetPermissionsForRole(CountryAdminRoles[0]).ToArray());
+
+        var createRequest = new CreateCountryRequest
+        {
+            Iso2 = "US",
+            Iso3 = "USA",
+            Name = "United States"
+        };
+        var createResponse = await adminClient.PostAsJsonAsync("/country/v1/admin/countries", createRequest);
+        var created = await createResponse.Content.ReadFromJsonAsync<CountryResponse>(JsonSerializerOptions);
+        Assert.NotNull(created);
+        var countryId = created.Id;
+
         var client = _client.WithTestAuth(_factory, CountryPermissions.CountriesRead);
 
         // Initial request to populate cache
@@ -94,7 +109,21 @@ public class ResilienceTests : IntegrationTestBase
     [Fact]
     public async Task GetByIso2_AfterCacheWarming_ThenDbStop_ServesFromCache()
     {
-        // Arrange - Populate cache with ISO2 lookup
+        // Arrange - Create test country first
+        var adminClient = _factory.CreateAuthenticatedClient(
+            "test-admin",
+            CountryAdminRoles,
+            CountryPredefinedRoles.GetPermissionsForRole(CountryAdminRoles[0]).ToArray());
+
+        var createRequest = new CreateCountryRequest
+        {
+            Iso2 = "CA",
+            Iso3 = "CAN",
+            Name = "Canada"
+        };
+        var createResponse = await adminClient.PostAsJsonAsync("/country/v1/admin/countries", createRequest);
+        Assert.Equal(HttpStatusCode.Created, createResponse.StatusCode);
+
         var iso2 = "CA";
         var client = _client.WithTestAuth(_factory, CountryPermissions.CountriesRead);
 
@@ -233,8 +262,23 @@ public class ResilienceTests : IntegrationTestBase
     [Fact]
     public async Task DatabaseRecovery_AfterRestart_NormalOperationsResume()
     {
-        // Arrange - Make initial request
-        var countryId = 187; // US from seed data (United States is at ID 187)
+        // Arrange - Create test country first
+        var adminClient = _factory.CreateAuthenticatedClient(
+            "test-admin",
+            CountryAdminRoles,
+            CountryPredefinedRoles.GetPermissionsForRole(CountryAdminRoles[0]).ToArray());
+
+        var createRequest = new CreateCountryRequest
+        {
+            Iso2 = "US",
+            Iso3 = "USA",
+            Name = "United States"
+        };
+        var createResponse = await adminClient.PostAsJsonAsync("/country/v1/admin/countries", createRequest);
+        var created = await createResponse.Content.ReadFromJsonAsync<CountryResponse>(JsonSerializerOptions);
+        Assert.NotNull(created);
+        var countryId = created.Id;
+
         var client = _client.WithTestAuth(_factory, CountryPermissions.CountriesRead);
 
         var initialResponse = await client.GetAsync($"/country/v1/countries/{countryId}");
