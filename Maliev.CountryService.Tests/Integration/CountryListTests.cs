@@ -80,9 +80,10 @@ public class CountryListTests : IntegrationTestBase
 
         // Arrange - Create 12 test countries so we can test pagination
         var adminClient = await CreateAdminClient();
-        for (int i = 1; i <= 12; i++)
+        var letters = "ABCDEFGHIJKL"; // 12 letters for 12 countries
+        for (int i = 0; i < 12; i++)
         {
-            await CreateTestCountry(adminClient, $"C{i:D2}", $"CT{i}", $"Country {i:D2}");
+            await CreateTestCountry(adminClient, $"C{letters[i]}", $"CT{letters[i]}", $"Country {i + 1:D2}");
         }
 
         var client = _client.WithTestAuth(_factory, CountryPermissions.CountriesList);
