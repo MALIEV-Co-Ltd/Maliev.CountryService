@@ -25,7 +25,19 @@ public class BulkImportTests : IntegrationTestBase
         {
             Countries = new List<CreateCountryRequest>
             {
-                new CreateCountryRequest { Iso2 = "XD", Name = "Test Country" }
+                new CreateCountryRequest
+                {
+                    Iso2 = "XD",
+                    Name = "Test Country",
+                    Timezones = "[]",
+                    Borders = "[]",
+                    CallingCodes = "[]",
+                    TopLevelDomains = "[]",
+                    Currencies = "{}",
+                    Languages = "{}",
+                    Translations = "{}",
+                    Flags = "{}"
+                }
             }
         };
 
@@ -50,13 +62,29 @@ public class BulkImportTests : IntegrationTestBase
                 {
                     Iso2 = "XE",
                     Iso3 = "XXE",
-                    Name = "Bulk Test Country 1"
+                    Name = "Bulk Test Country 1",
+                    Timezones = "[]",
+                    Borders = "[]",
+                    CallingCodes = "[]",
+                    TopLevelDomains = "[]",
+                    Currencies = "{}",
+                    Languages = "{}",
+                    Translations = "{}",
+                    Flags = "{}"
                 },
                 new CreateCountryRequest
                 {
                     Iso2 = "XF",
                     Iso3 = "XXF",
-                    Name = "Bulk Test Country 2"
+                    Name = "Bulk Test Country 2",
+                    Timezones = "[]",
+                    Borders = "[]",
+                    CallingCodes = "[]",
+                    TopLevelDomains = "[]",
+                    Currencies = "{}",
+                    Languages = "{}",
+                    Translations = "{}",
+                    Flags = "{}"
                 }
             }
         };
@@ -164,7 +192,20 @@ public class BulkImportTests : IntegrationTestBase
         {
             Countries = new List<CreateCountryRequest>
             {
-                new CreateCountryRequest { Iso2 = "XG", Iso3 = "XXG", Name = "Status Test Country" }
+                new CreateCountryRequest
+                {
+                    Iso2 = "XG",
+                    Iso3 = "XXG",
+                    Name = "Status Test Country",
+                    Timezones = "[]",
+                    Borders = "[]",
+                    CallingCodes = "[]",
+                    TopLevelDomains = "[]",
+                    Currencies = "{}",
+                    Languages = "{}",
+                    Translations = "{}",
+                    Flags = "{}"
+                }
             }
         };
 
@@ -210,7 +251,20 @@ public class BulkImportTests : IntegrationTestBase
         {
             Countries = new List<CreateCountryRequest>
             {
-                new CreateCountryRequest { Iso2 = "XI", Iso3 = "XXI", Name = "Process Test Country" }
+                new CreateCountryRequest
+                {
+                    Iso2 = "XI",
+                    Iso3 = "XXI",
+                    Name = "Process Test Country",
+                    Timezones = "[]",
+                    Borders = "[]",
+                    CallingCodes = "[]",
+                    TopLevelDomains = "[]",
+                    Currencies = "{}",
+                    Languages = "{}",
+                    Translations = "{}",
+                    Flags = "{}"
+                }
             }
         };
 
@@ -256,8 +310,34 @@ public class BulkImportTests : IntegrationTestBase
         {
             Countries = new List<CreateCountryRequest>
             {
-                new CreateCountryRequest { Iso2 = "XJ", Iso3 = "XXJ", Name = "Duplicate Test 1" },
-                new CreateCountryRequest { Iso2 = "XJ", Iso3 = "XXK", Name = "Duplicate Test 2" } // Same Iso2
+                new CreateCountryRequest
+                {
+                    Iso2 = "XJ",
+                    Iso3 = "XXJ",
+                    Name = "Duplicate Test 1",
+                    Timezones = "[]",
+                    Borders = "[]",
+                    CallingCodes = "[]",
+                    TopLevelDomains = "[]",
+                    Currencies = "{}",
+                    Languages = "{}",
+                    Translations = "{}",
+                    Flags = "{}"
+                },
+                new CreateCountryRequest
+                {
+                    Iso2 = "XJ",
+                    Iso3 = "XXK",
+                    Name = "Duplicate Test 2",
+                    Timezones = "[]",
+                    Borders = "[]",
+                    CallingCodes = "[]",
+                    TopLevelDomains = "[]",
+                    Currencies = "{}",
+                    Languages = "{}",
+                    Translations = "{}",
+                    Flags = "{}"
+                } // Same Iso2
             }
         };
 
@@ -278,8 +358,34 @@ public class BulkImportTests : IntegrationTestBase
         {
             Countries = new List<CreateCountryRequest>
             {
-                new CreateCountryRequest { Iso2 = "XL", Iso3 = "XXL", Name = "Flow Test Country 1" },
-                new CreateCountryRequest { Iso2 = "XM", Iso3 = "XXM", Name = "Flow Test Country 2" }
+                new CreateCountryRequest
+                {
+                    Iso2 = "XL",
+                    Iso3 = "XXL",
+                    Name = "Flow Test Country 1",
+                    Timezones = "[]",
+                    Borders = "[]",
+                    CallingCodes = "[]",
+                    TopLevelDomains = "[]",
+                    Currencies = "{}",
+                    Languages = "{}",
+                    Translations = "{}",
+                    Flags = "{}"
+                },
+                new CreateCountryRequest
+                {
+                    Iso2 = "XM",
+                    Iso3 = "XXM",
+                    Name = "Flow Test Country 2",
+                    Timezones = "[]",
+                    Borders = "[]",
+                    CallingCodes = "[]",
+                    TopLevelDomains = "[]",
+                    Currencies = "{}",
+                    Languages = "{}",
+                    Translations = "{}",
+                    Flags = "{}"
+                }
             }
         };
 
@@ -335,7 +441,20 @@ public class BulkImportTests : IntegrationTestBase
         {
             Countries = new List<CreateCountryRequest>
             {
-                new CreateCountryRequest { Iso2 = "XN", Iso3 = "XXN", Name = "Multi Job 1" }
+                new CreateCountryRequest
+                {
+                    Iso2 = "XN",
+                    Iso3 = "XXN",
+                    Name = "Multi Job 1",
+                    Timezones = "[]",
+                    Borders = "[]",
+                    CallingCodes = "[]",
+                    TopLevelDomains = "[]",
+                    Currencies = "{}",
+                    Languages = "{}",
+                    Translations = "{}",
+                    Flags = "{}"
+                }
             }
         };
 
@@ -343,7 +462,20 @@ public class BulkImportTests : IntegrationTestBase
         {
             Countries = new List<CreateCountryRequest>
             {
-                new CreateCountryRequest { Iso2 = "XO", Iso3 = "XXO", Name = "Multi Job 2" }
+                new CreateCountryRequest
+                {
+                    Iso2 = "XO",
+                    Iso3 = "XXO",
+                    Name = "Multi Job 2",
+                    Timezones = "[]",
+                    Borders = "[]",
+                    CallingCodes = "[]",
+                    TopLevelDomains = "[]",
+                    Currencies = "{}",
+                    Languages = "{}",
+                    Translations = "{}",
+                    Flags = "{}"
+                }
             }
         };
 
