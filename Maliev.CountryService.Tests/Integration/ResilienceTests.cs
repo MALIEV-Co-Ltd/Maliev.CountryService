@@ -108,7 +108,7 @@ public class ResilienceTests : IntegrationTestBase
 
             var cachedCountry = await degradedResponse.Content.ReadFromJsonAsync<CountryResponse>(JsonSerializerOptions);
             Assert.NotNull(cachedCountry);
-            Assert.Equal("US", cachedCountry.Iso2);
+            Assert.Equal("TA", cachedCountry.Iso2);
             Assert.Equal(initialCountry.Name, cachedCountry.Name);
         }
 
