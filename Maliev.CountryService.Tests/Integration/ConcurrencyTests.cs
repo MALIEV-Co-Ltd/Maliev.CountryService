@@ -31,7 +31,15 @@ public class ConcurrencyTests : IntegrationTestBase
         {
             Iso2 = "XP",
             Iso3 = "CCX",
-            Name = "Concurrency Test Country"
+            Name = "Concurrency Test Country",
+            Timezones = "[]",
+            Borders = "[]",
+            CallingCodes = "[]",
+            TopLevelDomains = "[]",
+            Currencies = "{}",
+            Languages = "{}",
+            Translations = "{}",
+            Flags = "{}"
         };
         var createResponse = await adminClient.PostAsJsonAsync("/country/v1/admin/countries", createRequest);
         var created = await createResponse.Content.ReadFromJsonAsync<CountryResponse>(JsonSerializerOptions);
@@ -94,7 +102,15 @@ public class ConcurrencyTests : IntegrationTestBase
             Iso2 = "XQ",
             Iso3 = "CCY",
             Name = "Concurrency Patch Test",
-            Region = "Original Region"
+            Region = "Original Region",
+            Timezones = "[]",
+            Borders = "[]",
+            CallingCodes = "[]",
+            TopLevelDomains = "[]",
+            Currencies = "{}",
+            Languages = "{}",
+            Translations = "{}",
+            Flags = "{}"
         };
         var createResponse = await adminClient.PostAsJsonAsync("/country/v1/admin/countries", createRequest);
         var created = await createResponse.Content.ReadFromJsonAsync<CountryResponse>(JsonSerializerOptions);
@@ -147,7 +163,15 @@ public class ConcurrencyTests : IntegrationTestBase
         {
             Iso2 = "XR",
             Iso3 = "CCZ",
-            Name = "Sequential Test Country"
+            Name = "Sequential Test Country",
+            Timezones = "[]",
+            Borders = "[]",
+            CallingCodes = "[]",
+            TopLevelDomains = "[]",
+            Currencies = "{}",
+            Languages = "{}",
+            Translations = "{}",
+            Flags = "{}"
         };
         var createResponse = await adminClient.PostAsJsonAsync("/country/v1/admin/countries", createRequest);
         var created = await createResponse.Content.ReadFromJsonAsync<CountryResponse>(JsonSerializerOptions);
@@ -195,7 +219,15 @@ public class ConcurrencyTests : IntegrationTestBase
         {
             Iso2 = "XA",
             Iso3 = "CCA",
-            Name = "ETag Change Test"
+            Name = "ETag Change Test",
+            Timezones = "[]",
+            Borders = "[]",
+            CallingCodes = "[]",
+            TopLevelDomains = "[]",
+            Currencies = "{}",
+            Languages = "{}",
+            Translations = "{}",
+            Flags = "{}"
         };
         var createResponse = await adminClient.PostAsJsonAsync("/country/v1/admin/countries", createRequest);
         var created = await createResponse.Content.ReadFromJsonAsync<CountryResponse>(JsonSerializerOptions);
@@ -256,7 +288,15 @@ public class ConcurrencyTests : IntegrationTestBase
         {
             Iso2 = "XB",
             Iso3 = "CCB",
-            Name = "ETag Get Test"
+            Name = "ETag Get Test",
+            Timezones = "[]",
+            Borders = "[]",
+            CallingCodes = "[]",
+            TopLevelDomains = "[]",
+            Currencies = "{}",
+            Languages = "{}",
+            Translations = "{}",
+            Flags = "{}"
         };
         var createResponse = await adminClient.PostAsJsonAsync("/country/v1/admin/countries", createRequest);
         var created = await createResponse.Content.ReadFromJsonAsync<CountryResponse>(JsonSerializerOptions);
@@ -290,7 +330,15 @@ public class ConcurrencyTests : IntegrationTestBase
         {
             Iso2 = "XC",
             Iso3 = "CCC",
-            Name = "Concurrent Users Test"
+            Name = "Concurrent Users Test",
+            Timezones = "[]",
+            Borders = "[]",
+            CallingCodes = "[]",
+            TopLevelDomains = "[]",
+            Currencies = "{}",
+            Languages = "{}",
+            Translations = "{}",
+            Flags = "{}"
         };
         var createResponse = await admin1.PostAsJsonAsync("/country/v1/admin/countries", createRequest);
         var created = await createResponse.Content.ReadFromJsonAsync<CountryResponse>(JsonSerializerOptions);

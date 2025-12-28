@@ -28,7 +28,20 @@ public class AuthorizationTests : IntegrationTestBase
 
         var iso2 = GetRandomIso2('C');
         var iso3 = "ZZZ";
-        var request = new CreateCountryRequest { Name = $"AuthTest-{Guid.NewGuid()}", Iso2 = iso2, Iso3 = iso3 };
+        var request = new CreateCountryRequest
+        {
+            Name = $"AuthTest-{Guid.NewGuid()}",
+            Iso2 = iso2,
+            Iso3 = iso3,
+            Timezones = "[]",
+            Borders = "[]",
+            CallingCodes = "[]",
+            TopLevelDomains = "[]",
+            Currencies = "{}",
+            Languages = "{}",
+            Translations = "{}",
+            Flags = "{}"
+        };
 
         var client = _factory.CreateClient().WithTestAuth(_factory, CountryPermissions.CountriesCreate);
 
@@ -50,7 +63,20 @@ public class AuthorizationTests : IntegrationTestBase
         await _factory.CleanDatabaseAsync();
 
         var iso2 = GetRandomIso2('E');
-        var request = new CreateCountryRequest { Name = "AuthTest2", Iso2 = iso2, Iso3 = "AUS" };
+        var request = new CreateCountryRequest
+        {
+            Name = "AuthTest2",
+            Iso2 = iso2,
+            Iso3 = "AUS",
+            Timezones = "[]",
+            Borders = "[]",
+            CallingCodes = "[]",
+            TopLevelDomains = "[]",
+            Currencies = "{}",
+            Languages = "{}",
+            Translations = "{}",
+            Flags = "{}"
+        };
         var client = _factory.CreateClient().WithTestAuth(_factory, "Permission:invalid.permission");
 
         var response = await client.PostAsJsonAsync("/country/v1/admin/countries", request);
