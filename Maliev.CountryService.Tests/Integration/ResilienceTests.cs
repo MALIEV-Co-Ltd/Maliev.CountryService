@@ -13,7 +13,7 @@ namespace Maliev.CountryService.Tests.Integration;
 /// Integration tests for resilience features including graceful degradation.
 /// Tests that the service can serve from cache when the database is unavailable.
 /// </summary>
-[Collection("TestDatabase")]
+[Collection("ResilienceTests")]
 public class ResilienceTests : IntegrationTestBase
 {
     public ResilienceTests(TestWebApplicationFactory factory) : base(factory) { }
