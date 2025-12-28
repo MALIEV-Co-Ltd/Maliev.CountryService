@@ -376,8 +376,8 @@ public class ResilienceTests : IntegrationTestBase
                 await Task.Delay(3000); // Give DB time to fully start
             }
 
-            // Make a new request
-            var recoveredResponse = await client.GetAsync($"/country/v1/countries/{countryId}");
+            // Make a new request - use ISO code to avoid ID issues
+            var recoveredResponse = await client.GetAsync($"/country/v1/countries/iso2/TC");
 
             // Assert - Normal operation should resume
             Assert.Equal(HttpStatusCode.OK, recoveredResponse.StatusCode);
