@@ -112,12 +112,15 @@ public class ResilienceTests : IntegrationTestBase
             Assert.Equal(initialCountry.Name, cachedCountry.Name);
         }
 
-        // Cleanup - Restart the database for other tests
+        // Cleanup - Restart the database for other tests and clean data
         if (dbFixture?.PostgresContainer != null)
         {
             await dbFixture.PostgresContainer.StartAsync();
             _logger.LogInformation("PostgreSQL container restarted");
             await Task.Delay(2000); // Wait for DB to be ready
+
+            // Clean database to ensure fresh state for next test
+            await _factory.CleanDatabaseAsync();
         }
     }
 
@@ -206,6 +209,9 @@ public class ResilienceTests : IntegrationTestBase
         {
             await dbFixture.PostgresContainer.StartAsync();
             await Task.Delay(2000);
+
+            // Clean database to ensure fresh state for next test
+            await _factory.CleanDatabaseAsync();
         }
         catch
         {
@@ -242,11 +248,21 @@ public class ResilienceTests : IntegrationTestBase
         }
         finally
         {
-            // Cleanup - Always restart DB
+            // Cleanup - Always restart DB and clean data
             if (dbFixture?.PostgresContainer != null)
             {
                 await dbFixture.PostgresContainer.StartAsync();
                 await Task.Delay(2000);
+
+                // Clean database to ensure fresh state for next test
+                try
+                {
+                    await _factory.CleanDatabaseAsync();
+                }
+                catch
+                {
+                    // Ignore cleanup errors
+                }
             }
         }
     }
@@ -285,6 +301,16 @@ public class ResilienceTests : IntegrationTestBase
             {
                 await dbFixture.PostgresContainer.StartAsync();
                 await Task.Delay(2000);
+
+                // Clean database to ensure fresh state for next test
+                try
+                {
+                    await _factory.CleanDatabaseAsync();
+                }
+                catch
+                {
+                    // Ignore cleanup errors
+                }
             }
         }
     }
@@ -362,11 +388,21 @@ public class ResilienceTests : IntegrationTestBase
         }
         finally
         {
-            // Ensure DB is running
+            // Ensure DB is running and clean
             if (dbFixture?.PostgresContainer != null)
             {
                 await dbFixture.PostgresContainer.StartAsync();
                 await Task.Delay(2000);
+
+                // Clean database to ensure fresh state for next test
+                try
+                {
+                    await _factory.CleanDatabaseAsync();
+                }
+                catch
+                {
+                    // Ignore cleanup errors
+                }
             }
         }
     }
