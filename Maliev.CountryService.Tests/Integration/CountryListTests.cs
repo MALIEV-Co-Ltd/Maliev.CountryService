@@ -33,7 +33,15 @@ public class CountryListTests : IntegrationTestBase
             Name = name,
             Region = region,
             Subregion = subregion,
-            Population = population
+            Population = population,
+            Timezones = "[]",
+            Borders = "[]",
+            CallingCodes = "[]",
+            TopLevelDomains = "[]",
+            Currencies = "{}",
+            Languages = "{}",
+            Translations = "{}",
+            Flags = "{}"
         };
         var response = await client.PostAsJsonAsync("/country/v1/admin/countries", request);
         response.EnsureSuccessStatusCode();
