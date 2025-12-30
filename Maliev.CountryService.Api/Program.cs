@@ -136,18 +136,7 @@ var app = builder.Build();
 var logger = app.Services.GetRequiredService<ILogger<Program>>();
 
 // --- Database Migrations ---
-if (!app.Environment.IsEnvironment("Testing"))
-{
-    try
-    {
-        await app.MigrateDatabaseAsync<CountryDbContext>();
-    }
-    catch (Exception ex)
-    {
-        logger.LogError(ex, "Database migration failed - application may not function correctly");
-        // Don't throw - allow app to start for debugging
-    }
-}
+await app.MigrateDatabaseAsync<CountryDbContext>();
 
 app.UseForwardedHeaders();
 
