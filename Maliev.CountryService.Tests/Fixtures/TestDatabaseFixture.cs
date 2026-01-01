@@ -28,11 +28,11 @@ public class TestDatabaseFixture : IAsyncLifetime
             .Build();
 
         RedisContainer = new RedisBuilder()
-            .WithImage("redis:alpine")
+            .WithImage("redis:8.4-alpine")
             .Build();
 
         RabbitMqContainer = new RabbitMqBuilder()
-            .WithImage("rabbitmq:4.2.1-alpine")
+            .WithImage("rabbitmq:4.2-alpine")
             .Build();
 
         // Start all containers in parallel
