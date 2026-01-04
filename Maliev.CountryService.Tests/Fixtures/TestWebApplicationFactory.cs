@@ -14,12 +14,19 @@ public class TestWebApplicationFactory : BaseIntegrationTestFactory<Program, Cou
 
     protected override void ConfigureAdditionalServices(IServiceCollection services)
     {
-        // Remove background services by default to prevent interference with regular tests
-        // Background service tests should use TestWebApplicationFactoryWithBackgroundServices instead
+        // Remove domain background services by default to prevent interference with regular tests
+        // Infrastructure background services (MassTransit, IAM registration) are kept to ensure health checks pass
         var hostedServices = services.Where(d => d.ServiceType == typeof(IHostedService)).ToList();
         foreach (var service in hostedServices)
         {
-            services.Remove(service);
+            var typeName = service.ImplementationType?.Name ??
+                          service.ImplementationFactory?.Method.ReturnType.Name ?? "";
+
+            if (typeName.Contains("CacheWarmingService") ||
+                typeName.Contains("BulkImportWorkerService"))
+            {
+                services.Remove(service);
+            }
         }
     }
 }
