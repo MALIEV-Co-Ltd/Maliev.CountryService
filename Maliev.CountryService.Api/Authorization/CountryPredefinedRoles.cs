@@ -1,38 +1,33 @@
 namespace Maliev.CountryService.Api.Authorization;
 
 /// <summary>
-/// Defines predefined roles for the Country Service.
+/// Predefined roles for the Country Service.
 /// </summary>
 public static class CountryPredefinedRoles
 {
-    /// <summary>Country Super Administrator: Absolute full control.</summary>
-    public static readonly RoleRegistration SuperAdmin = new()
-    {
-        RoleId = "roles.country.superadmin",
-        RoleName = "Country Super Administrator",
-        Description = "Absolute full control over country data including permanent deletion",
-        Permissions = CountryPermissions.All
-    };
+    /// <summary>Role for super administrators with absolute control.</summary>
+    public const string SuperAdmin = "roles.country.superadmin";
+    /// <summary>Role for administrators managing country data.</summary>
+    public const string Admin = "roles.country.admin";
+    /// <summary>Role for managers with general access.</summary>
+    public const string Manager = "roles.country.manager";
+    /// <summary>Role for users performing data imports.</summary>
+    public const string Importer = "roles.country.importer";
+    /// <summary>Role for users with read-only access.</summary>
+    public const string Viewer = "roles.country.viewer";
 
-    /// <summary>Country Administrator: Manage country data except permanent delete.</summary>
-    public static readonly RoleRegistration Admin = new()
+    /// <summary>
+    /// Collection of all predefined roles for the Country Service.
+    /// </summary>
+    public static readonly IReadOnlyList<(string RoleId, string Description, string[] Permissions)> All = new List<(string, string, string[])>
     {
-        RoleId = "roles.country.admin",
-        RoleName = "Country Administrator",
-        Description = "Manage country data except permanent delete",
-        Permissions = CountryPermissions.All
-            .Where(p => p != CountryPermissions.CountriesHardDelete)
-            .ToArray()
-    };
+        (SuperAdmin, "Absolute full control over country data including permanent deletion", CountryPermissions.All.ToArray()),
 
-    /// <summary>Country Manager: Manage country data except import and hard delete.</summary>
-    public static readonly RoleRegistration Manager = new()
-    {
-        RoleId = "roles.country.manager",
-        RoleName = "Country Manager",
-        Description = "Manage country data except hard delete",
-        Permissions =
-        [
+        (Admin, "Manage country data except permanent delete", CountryPermissions.All
+            .Where(p => p != CountryPermissions.CountriesHardDelete).ToArray()),
+
+        (Manager, "Manage country data except hard delete", new[]
+        {
             CountryPermissions.CountriesRead,
             CountryPermissions.CountriesList,
             CountryPermissions.CountriesSearch,
@@ -48,17 +43,10 @@ public static class CountryPredefinedRoles
             CountryPermissions.SystemRebuildCache,
             CountryPermissions.SystemExport,
             CountryPermissions.SystemViewStats
-        ]
-    };
+        }),
 
-    /// <summary>Country Data Importer: Execute bulk imports.</summary>
-    public static readonly RoleRegistration Importer = new()
-    {
-        RoleId = "roles.country.importer",
-        RoleName = "Country Data Importer",
-        Description = "Execute bulk imports",
-        Permissions =
-        [
+        (Importer, "Execute bulk imports", new[]
+        {
             CountryPermissions.CountriesRead,
             CountryPermissions.CountriesList,
             CountryPermissions.ImportUpload,
@@ -66,31 +54,24 @@ public static class CountryPredefinedRoles
             CountryPermissions.ImportStatus,
             CountryPermissions.ImportHistory,
             CountryPermissions.SystemViewStats
-        ]
-    };
+        }),
 
-    /// <summary>Country Data Viewer: Read-only access to country data.</summary>
-    public static readonly RoleRegistration Viewer = new()
-    {
-        RoleId = "roles.country.viewer",
-        RoleName = "Country Data Viewer",
-        Description = "Read-only access to country data",
-        Permissions =
-        [
+        (Viewer, "Read-only access to country data", new[]
+        {
             CountryPermissions.CountriesRead,
             CountryPermissions.CountriesList,
             CountryPermissions.CountriesSearch
-        ]
+        })
     };
 
-    /// <summary>All predefined roles.</summary>
-    public static readonly RoleRegistration[] All = [SuperAdmin, Admin, Manager, Importer, Viewer];
-
     /// <summary>
-    /// Gets permissions for a given role ID.
+    /// Gets the permissions associated with a predefined role.
     /// </summary>
+    /// <param name="roleId">The role ID to look up.</param>
+    /// <returns>A collection of permission IDs.</returns>
     public static IEnumerable<string> GetPermissionsForRole(string roleId)
     {
-        return All.FirstOrDefault(r => r.RoleId == roleId)?.Permissions ?? Enumerable.Empty<string>();
+        var role = All.FirstOrDefault(r => r.RoleId == roleId);
+        return role.Permissions ?? Enumerable.Empty<string>();
     }
 }
