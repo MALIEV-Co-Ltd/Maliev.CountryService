@@ -115,6 +115,13 @@ public class BulkImportWorkerService : BackgroundService
     {
         byte[] bytes = new byte[16];
         byte[] idBytes = BitConverter.GetBytes(id);
+
+        // Ensure little-endian byte order for cross-platform consistency
+        if (!BitConverter.IsLittleEndian)
+        {
+            Array.Reverse(idBytes);
+        }
+
         Array.Copy(idBytes, 0, bytes, 0, idBytes.Length);
         return new Guid(bytes);
     }

@@ -405,6 +405,13 @@ public partial class BulkImportService : IBulkImportService
         // Create deterministic GUID from long ID
         byte[] bytes = new byte[16];
         byte[] idBytes = BitConverter.GetBytes(id);
+
+        // Ensure little-endian byte order for cross-platform consistency
+        if (!BitConverter.IsLittleEndian)
+        {
+            Array.Reverse(idBytes);
+        }
+
         Array.Copy(idBytes, 0, bytes, 0, idBytes.Length);
         return new Guid(bytes);
     }
@@ -413,6 +420,13 @@ public partial class BulkImportService : IBulkImportService
     {
         // Extract long ID from GUID
         byte[] bytes = guid.ToByteArray();
+
+        // Ensure little-endian byte order for cross-platform consistency
+        if (!BitConverter.IsLittleEndian)
+        {
+            Array.Reverse(bytes, 0, 8); // Long is the first 8 bytes
+        }
+
         return BitConverter.ToInt64(bytes, 0);
     }
 }
