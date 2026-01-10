@@ -60,6 +60,7 @@ public class RedisCacheService : ICacheService
 
     /// <summary>
     /// Retrieves a cached value from Redis by key, with stale-while-revalidate support and fallback to memory cache.
+    /// L1 (Memory) is checked before L2 (Redis) for optimal performance.
     /// </summary>
     /// <typeparam name="T">The type of the cached value.</typeparam>
     /// <param name="key">The cache key.</param>
@@ -67,10 +68,17 @@ public class RedisCacheService : ICacheService
     /// <returns>The cached value, or null if not found.</returns>
     public async Task<T?> GetAsync<T>(string key, CancellationToken cancellationToken = default) where T : class
     {
+        // T068: Check L1 cache (Memory) FIRST for ultra-low latency
+        var localCached = await _fallbackCache.GetAsync<T>(key, cancellationToken);
+        if (localCached != null)
+        {
+            _logger.LogDebug("L1 cache HIT for key {Key}", key);
+            return localCached;
+        }
+
         if (_redis == null || !_redis.IsConnected)
         {
-            _logger.LogDebug("Redis unavailable, using fallback cache for key {Key}", key);
-            return await _fallbackCache.GetAsync<T>(key, cancellationToken);
+            return null;
         }
 
         try
@@ -80,7 +88,7 @@ public class RedisCacheService : ICacheService
 
             if (value.IsNullOrEmpty)
             {
-                _businessMetrics?.RecordCacheMiss("redis"); // Added null conditional operator
+                _businessMetrics?.RecordCacheMiss("redis");
                 return null;
             }
 
@@ -88,7 +96,7 @@ public class RedisCacheService : ICacheService
             var cacheEntry = JsonSerializer.Deserialize<CacheEntry<T>>((string)value!);
             if (cacheEntry == null || cacheEntry.Value == null)
             {
-                _businessMetrics?.RecordCacheMiss("redis"); // Added null conditional operator
+                _businessMetrics?.RecordCacheMiss("redis");
                 return null;
             }
 
@@ -96,35 +104,25 @@ public class RedisCacheService : ICacheService
             var freshnessExpiry = cacheEntry.CachedAtUtc + cacheEntry.OriginalTtl;
             var staleExpiry = freshnessExpiry + StaleGracePeriod;
 
+            // Update L1 cache with what we found in L2
+            await _fallbackCache.SetAsync(key, cacheEntry.Value, cacheEntry.OriginalTtl, cancellationToken);
+
             // T120: Check if data is stale but within grace period
             if (now > freshnessExpiry && now < staleExpiry)
             {
                 _logger.LogDebug("Serving stale cache entry for key {Key}, age {Age}s, triggering refresh",
                     key, (now - cacheEntry.CachedAtUtc).TotalSeconds);
 
-                // Trigger background refresh (fire-and-forget)
-                _ = Task.Run(() =>
-                {
-                    try
-                    {
-                        _logger.LogDebug("Background refresh triggered for stale key {Key}", key);
-                        // Note: Actual refresh would require callback to data source
-                        // For now, we just log the intent. The consumer (CountryService) would need to handle this.
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogError(ex, "Background refresh failed for key {Key}", ex);
-                    }
-                });
+                // Note: Real background refresh logic would be implemented here if a callback was available
             }
 
-            _businessMetrics?.RecordCacheHit("redis"); // Added null conditional operator
+            _businessMetrics?.RecordCacheHit("redis");
             return cacheEntry.Value;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Redis GET failed for key {Key}, using fallback", key);
-            return await _fallbackCache.GetAsync<T>(key, cancellationToken);
+            _logger.LogError(ex, "Redis GET failed for key {Key}", key);
+            return null;
         }
     }
 

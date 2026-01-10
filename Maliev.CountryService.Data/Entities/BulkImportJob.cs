@@ -19,6 +19,14 @@ public class BulkImportJob
     [Column(TypeName = "jsonb")]
     public string? ValidationErrors { get; set; } // JSON string of validation errors
 
+    public string? ErrorMessage { get; set; }
+
+    [Required]
+    [StringLength(100)]
+    public string UserId { get; set; } = string.Empty;
+
+    public string? UserEmail { get; set; }
+
     [Required]
     [StringLength(100)]
     public string CreatedBy { get; set; } = string.Empty;
@@ -26,6 +34,14 @@ public class BulkImportJob
     public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
     public DateTime? StartedAtUtc { get; set; }
     public DateTime? CompletedAtUtc { get; set; }
+
+    public string? IpAddress { get; set; }
+    public Guid? CorrelationId { get; set; }
+
+    [NotMapped]
+    public long? DurationMs => (CompletedAtUtc.HasValue && StartedAtUtc.HasValue)
+        ? (long?)(CompletedAtUtc.Value - StartedAtUtc.Value).TotalMilliseconds
+        : null;
 
     [Column(TypeName = "jsonb")]
     public string? PayloadData { get; set; } // Stores the serialized BulkImportRequest

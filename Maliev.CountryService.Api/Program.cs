@@ -51,6 +51,9 @@ builder.Services.AddMemoryCache();
 // Redis Distributed Cache (ServiceDefaults)
 builder.AddRedisDistributedCache(instanceName: "country:");
 
+// MassTransit with RabbitMQ
+builder.AddMassTransitWithRabbitMq();
+
 // Configure rate limiting
 builder.Services.AddRateLimiter(options =>
 {
@@ -124,13 +127,11 @@ builder.Services.AddScoped<ICountryService, CountryService>();
 // Register bulk import services
 builder.Services.AddScoped<IBulkImportService, BulkImportService>();
 
-// Register IAM Service Client
-builder.Services.AddIAMClient(builder.Configuration, "CountryService");
-
 // Register hosted services
 builder.Services.AddHostedService<CacheWarmingService>();
 builder.Services.AddHostedService<BulkImportWorkerService>();
-builder.Services.AddIAMRegistration<CountryIAMRegistrationService>();
+builder.AddIAMServiceClient("country");
+builder.Services.AddIAMRegistration<CountryIAMRegistrationService>("country");
 
 var app = builder.Build();
 var logger = app.Services.GetRequiredService<ILogger<Program>>();
@@ -141,10 +142,13 @@ await app.MigrateDatabaseAsync<CountryDbContext>();
 app.UseForwardedHeaders();
 
 // Configure middleware pipeline
-app.UseStandardMiddleware();
 app.UseMiddleware<DegradationHeaderMiddleware>();
+app.UseStandardMiddleware();
 
-app.UseHttpsRedirection();
+if (!app.Environment.IsDevelopment())
+{
+    app.UseHttpsRedirection();
+}
 app.UseRateLimiter();
 app.UseCors();
 

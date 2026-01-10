@@ -81,25 +81,14 @@ public class CountryService : ICountryService
 
             return response;
         }
-        catch (Exception ex) when (ex is Npgsql.NpgsqlException or Microsoft.EntityFrameworkCore.DbUpdateException)
+        catch (Exception ex) when (ex is Npgsql.NpgsqlException or Microsoft.EntityFrameworkCore.DbUpdateException or System.Net.Sockets.SocketException)
         {
-            // T122 + T126: Database unavailable - try serving from cache (including stale data)
-            _logger.LogWarning(ex, "Database unavailable for GetByIdAsync({Id}), attempting cache-only fallback", id);
+            // T122 + T126: Database unavailable - signal degradation
+            _logger.LogWarning(ex, "Database unavailable for GetByIdAsync({Id})", id);
+            _degradationContext.IsDegraded = true;
+            _degradationContext.DegradationReason = "Database unavailable";
 
-            var staleData = await _cacheService.GetAsync<CountryResponse>(cacheKey, cancellationToken);
-            if (staleData != null)
-            {
-                _degradationContext.IsDegraded = true;
-                _degradationContext.DegradationReason = "Database unavailable";
-                staleData.XServedFromCache = true; // Set header property
-                staleData.XCacheStale = true; // Set header property
-                _logger.LogInformation("Serving cached data in degraded mode for country ID {Id}", id);
-                return staleData;
-            }
-
-            // No cache available - rethrow
-            _logger.LogError("No cache available for country ID {Id}, cannot serve request in degraded mode", id);
-            throw;
+            throw; // Caller will handle or error response middleware will catch
         }
     }
 
@@ -584,10 +573,18 @@ public class CountryService : ICountryService
 #nullable restore
 
         _context.Countries.Add(country);
-        await _context.SaveChangesAsync(cancellationToken);
 
-        // Log audit
-        await LogAuditAsync(country.Id, "CREATE", userId, JsonSerializer.Serialize(country), cancellationToken);
+        // T080: Add audit log atomically
+        _context.AuditLogs.Add(new AuditLog
+        {
+            Country = country, // EF Core will handle the ID assignment automatically
+            Action = "CREATE",
+            UserId = userId,
+            TimestampUtc = DateTime.UtcNow,
+            Changes = JsonSerializer.Serialize(country)
+        });
+
+        await _context.SaveChangesAsync(cancellationToken);
 
         _logger.LogInformation("Country created: {Iso2} - {Name} by user {UserId}", country.Iso2, country.Name, userId);
 
@@ -640,6 +637,8 @@ public class CountryService : ICountryService
             throw new InvalidOperationException($"Another country with ISO3 code '{request.Iso3}' already exists");
         }
 
+        var changes = JsonSerializer.Serialize(request);
+
         // T082: Update all fields (full replacement)
 #nullable disable
         country.Iso2 = request.Iso2.ToUpperInvariant();
@@ -656,10 +655,10 @@ public class CountryService : ICountryService
         country.AreaKm2 = (double?)request.AreaKm2;
         country.Population = request.Population;
         country.GiniCoefficient = (double?)request.GiniCoefficient;
-        country.Timezones = request.Timezones ?? "{}";
-        country.Borders = request.Borders ?? "{}";
-        country.CallingCodes = request.CallingCodes ?? "{}";
-        country.TopLevelDomains = request.TopLevelDomains ?? "{}";
+        country.Timezones = request.Timezones ?? "[]";
+        country.Borders = request.Borders ?? "[]";
+        country.CallingCodes = request.CallingCodes ?? "[]";
+        country.TopLevelDomains = request.TopLevelDomains ?? "[]";
         country.Currencies = request.Currencies ?? "{}";
         country.Languages = request.Languages ?? "{}";
         country.Translations = request.Translations ?? "{}";
@@ -673,19 +672,25 @@ public class CountryService : ICountryService
         country.Version = Guid.NewGuid();
 #nullable restore
 
+        // Log audit atomically
+        _context.AuditLogs.Add(new AuditLog
+        {
+            CountryId = country.Id,
+            Action = "UPDATE",
+            UserId = userId,
+            TimestampUtc = DateTime.UtcNow,
+            Changes = changes
+        });
+
         try
         {
             await _context.SaveChangesAsync(cancellationToken);
         }
         catch (DbUpdateConcurrencyException ex)
         {
-            // T101: Handle EF Core concurrency exception
             _logger.LogWarning(ex, "Concurrency conflict detected for country ID {Id}", id);
             throw new InvalidOperationException($"Concurrency conflict: Country ID {id} was modified by another user. Please refresh and try again.", ex);
         }
-
-        // Log audit
-        await LogAuditAsync(country.Id, "UPDATE", userId, JsonSerializer.Serialize(request), cancellationToken);
 
         _logger.LogInformation("Country updated: {Iso2} - {Name} by user {UserId}", country.Iso2, country.Name, userId);
 
@@ -720,6 +725,8 @@ public class CountryService : ICountryService
         {
             throw new InvalidOperationException("Precondition failed: ETag mismatch (concurrent modification detected)");
         }
+
+        var changes = JsonSerializer.Serialize(request);
 
         // T083: Apply only non-null fields
 #nullable disable
@@ -766,6 +773,16 @@ public class CountryService : ICountryService
         country.Version = Guid.NewGuid();
 #nullable restore
 
+        // Log audit atomically
+        _context.AuditLogs.Add(new AuditLog
+        {
+            CountryId = country.Id,
+            Action = "PATCH",
+            UserId = userId,
+            TimestampUtc = DateTime.UtcNow,
+            Changes = changes
+        });
+
         try
         {
             await _context.SaveChangesAsync(cancellationToken);
@@ -778,8 +795,7 @@ public class CountryService : ICountryService
         }
 
         // Log audit
-        await LogAuditAsync(country.Id, "PATCH", userId, JsonSerializer.Serialize(request), cancellationToken);
-
+        // (Removed previous LogAuditAsync call)
         _logger.LogInformation("Country patched: {Iso2} - {Name} by user {UserId}", country.Iso2, country.Name, userId);
 
         // Invalidate caches
@@ -816,10 +832,17 @@ public class CountryService : ICountryService
         country.UpdatedBy = userId;
         country.Version = Guid.NewGuid();
 
-        await _context.SaveChangesAsync(cancellationToken);
+        // Log audit atomically
+        _context.AuditLogs.Add(new AuditLog
+        {
+            CountryId = id,
+            Action = "SOFT_DELETE",
+            UserId = userId,
+            TimestampUtc = DateTime.UtcNow,
+            Changes = JsonSerializer.Serialize(new { IsActive = false, DeletedAt = country.DeletedAt })
+        });
 
-        // Log audit
-        await LogAuditAsync(id, "SOFT_DELETE", userId, JsonSerializer.Serialize(new { IsActive = false, DeletedAt = country.DeletedAt }), cancellationToken);
+        await _context.SaveChangesAsync(cancellationToken);
 
         _logger.LogInformation("Country soft-deleted: {Iso2} - {Name} by user {UserId}", country.Iso2, country.Name, userId);
 
@@ -847,8 +870,15 @@ public class CountryService : ICountryService
         var iso2 = country.Iso2;
         var name = country.Name;
 
-        // Log audit BEFORE deleting (FK constraint requires country to exist when logging)
-        await LogAuditAsync(id, "HARD_DELETE", userId, JsonSerializer.Serialize(new { Id = id, Iso2 = iso2, Name = name }), cancellationToken);
+        // Log audit atomically
+        _context.AuditLogs.Add(new AuditLog
+        {
+            CountryId = id,
+            Action = "HARD_DELETE",
+            UserId = userId,
+            TimestampUtc = DateTime.UtcNow,
+            Changes = JsonSerializer.Serialize(new { Id = id, Iso2 = iso2, Name = name })
+        });
 
         _context.Countries.Remove(country);
         await _context.SaveChangesAsync(cancellationToken);
@@ -890,10 +920,17 @@ public class CountryService : ICountryService
         country.UpdatedBy = userId;
         country.Version = Guid.NewGuid();
 
-        await _context.SaveChangesAsync(cancellationToken);
+        // Log audit atomically
+        _context.AuditLogs.Add(new AuditLog
+        {
+            CountryId = id,
+            Action = "RESTORE",
+            UserId = userId,
+            TimestampUtc = DateTime.UtcNow,
+            Changes = JsonSerializer.Serialize(new { IsActive = true, RestoredAt = DateTime.UtcNow })
+        });
 
-        // Log audit
-        await LogAuditAsync(id, "RESTORE", userId, JsonSerializer.Serialize(new { IsActive = true, RestoredAt = DateTime.UtcNow }), cancellationToken);
+        await _context.SaveChangesAsync(cancellationToken);
 
         _logger.LogInformation("Country restored: {Iso2} - {Name} by user {UserId}", country.Iso2, country.Name, userId);
 

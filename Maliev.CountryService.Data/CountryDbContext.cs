@@ -19,45 +19,20 @@ public class CountryDbContext : DbContext
     {
         base.OnModelCreating(modelBuilder);
 
-        foreach (var entity in modelBuilder.Model.GetEntityTypes())
-        {
-            // Replace table names
-            entity.SetTableName(entity.GetTableName()?.ToSnakeCase());
-
-            // Replace column names
-            foreach (var property in entity.GetProperties())
-            {
-                property.SetColumnName(property.GetColumnName()?.ToSnakeCase());
-            }
-
-            // Replace key names
-            foreach (var key in entity.GetKeys())
-            {
-                key.SetName(key.GetName()?.ToSnakeCase());
-            }
-
-            // Replace foreign key names
-            foreach (var foreignKey in entity.GetForeignKeys())
-            {
-                foreignKey.SetConstraintName(foreignKey.GetConstraintName()?.ToSnakeCase());
-            }
-
-            // Replace index names
-            foreach (var index in entity.GetIndexes())
-            {
-                index.SetDatabaseName(index.GetDatabaseName()?.ToSnakeCase());
-
-                // Apply PostgreSQL snake_case naming convention globally
-                SnakeCaseNamingHelper.ApplySnakeCaseNaming(modelBuilder);
-            }
-        }
+        // T033: Enable pg_trgm extension for high-performance full-text search
+        modelBuilder.HasPostgresExtension("pg_trgm");
 
         modelBuilder.Entity<Country>(entity =>
         {
             entity.HasKey(e => e.Id);
             entity.HasIndex(e => e.Iso2).IsUnique();
             entity.HasIndex(e => e.Iso3).IsUnique().HasFilter("iso3 IS NOT NULL"); // Only unique for non-null values
-            entity.HasIndex(e => e.Name); // Regular B-tree index for Name sorting and filtering
+
+            // T033: GIN index for high-performance full-text search (requires pg_trgm extension)
+            entity.HasIndex(e => e.Name)
+                  .HasMethod("gin")
+                  .HasOperators("gin_trgm_ops");
+
             entity.Property(e => e.Name).IsRequired().HasMaxLength(100);
             entity.Property(e => e.OfficialName).HasMaxLength(200);
             entity.Property(e => e.NumericCode).HasMaxLength(3);
@@ -121,8 +96,11 @@ public class CountryDbContext : DbContext
                   .WithMany()
                   .HasForeignKey(e => e.CountryId)
                   .IsRequired(false) // Fix for global query filter warning
-                  .OnDelete(DeleteBehavior.Cascade); // Ensure hard delete works
+                  .OnDelete(DeleteBehavior.SetNull); // Preserve audit logs after hard delete
         });
+
+        // Apply PostgreSQL snake_case naming convention globally once
+        SnakeCaseNamingHelper.ApplySnakeCaseNaming(modelBuilder);
     }
 }
 

@@ -12,22 +12,22 @@ public class CountryIAMRegistrationService : IAMRegistrationService
     /// <summary>
     /// Initializes a new instance of the <see cref="CountryIAMRegistrationService"/> class.
     /// </summary>
-    /// <param name="httpClientFactory">The HTTP client factory.</param>
+    /// <param name="configuration">The application configuration.</param>
     /// <param name="logger">The logger.</param>
     public CountryIAMRegistrationService(
-        IHttpClientFactory httpClientFactory,
+        IConfiguration configuration,
         ILogger<CountryIAMRegistrationService> logger)
-        : base(httpClientFactory, logger, "country")
+        : base(configuration, logger, "country")
     {
     }
 
     /// <inheritdoc/>
     protected override IEnumerable<PermissionRegistration> GetPermissions()
     {
-        return CountryPermissions.All.Select(p => new PermissionRegistration
+        return CountryPermissions.AllWithDescriptions.Select(p => new PermissionRegistration
         {
-            PermissionId = p.Replace("Permission:", ""),
-            Description = $"Permission for {p.Replace("Permission:", "")}"
+            PermissionId = p.Key,
+            Description = p.Value
         });
     }
 
@@ -38,8 +38,9 @@ public class CountryIAMRegistrationService : IAMRegistrationService
         {
             RoleId = r.RoleId,
             Description = r.Description,
-            PermissionIds = r.Permissions.Select(p => p.Replace("Permission:", "")).ToList(),
+            PermissionIds = r.Permissions.ToList(),
             IsCustom = false
         });
     }
 }
+

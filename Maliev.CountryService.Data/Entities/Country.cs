@@ -59,7 +59,7 @@ public class Country
     public bool IsActive { get; set; } = true;
 
     [ConcurrencyCheck]
-    public Guid Version { get; set; }
+    public Guid Version { get; set; } = Guid.NewGuid();
 
     [Required, StringLength(100)]
     public string CreatedBy { get; set; } = "system"; // Default to system for now

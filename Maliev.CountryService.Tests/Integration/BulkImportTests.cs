@@ -135,18 +135,12 @@ public class BulkImportTests : IntegrationTestBase
         var adminClient = _factory.CreateAuthenticatedClient("testuser", CountryAdminRoles, adminPermissions);
         var countries = new List<CreateCountryRequest>();
 
-        // Create 1001 countries to exceed the 1000 limit
-        for (int i = 0; i < 1001; i++)
+        // Create 10001 countries to exceed the 10000 limit
+        for (int i = 0; i < 10001; i++)
         {
-            // Generate unique ISO2 codes: AA, AB, AC...ZZ
-            var iso2 = i < 676
-                ? $"{(char)('A' + i / 26)}{(char)('A' + i % 26)}"  // AA-ZZ (676 combinations)
-                : $"Z{(char)('A' + (i - 676) % 26)}";  // ZA-ZZ for remaining
-
-            // Generate unique ISO3 codes: AAA, AAB, AAC...ZZZ
-            var iso3 = i < 17576
-                ? $"{(char)('A' + i / 676)}{(char)('A' + (i / 26) % 26)}{(char)('A' + i % 26)}"
-                : $"ZZ{(char)('A' + (i - 17576) % 26)}";
+            // Generate ISO2 codes (will have duplicates, but count check happens first)
+            var iso2 = $"{(char)('A' + (i / 26) % 26)}{(char)('A' + i % 26)}";
+            var iso3 = $"{(char)('A' + (i / 676) % 26)}{(char)('A' + (i / 26) % 26)}{(char)('A' + i % 26)}";
 
             countries.Add(new CreateCountryRequest
             {
