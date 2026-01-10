@@ -362,7 +362,10 @@ public class AdminCountriesController : ControllerBase
 
     /// <summary>
     /// Rebuilds the country cache from database.
+    /// Requires CountrySystemRebuildCache permission.
     /// </summary>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>No content on success.</returns>
     [HttpPost("rebuild-cache")]
     [RequirePermission(CountryPermissions.SystemRebuildCache)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
@@ -388,7 +391,10 @@ public class AdminCountriesController : ControllerBase
 
     /// <summary>
     /// Exports all country data as JSON.
+    /// Requires CountrySystemExport permission.
     /// </summary>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>List of all countries.</returns>
     [HttpGet("export")]
     [RequirePermission(CountryPermissions.SystemExport)]
     [ProducesResponseType(typeof(IEnumerable<CountryResponse>), StatusCodes.Status200OK)]

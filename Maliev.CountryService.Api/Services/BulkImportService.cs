@@ -11,11 +11,20 @@ namespace Maliev.CountryService.Api.Services;
 /// <summary>
 /// T108: Bulk import service implementation with two-phase validation and processing.
 /// </summary>
-public class BulkImportService : IBulkImportService
+public partial class BulkImportService : IBulkImportService
 {
     private readonly CountryDbContext _context;
     private readonly ICountryService _countryService;
     private readonly ILogger<BulkImportService> _logger;
+
+    [GeneratedRegex("^[A-Z]{2}$")]
+    private static partial Regex Iso2Regex();
+
+    [GeneratedRegex("^[A-Z]{3}$")]
+    private static partial Regex Iso3Regex();
+
+    [GeneratedRegex("^[0-9]{3}$")]
+    private static partial Regex NumericCodeRegex();
 
     /// <summary>
     /// Initializes a new instance of the <see cref="BulkImportService"/> class.
@@ -42,7 +51,7 @@ public class BulkImportService : IBulkImportService
             errors.Add("ISO2 code is required");
         else if (country.Iso2.Length != 2)
             errors.Add("ISO2 code must be exactly 2 characters");
-        else if (!Regex.IsMatch(country.Iso2, "^[A-Z]{2}$"))
+        else if (!Iso2Regex().IsMatch(country.Iso2))
             errors.Add("ISO2 code must be uppercase letters only");
 
         // ISO3 validation
@@ -50,7 +59,7 @@ public class BulkImportService : IBulkImportService
             errors.Add("ISO3 code is required");
         else if (country.Iso3.Length != 3)
             errors.Add("ISO3 code must be exactly 3 characters");
-        else if (!Regex.IsMatch(country.Iso3, "^[A-Z]{3}$"))
+        else if (!Iso3Regex().IsMatch(country.Iso3))
             errors.Add("ISO3 code must be uppercase letters only");
 
         // Name validation
@@ -64,7 +73,7 @@ public class BulkImportService : IBulkImportService
             errors.Add("Official name must not exceed 200 characters");
 
         if (!string.IsNullOrWhiteSpace(country.NumericCode) &&
-            (country.NumericCode.Length != 3 || !Regex.IsMatch(country.NumericCode, "^[0-9]{3}$")))
+            (country.NumericCode.Length != 3 || !NumericCodeRegex().IsMatch(country.NumericCode)))
             errors.Add("Numeric code must be exactly 3 digits");
 
         if (country.Latitude.HasValue && (country.Latitude.Value < -90 || country.Latitude.Value > 90))
@@ -100,7 +109,8 @@ public class BulkImportService : IBulkImportService
             CreatedBy = userId,
             CreatedAtUtc = DateTime.UtcNow,
             StartedAtUtc = DateTime.UtcNow,
-            ValidationErrors = "[]"
+            ValidationErrors = "[]",
+            PayloadData = JsonSerializer.Serialize(request) // Persist data for async processing
         };
 
         _context.BulkImportJobs.Add(job);
@@ -214,7 +224,7 @@ public class BulkImportService : IBulkImportService
             job.Status = "Validated";
         }
 
-        job.CompletedAtUtc = DateTime.UtcNow;
+        // T226: Do NOT set CompletedAtUtc here as the job is only validated, not finished.
         await _context.SaveChangesAsync(cancellationToken);
 
         _logger.LogInformation("Bulk import validation completed: JobId {JobId}, Status {Status}, Errors {ErrorCount}",
@@ -238,21 +248,30 @@ public class BulkImportService : IBulkImportService
             throw new KeyNotFoundException($"Bulk import job {jobId} not found");
         }
 
-        if (job.Status != "Validated")
+        if (job.Status != "Validated" && job.Status != "Processing")
         {
             throw new InvalidOperationException($"Job {jobId} is in status '{job.Status}', cannot process. Only 'Validated' jobs can be processed.");
         }
 
-        job.Status = "Processing";
-        job.StartedAtUtc = DateTime.UtcNow;
-        await _context.SaveChangesAsync(cancellationToken);
+        if (job.Status == "Validated")
+        {
+            job.Status = "Processing";
+            job.StartedAtUtc = DateTime.UtcNow;
+            await _context.SaveChangesAsync(cancellationToken);
+        }
 
         try
         {
-            // Load the original request data
-            // Note: In production, this would be stored in the BulkImportJob or a separate table
-            // For now, we'll assume this is called immediately after validation with the data still available
-            // This is a simplified implementation
+            if (string.IsNullOrEmpty(job.PayloadData))
+            {
+                throw new InvalidOperationException("Job payload data is missing");
+            }
+
+            var request = JsonSerializer.Deserialize<BulkImportRequest>(job.PayloadData);
+            if (request == null || request.Countries == null)
+            {
+                throw new InvalidOperationException("Failed to deserialize job payload data");
+            }
 
             // T110: Process validated job with atomic transaction using execution strategy
             var strategy = _context.Database.CreateExecutionStrategy();
@@ -263,9 +282,44 @@ public class BulkImportService : IBulkImportService
 
                 try
                 {
-                    // In a real implementation, the country data would be stored with the job
-                    // For this simplified version, we'll just mark as completed
-                    // The actual insert logic would go here
+                    var countriesToInsert = request.Countries.Select(c => new Data.Entities.Country
+                    {
+                        Iso2 = c.Iso2.ToUpperInvariant(),
+                        Iso3 = c.Iso3?.ToUpperInvariant(),
+                        Name = c.Name,
+                        OfficialName = c.OfficialName,
+                        NumericCode = c.NumericCode,
+                        Capital = c.Capital,
+                        Region = c.Region,
+                        Subregion = c.Subregion,
+                        Latitude = (double?)c.Latitude,
+                        Longitude = (double?)c.Longitude,
+                        Demonym = c.Demonym,
+                        AreaKm2 = (double?)c.AreaKm2,
+                        Population = c.Population,
+                        GiniCoefficient = (double?)c.GiniCoefficient,
+                        Timezones = c.Timezones ?? "[]",
+                        Borders = c.Borders ?? "[]",
+                        CallingCodes = c.CallingCodes ?? "[]",
+                        TopLevelDomains = c.TopLevelDomains ?? "[]",
+                        Currencies = c.Currencies ?? "{}",
+                        Languages = c.Languages ?? "{}",
+                        Translations = c.Translations ?? "{}",
+                        Flags = c.Flags ?? "{}",
+                        CoatOfArms = c.CoatOfArms ?? "{}",
+                        Independent = c.Independent ?? false,
+                        UnMember = c.UnMember ?? false,
+                        Landlocked = c.Landlocked ?? false,
+                        IsActive = true,
+                        CreatedAtUtc = DateTime.UtcNow,
+                        LastModifiedUtc = DateTime.UtcNow,
+                        CreatedBy = job.CreatedBy,
+                        UpdatedBy = job.CreatedBy,
+                        Version = Guid.NewGuid()
+                    }).ToList();
+
+                    _context.Countries.AddRange(countriesToInsert);
+                    await _context.SaveChangesAsync(cancellationToken);
 
                     job.ProcessedRecords = job.TotalRecords;
                     job.Status = "Completed";
@@ -293,6 +347,7 @@ public class BulkImportService : IBulkImportService
 
             job.Status = "Failed";
             job.CompletedAtUtc = DateTime.UtcNow;
+            job.ValidationErrors = JsonSerializer.Serialize(new[] { new { message = ex.Message } });
             await _context.SaveChangesAsync(cancellationToken);
 
             throw;

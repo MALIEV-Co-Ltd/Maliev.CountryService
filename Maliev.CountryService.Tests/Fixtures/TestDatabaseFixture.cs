@@ -59,7 +59,6 @@ public class TestDatabaseFixture : IAsyncLifetime
         using var context = new CountryDbContext(options);
         await context.Database.EnsureDeletedAsync(); // Ensure clean database
         await context.Database.EnsureCreatedAsync(); // Create schema from model
-        Console.WriteLine("Database schema created using EnsureCreatedAsync().");
 
         // Seed initial data for tests
         var countries = new List<Maliev.CountryService.Data.Entities.Country>
@@ -186,11 +185,9 @@ public class TestDatabaseFixture : IAsyncLifetime
         };
         context.Countries.AddRange(countries);
         await context.SaveChangesAsync();
-        Console.WriteLine("Database seeded with initial country data.");
 
         // Reset the sequence to continue from the last seeded ID
         await context.Database.ExecuteSqlRawAsync("SELECT setval(pg_get_serial_sequence('countries', 'id'), (SELECT MAX(id) FROM countries));");
-        Console.WriteLine("Database sequence reset to continue from last seeded ID.");
     }
 
     public async Task DisposeAsync()

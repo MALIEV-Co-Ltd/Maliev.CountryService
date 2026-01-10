@@ -16,7 +16,7 @@ namespace Maliev.CountryService.Api.Controllers;
 /// <summary>
 /// Administrative endpoints for bulk importing country data.
 /// Implements a two-phase approach: validation phase (returns validation errors immediately) followed by processing phase (executed asynchronously).
-/// Maximum 1000 countries per batch. All operations logged with full audit trail.
+/// Maximum 10,000 countries per batch. All operations logged with full audit trail.
 /// </summary>
 [ApiController]
 [ApiVersion("1.0")]
@@ -54,17 +54,17 @@ public class BulkImportController : ControllerBase
         var stopwatch = System.Diagnostics.Stopwatch.StartNew();
         var userId = GetUserId();
 
-        if (request.Countries.Count > 1000)
+        if (request.Countries.Count > 10000)
         {
-            _logger.LogWarning("Bulk import rejected: {Count} countries exceeds limit of 1000 by user {UserId}",
+            _logger.LogWarning("Bulk import rejected: {Count} countries exceeds limit of 10000 by user {UserId}",
                 request.Countries.Count, userId);
 
             _businessMetrics.RecordRequestDuration(stopwatch.Elapsed.TotalSeconds, "BulkImportSubmit", "POST", "413");
             return StatusCode(413, new
             {
                 error = "PAYLOAD_TOO_LARGE",
-                message = "Bulk import requests are limited to 1000 countries per batch",
-                limit = 1000,
+                message = "Bulk import requests are limited to 10,000 countries per batch",
+                limit = 10000,
                 received = request.Countries.Count
             });
         }
@@ -97,7 +97,7 @@ public class BulkImportController : ControllerBase
                 });
             }
 
-            Response.Headers["Location"] = $"/countries/v1/admin/bulk-import/{result.JobId}";
+            Response.Headers["Location"] = $"/country/v1/admin/bulk-import/{result.JobId}";
 
             _businessMetrics.RecordRequestDuration(stopwatch.Elapsed.TotalSeconds, "BulkImportSubmit", "POST", "202");
             return AcceptedAtAction(nameof(GetJobStatus), new { jobId = result.JobId }, result);
@@ -144,6 +144,8 @@ public class BulkImportController : ControllerBase
 
     /// <summary>
     /// Triggers asynchronous processing of a validated bulk import job.
+    /// This endpoint validates the job state and returns 202 Accepted.
+    /// The actual processing is handled by the background worker.
     /// </summary>
     [HttpPost("{jobId:guid}/process")]
     [RequirePermission(CountryPermissions.ImportExecute)]
@@ -179,18 +181,16 @@ public class BulkImportController : ControllerBase
                 });
             }
 
-            var result = await _bulkImportService.ProcessImportAsync(jobId, cancellationToken);
-
             _logger.LogInformation("Bulk import processing triggered: JobId {JobId} by user {UserId}", jobId, userId);
 
             _businessMetrics.RecordRequestDuration(stopwatch.Elapsed.TotalSeconds, "ProcessJob", "POST", "202");
-            return AcceptedAtAction(nameof(GetJobStatus), new { jobId }, result);
+            return AcceptedAtAction(nameof(GetJobStatus), new { jobId }, jobStatus);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error processing job {JobId}", jobId);
+            _logger.LogError(ex, "Error triggering job processing {JobId}", jobId);
             _businessMetrics.RecordRequestDuration(stopwatch.Elapsed.TotalSeconds, "ProcessJob", "POST", "500");
-            return StatusCode(500, new { error = "INTERNAL_ERROR", message = "An error occurred while processing the job" });
+            return StatusCode(500, new { error = "INTERNAL_ERROR", message = "An error occurred while triggering the job processing" });
         }
     }
 

@@ -13,7 +13,6 @@ public class BulkImportWorkerService : BackgroundService
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<BulkImportWorkerService> _logger;
     private readonly TimeSpan _pollInterval = TimeSpan.FromSeconds(10);
-    private readonly int _maxConcurrentJobs = 2; // T114: Configurable batch processing limits
     private readonly TimeSpan _processingTimeout = TimeSpan.FromMinutes(30); // T114: Processing timeout
     /// <summary>
     /// Initializes a new instance of the <see cref="BulkImportWorkerService"/> class.
@@ -60,57 +59,63 @@ public class BulkImportWorkerService : BackgroundService
         var context = scope.ServiceProvider.GetRequiredService<CountryDbContext>();
         var bulkImportService = scope.ServiceProvider.GetRequiredService<IBulkImportService>();
 
-        // T113: Poll for Validated jobs
-        var validatedJobs = await context.BulkImportJobs
-            .Where(j => j.Status == "Validated")
-            .OrderBy(j => j.CreatedAtUtc)
-            .Take(_maxConcurrentJobs)
-            .ToListAsync(cancellationToken);
+        // T113: Select and lock the next validated job using 'SKIP LOCKED'
+        var job = await context.BulkImportJobs
+            .FromSqlRaw("SELECT * FROM bulk_import_jobs WHERE status = 'Validated' ORDER BY created_at_utc FOR UPDATE SKIP LOCKED")
+            .FirstOrDefaultAsync(cancellationToken);
 
-        if (!validatedJobs.Any())
+        if (job == null)
         {
             return;
         }
 
-        _logger.LogInformation("Found {Count} validated jobs to process", validatedJobs.Count);
+        // Mark as Processing immediately inside the scope
+        job.Status = "Processing";
+        await context.SaveChangesAsync(cancellationToken);
 
-        // T114: Process jobs with timeout and error handling
-        foreach (var job in validatedJobs)
+        _logger.LogInformation("Selected validated job {JobId} for processing", job.Id);
+
+        try
         {
-            try
-            {
-                using var timeoutCts = new CancellationTokenSource(_processingTimeout);
-                using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCts.Token);
+            using var timeoutCts = new CancellationTokenSource(_processingTimeout);
+            using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCts.Token);
 
-                _logger.LogInformation("Processing bulk import job {JobId}", job.Id);
+            _logger.LogInformation("Processing bulk import job {JobId}", job.Id);
 
-                // Convert long ID to Guid (simplified - in production would use proper GUID)
-                var jobGuid = Guid.NewGuid();
+            // Convert long ID to Guid (simplified - in production would use proper GUID)
+            var jobGuid = CreateGuidFromLongId(job.Id);
 
-                await bulkImportService.ProcessImportAsync(jobGuid, linkedCts.Token);
+            await bulkImportService.ProcessImportAsync(jobGuid, linkedCts.Token);
 
-                _logger.LogInformation("Successfully processed bulk import job {JobId}", job.Id);
-            }
-            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-            {
-                _logger.LogInformation("Bulk import processing cancelled for job {JobId}", job.Id);
-                throw; // Re-throw to stop the service
-            }
-            catch (OperationCanceledException)
-            {
-                _logger.LogWarning("Bulk import processing timed out for job {JobId} after {Timeout}", job.Id, _processingTimeout);
-
-                // Mark job as failed due to timeout
-                job.Status = "Failed";
-                job.ValidationErrors = System.Text.Json.JsonSerializer.Serialize(new[] { new { message = $"Processing timed out after {_processingTimeout.TotalMinutes} minutes" } });
-                job.CompletedAtUtc = DateTime.UtcNow;
-                await context.SaveChangesAsync(cancellationToken);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error processing bulk import job {JobId}", job.Id);
-                // Error handling is done in BulkImportService.ProcessImportAsync
-            }
+            _logger.LogInformation("Successfully processed bulk import job {JobId}", job.Id);
         }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            _logger.LogInformation("Bulk import processing cancelled for job {JobId}", job.Id);
+            throw; // Re-throw to stop the service
+        }
+        catch (OperationCanceledException)
+        {
+            _logger.LogWarning("Bulk import processing timed out for job {JobId} after {Timeout}", job.Id, _processingTimeout);
+
+            // Mark job as failed due to timeout
+            job.Status = "Failed";
+            job.ValidationErrors = System.Text.Json.JsonSerializer.Serialize(new[] { new { message = $"Processing timed out after {_processingTimeout.TotalMinutes} minutes" } });
+            job.CompletedAtUtc = DateTime.UtcNow;
+            await context.SaveChangesAsync(cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error processing bulk import job {JobId}", job.Id);
+            // Error handling is done in BulkImportService.ProcessImportAsync
+        }
+    }
+
+    private Guid CreateGuidFromLongId(long id)
+    {
+        byte[] bytes = new byte[16];
+        byte[] idBytes = BitConverter.GetBytes(id);
+        Array.Copy(idBytes, 0, bytes, 0, idBytes.Length);
+        return new Guid(bytes);
     }
 }
