@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using Maliev.CountryService.Data.Models;
+using Maliev.CountryService.Data.Entities;
 
 namespace Maliev.CountryService.Data.Configurations;
 
