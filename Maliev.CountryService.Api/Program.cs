@@ -15,7 +15,7 @@ var bootstrapLogger = loggerFactory.CreateLogger("Program");
 
 try
 {
-    Log.StartingHost(bootstrapLogger, "Country Service");
+    Program.Log.StartingHost(bootstrapLogger, "Country Service");
 
     var builder = WebApplication.CreateBuilder(args);
 
@@ -175,12 +175,12 @@ try
     // Map OpenAPI and Scalar documentation (dev/staging only)
     app.MapApiDocumentation(servicePrefix: "country");
 
-    Log.ServiceStarted(logger, "Country Service");
+    Program.Log.ServiceStarted(logger, "Country Service");
     await app.RunAsync();
 }
 catch (Exception ex)
 {
-    Log.HostTerminated(bootstrapLogger, ex, "Country Service");
+    Program.Log.HostTerminated(bootstrapLogger, ex, "Country Service");
     throw;
 }
 finally
