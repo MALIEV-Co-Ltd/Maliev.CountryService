@@ -1,4 +1,3 @@
-#pragma warning disable CA1848 // For improved performance, use the LoggerMessage delegates
 using Maliev.CountryService.Api.BackgroundServices;
 using Maliev.CountryService.Api.Middleware;
 using Maliev.CountryService.Api.Services;
@@ -16,7 +15,7 @@ var bootstrapLogger = loggerFactory.CreateLogger("Program");
 
 try
 {
-    bootstrapLogger.LogInformation("Starting Country Service host");
+    Log.StartingHost(bootstrapLogger, "Country Service");
 
     var builder = WebApplication.CreateBuilder(args);
 
@@ -176,12 +175,12 @@ try
     // Map OpenAPI and Scalar documentation (dev/staging only)
     app.MapApiDocumentation(servicePrefix: "country");
 
-    logger.LogInformation("CountryService started successfully");
+    Log.ServiceStarted(logger, "Country Service");
     await app.RunAsync();
 }
 catch (Exception ex)
 {
-    bootstrapLogger.LogCritical(ex, "Country Service host terminated unexpectedly during startup");
+    Log.HostTerminated(bootstrapLogger, ex, "Country Service");
     throw;
 }
 finally
@@ -192,4 +191,17 @@ finally
 /// <summary>
 /// Entry point for the application.
 /// </summary>
-public partial class Program { }
+public partial class Program
+{
+    internal static partial class Log
+    {
+        [LoggerMessage(Level = LogLevel.Information, Message = "Starting {ServiceName} host")]
+        public static partial void StartingHost(ILogger logger, string serviceName);
+
+        [LoggerMessage(Level = LogLevel.Critical, Message = "{ServiceName} host terminated unexpectedly during startup")]
+        public static partial void HostTerminated(ILogger logger, Exception ex, string serviceName);
+
+        [LoggerMessage(Level = LogLevel.Information, Message = "{ServiceName} started successfully")]
+        public static partial void ServiceStarted(ILogger logger, string serviceName);
+    }
+}
