@@ -62,7 +62,9 @@ public class BulkImportWorkerService : BackgroundService
         // T113: Select and lock the next validated job using 'SKIP LOCKED'
         var job = await context.BulkImportJobs
             .FromSqlRaw("SELECT * FROM bulk_import_jobs WHERE status = 'Validated' ORDER BY created_at_utc FOR UPDATE SKIP LOCKED")
+            .OrderBy(j => j.CreatedAtUtc) // Ensure deterministic ordering for EF Core
             .FirstOrDefaultAsync(cancellationToken);
+
 
         if (job == null)
         {
