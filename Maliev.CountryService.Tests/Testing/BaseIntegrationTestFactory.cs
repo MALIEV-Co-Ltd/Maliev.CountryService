@@ -17,9 +17,6 @@ using Testcontainers.RabbitMq;
 using Testcontainers.Redis;
 using Xunit;
 
-// Disable parallel execution to prevent race conditions on the shared singleton database
-[assembly: CollectionBehavior(DisableTestParallelization = true)]
-
 namespace Maliev.CountryService.Tests.Testing;
 
 /// <summary>
@@ -362,11 +359,13 @@ public class BaseIntegrationTestFactory<TProgram, TDbContext> : WebApplicationFa
     /// <param name="userId">User ID to include in token</param>
     /// <param name="roles">Roles to include in token claims</param>
     /// <param name="additionalClaims">Additional claims to include</param>
+    /// <param name="permissions">Permissions to include in token claims</param>
     /// <returns>JWT token string</returns>
     public string CreateTestJwtToken(
         string userId = "test-user",
         string[]? roles = null,
-        Dictionary<string, string>? additionalClaims = null)
+        Dictionary<string, string>? additionalClaims = null,
+        string[]? permissions = null)
     {
         var claims = new List<Claim>
         {
@@ -379,6 +378,14 @@ public class BaseIntegrationTestFactory<TProgram, TDbContext> : WebApplicationFa
             foreach (var role in roles)
             {
                 claims.Add(new Claim(ClaimTypes.Role, role));
+            }
+        }
+
+        if (permissions != null)
+        {
+            foreach (var permission in permissions)
+            {
+                claims.Add(new Claim("permission", permission));
             }
         }
 
@@ -414,11 +421,11 @@ public class BaseIntegrationTestFactory<TProgram, TDbContext> : WebApplicationFa
     }
 
     /// <summary>
-    /// Creates an HTTP client with authenticated user and specified roles.
+    /// Creates an HTTP client with authenticated user and specified roles or permissions.
     /// </summary>
-    public HttpClient CreateAuthenticatedClient(string userId = "test-user", string[]? roles = null)
+    public HttpClient CreateAuthenticatedClient(string userId = "test-user", string[]? roles = null, string[]? permissions = null)
     {
-        var token = CreateTestJwtToken(userId, roles);
+        var token = CreateTestJwtToken(userId, roles, permissions: permissions);
         var client = CreateClient();
         client.DefaultRequestHeaders.Add("Authorization", $"Bearer {token}");
         return client;
