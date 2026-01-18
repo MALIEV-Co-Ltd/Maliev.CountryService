@@ -1,6 +1,6 @@
-using Maliev.CountryService.Api.Services;
 using Microsoft.Extensions.Caching.Memory;
-using System.Text.Json;
+using System.Collections.Concurrent;
+using System.Text.RegularExpressions;
 
 namespace Maliev.CountryService.Api.Services;
 
@@ -11,6 +11,7 @@ public class MemoryCacheService : ICacheService
 {
     private readonly IMemoryCache _memoryCache;
     private readonly ILogger<MemoryCacheService> _logger;
+    private readonly ConcurrentDictionary<string, byte> _keys = new();
 
     /// <summary>
     /// Initializes a new instance of the <see cref="MemoryCacheService"/> class.
@@ -57,7 +58,13 @@ public class MemoryCacheService : ICacheService
         {
             AbsoluteExpirationRelativeToNow = expiration ?? TimeSpan.FromMinutes(15) // Default 15 minutes
         };
+        options.RegisterPostEvictionCallback((k, v, reason, state) =>
+        {
+            _keys.TryRemove(k.ToString()!, out _);
+        });
+
         _memoryCache.Set(key, value, options);
+        _keys.TryAdd(key, 0);
         _logger.LogDebug("Memory cache SET for key {Key} with expiration {Expiration}", key, options.AbsoluteExpirationRelativeToNow);
         await Task.CompletedTask;
     }
@@ -71,25 +78,32 @@ public class MemoryCacheService : ICacheService
     public async Task RemoveAsync(string key, CancellationToken cancellationToken = default)
     {
         _memoryCache.Remove(key);
+        _keys.TryRemove(key, out _);
         _logger.LogDebug("Memory cache REMOVED key {Key}", key);
         await Task.CompletedTask;
     }
 
     /// <summary>
     /// Removes all cached items matching a specific pattern.
-    /// Note: IMemoryCache does not support pattern-based removal directly.
-    /// This implementation logs a warning and does nothing.
     /// </summary>
     /// <param name="pattern">The pattern to match cache keys against.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>A task that represents the asynchronous operation.</returns>
     public Task RemovePatternAsync(string pattern, CancellationToken cancellationToken = default)
     {
-        _logger.LogWarning("RemovePatternAsync is not fully supported by IMemoryCache. Clearing all or using a workaround.");
-        // IMemoryCache does not support pattern-based removal directly.
-        // A common workaround involves storing keys in a separate collection, or simply clearing the entire cache.
-        // For simplicity in this example, we'll log a warning and do nothing.
-        // In a real scenario, this would require a custom IMemoryCache implementation or a different strategy.
+        _logger.LogInformation("Removing pattern {Pattern} from memory cache", pattern);
+
+        var regexPattern = "^" + Regex.Escape(pattern).Replace("\\*", ".*") + "$";
+        var regex = new Regex(regexPattern, RegexOptions.IgnoreCase);
+
+        var keysToRemove = _keys.Keys.Where(k => regex.IsMatch(k)).ToList();
+
+        foreach (var key in keysToRemove)
+        {
+            _memoryCache.Remove(key);
+            _keys.TryRemove(key, out _);
+        }
+
         return Task.CompletedTask;
     }
 }

@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using System.Diagnostics.Metrics;
 
 namespace Maliev.CountryService.Api.Metrics;

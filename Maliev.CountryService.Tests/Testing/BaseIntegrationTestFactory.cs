@@ -134,13 +134,21 @@ public class BaseIntegrationTestFactory<TProgram, TDbContext> : WebApplicationFa
     {
         builder.ConfigureAppConfiguration((context, config) =>
         {
-            config.AddInMemoryCollection(new Dictionary<string, string?>
+            var dict = new Dictionary<string, string?>
             {
                 ["Jwt:SecurityKey"] = "test-secret-key-at-least-32-characters-long"
-            });
+            };
+
+            foreach (var kv in GetAdditionalConfiguration())
+            {
+                dict[kv.Key] = kv.Value;
+            }
+
+            config.AddInMemoryCollection(dict);
         });
 
         builder.ConfigureTestServices(services =>
+
         {
             // Configure JWT Bearer authentication with test RSA key
             services.PostConfigureAll<JwtBearerOptions>(options =>
@@ -189,8 +197,17 @@ public class BaseIntegrationTestFactory<TProgram, TDbContext> : WebApplicationFa
     }
 
     /// <summary>
+    /// Override this method to supply additional in-memory configuration for the test host.
+    /// </summary>
+    protected virtual IReadOnlyDictionary<string, string?> GetAdditionalConfiguration()
+    {
+        return new Dictionary<string, string?>();
+    }
+
+    /// <summary>
     /// Gets the DbContext from the service provider for use in tests.
     /// </summary>
+
     public TDbContext GetDbContext()
     {
         var scope = Services.CreateScope();
