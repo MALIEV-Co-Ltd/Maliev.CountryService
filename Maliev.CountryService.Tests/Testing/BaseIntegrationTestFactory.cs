@@ -378,7 +378,14 @@ public class BaseIntegrationTestFactory<TProgram, TDbContext> : WebApplicationFa
         {
             try
             {
-                using var connection = await StackExchange.Redis.ConnectionMultiplexer.ConnectAsync(_redisContainer.GetConnectionString());
+                var connectionString = _redisContainer.GetConnectionString();
+                // Ensure AllowAdmin=true is set for flushing
+                if (!connectionString.Contains("allowAdmin=true", StringComparison.OrdinalIgnoreCase))
+                {
+                    connectionString += ",allowAdmin=true";
+                }
+                
+                using var connection = await StackExchange.Redis.ConnectionMultiplexer.ConnectAsync(connectionString);
                 var endpoints = connection.GetEndPoints();
                 foreach (var endpoint in endpoints)
                 {

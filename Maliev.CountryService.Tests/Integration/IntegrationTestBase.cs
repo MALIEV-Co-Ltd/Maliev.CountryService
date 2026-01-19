@@ -24,7 +24,11 @@ public abstract class IntegrationTestBase
         _client = factory.CreateClient();
         JsonSerializerOptions = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
         _logger = factory.Services.GetRequiredService<ILoggerFactory>().CreateLogger(GetType());
+
+        // Ensure database and caches are clean before each test class run
+        factory.CleanDatabaseAsync().GetAwaiter().GetResult();
     }
+
 
     protected static readonly string[] CountryAdminRoles = { "roles.country.admin" };
     protected static readonly string[] SuperAdminRoles = { "roles.country.superadmin" };
