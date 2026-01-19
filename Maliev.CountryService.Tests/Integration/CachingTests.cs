@@ -21,9 +21,15 @@ public class CachingTests : IntegrationTestBase
     [Fact]
     public async Task GetById_ReturnsETagHeader()
     {
+        // Ensure data exists
+        var adminPermissions = CountryPredefinedRoles.GetPermissionsForRole(CountryAdminRoles[0]).ToArray();
+        var adminClient = _factory.CreateAuthenticatedClient("cachetest", CountryAdminRoles, adminPermissions);
+        var createResponse = await adminClient.PostAsJsonAsync("/country/v1/admin/countries", new CreateCountryRequest { Iso2 = "ET", Iso3 = "ETA", Name = "Etag Country" });
+        var created = await createResponse.Content.ReadFromJsonAsync<CountryResponse>(JsonSerializerOptions);
+
         // Act
         var client = _client.WithTestAuth(_factory, CountryPermissions.CountriesRead);
-        var response = await client.GetAsync("/country/v1/countries/1");
+        var response = await client.GetAsync($"/country/v1/countries/{created!.Id}");
 
         // Assert
         if (response.StatusCode == HttpStatusCode.OK)
@@ -35,9 +41,16 @@ public class CachingTests : IntegrationTestBase
     [Fact]
     public async Task GetById_WithIfNoneMatch_Returns304WhenNotModified()
     {
+        // Ensure data exists
+        var adminPermissions = CountryPredefinedRoles.GetPermissionsForRole(CountryAdminRoles[0]).ToArray();
+        var adminClient = _factory.CreateAuthenticatedClient("cachetest", CountryAdminRoles, adminPermissions);
+        var createResponse = await adminClient.PostAsJsonAsync("/country/v1/admin/countries", new CreateCountryRequest { Iso2 = "NM", Iso3 = "NMM", Name = "No Match Country" });
+        var created = await createResponse.Content.ReadFromJsonAsync<CountryResponse>(JsonSerializerOptions);
+
         // Arrange - First request to get ETag
         var client = _client.WithTestAuth(_factory, CountryPermissions.CountriesRead);
-        var firstResponse = await client.GetAsync("/country/v1/countries/1");
+        var firstResponse = await client.GetAsync($"/country/v1/countries/{created!.Id}");
+
 
         if (firstResponse.StatusCode != HttpStatusCode.OK)
         {
@@ -68,9 +81,16 @@ public class CachingTests : IntegrationTestBase
     [Fact]
     public async Task GetById_MultipleCalls_ShouldBeFast()
     {
+        // Ensure data exists
+        var adminPermissions = CountryPredefinedRoles.GetPermissionsForRole(CountryAdminRoles[0]).ToArray();
+        var adminClient = _factory.CreateAuthenticatedClient("cachetest", CountryAdminRoles, adminPermissions);
+        var createResponse = await adminClient.PostAsJsonAsync("/country/v1/admin/countries", new CreateCountryRequest { Iso2 = "FT", Iso3 = "FTA", Name = "Fast Country" });
+        var created = await createResponse.Content.ReadFromJsonAsync<CountryResponse>(JsonSerializerOptions);
+
         // Arrange
-        var countryId = 1;
+        var countryId = created!.Id;
         var client = _client.WithTestAuth(_factory, CountryPermissions.CountriesRead);
+
 
         // Act - Make multiple calls and measure average time
         var stopwatch = System.Diagnostics.Stopwatch.StartNew();
@@ -95,9 +115,15 @@ public class CachingTests : IntegrationTestBase
     [Fact]
     public async Task GetByIso2_CachingBehavior_ConsistentResults()
     {
+        // Ensure data exists
+        var adminPermissions = CountryPredefinedRoles.GetPermissionsForRole(CountryAdminRoles[0]).ToArray();
+        var adminClient = _factory.CreateAuthenticatedClient("cachetest", CountryAdminRoles, adminPermissions);
+        await adminClient.PostAsJsonAsync("/country/v1/admin/countries", new CreateCountryRequest { Iso2 = "US", Iso3 = "USA", Name = "United States" });
+
         // Arrange
         var iso2 = "US";
         var client = _client.WithTestAuth(_factory, CountryPermissions.CountriesRead);
+
 
         // Act - Make two consecutive calls
         var response1 = await client.GetAsync($"/country/v1/countries/iso2/{iso2}");
@@ -120,8 +146,14 @@ public class CachingTests : IntegrationTestBase
     [Fact]
     public async Task List_WithSameParams_ReturnsCachedResults()
     {
+        // Ensure some data exists
+        var adminPermissions = CountryPredefinedRoles.GetPermissionsForRole(CountryAdminRoles[0]).ToArray();
+        var adminClient = _factory.CreateAuthenticatedClient("cachetest", CountryAdminRoles, adminPermissions);
+        await adminClient.PostAsJsonAsync("/country/v1/admin/countries", new CreateCountryRequest { Iso2 = "CA", Iso3 = "CAN", Name = "Canada" });
+
         // Arrange
         var queryString = "?page=1&pageSize=10&sortBy=name";
+
         var client = _client.WithTestAuth(_factory, CountryPermissions.CountriesList);
 
         // Act - Make two consecutive calls with same parameters
@@ -145,9 +177,16 @@ public class CachingTests : IntegrationTestBase
     [Fact]
     public async Task CacheHeaders_PresentInResponse()
     {
+        // Ensure data exists
+        var adminPermissions = CountryPredefinedRoles.GetPermissionsForRole(CountryAdminRoles[0]).ToArray();
+        var adminClient = _factory.CreateAuthenticatedClient("cachetest", CountryAdminRoles, adminPermissions);
+        var createResponse = await adminClient.PostAsJsonAsync("/country/v1/admin/countries", new CreateCountryRequest { Iso2 = "CH", Iso3 = "CHA", Name = "Cache Header Country" });
+        var created = await createResponse.Content.ReadFromJsonAsync<CountryResponse>(JsonSerializerOptions);
+
         // Act
         var client = _client.WithTestAuth(_factory, CountryPermissions.CountriesRead);
-        var response = await client.GetAsync("/country/v1/countries/1");
+        var response = await client.GetAsync($"/country/v1/countries/{created!.Id}");
+
 
         // Assert
         if (response.StatusCode == HttpStatusCode.OK)
