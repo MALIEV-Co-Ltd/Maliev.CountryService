@@ -232,8 +232,25 @@ public class BaseIntegrationTestFactory<TProgram, TDbContext> : WebApplicationFa
             // Add MassTransit test harness for testing message publishing/consuming
             services.AddMassTransitTestHarness();
 
+            // Disable background services that cause interference during tests
+            var backgroundServicesToDisable = new[]
+            {
+                "CacheWarmingService",
+                "BulkImportWorkerService"
+            };
+
+            var descriptors = services.Where(d => 
+                d.ServiceType == typeof(IHostedService) && 
+                backgroundServicesToDisable.Contains(d.ImplementationType?.Name)).ToList();
+
+            foreach (var descriptor in descriptors)
+            {
+                services.Remove(descriptor);
+            }
+
             // Allow derived classes to add additional test services
             ConfigureAdditionalServices(services);
+
         });
     }
 
@@ -298,6 +315,10 @@ public class BaseIntegrationTestFactory<TProgram, TDbContext> : WebApplicationFa
     [SuppressMessage("Security", "EF1002:Gaps in SQL queries", Justification = "Table names are retrieved from information_schema and are safe.")]
     public async Task CleanDatabaseAsync()
     {
+        // Also clear caches to ensure full isolation
+        ClearCache();
+        await ClearRedisCacheAsync();
+
         await using var context = CreateDbContext();
 
         // Get all table names from information_schema
@@ -347,6 +368,32 @@ public class BaseIntegrationTestFactory<TProgram, TDbContext> : WebApplicationFa
             cache.Compact(1.0); // Compact 100% removes all entries
         }
     }
+
+    /// <summary>
+    /// Clears the Redis cache.
+    /// </summary>
+    public async Task ClearRedisCacheAsync()
+    {
+        if (_redisContainer != null)
+        {
+            try
+            {
+                using var connection = await StackExchange.Redis.ConnectionMultiplexer.ConnectAsync(_redisContainer.GetConnectionString());
+                var endpoints = connection.GetEndPoints();
+                foreach (var endpoint in endpoints)
+                {
+                    var server = connection.GetServer(endpoint);
+                    await server.FlushAllDatabasesAsync();
+                }
+            }
+            catch (Exception ex)
+            {
+                // Log or ignore if Redis is unavailable during cleanup
+                Console.WriteLine($"Error flushing Redis: {ex.Message}");
+            }
+        }
+    }
+
 
     /// <summary>
     /// Exposes the RSA signing credentials for JWT token creation in tests.
