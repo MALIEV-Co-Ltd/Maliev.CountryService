@@ -1,15 +1,11 @@
 using Asp.Versioning;
+using Maliev.Aspire.ServiceDefaults.Authorization;
 using Maliev.CountryService.Api.Authorization;
 using Maliev.CountryService.Api.Metrics;
 using Maliev.CountryService.Api.Models.BulkImport;
 using Maliev.CountryService.Api.Services;
-using Maliev.Aspire.ServiceDefaults.Authorization;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
-using System.Text.Json;
-using System.IO;
 
 namespace Maliev.CountryService.Api.Controllers;
 

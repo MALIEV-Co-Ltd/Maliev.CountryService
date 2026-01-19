@@ -1,12 +1,9 @@
+using Maliev.Aspire.ServiceDefaults;
 using Maliev.CountryService.Api.BackgroundServices;
 using Maliev.CountryService.Api.Middleware;
 using Maliev.CountryService.Api.Services;
 using Maliev.CountryService.Data;
-using Maliev.Aspire.ServiceDefaults;
-using Maliev.Aspire.ServiceDefaults.Authorization;
 using Microsoft.AspNetCore.HttpOverrides;
-using Microsoft.Extensions.Logging;
-using StackExchange.Redis;
 using System.Threading.RateLimiting;
 
 // Initialize bootstrap logging

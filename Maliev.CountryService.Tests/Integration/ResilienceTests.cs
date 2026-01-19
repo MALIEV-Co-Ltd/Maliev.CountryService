@@ -22,6 +22,7 @@ public class ResilienceTests : IntegrationTestBase
     public async Task GetById_AfterCacheWarming_ThenDbStop_ServesFromCache()
     {
         await _factory.CleanDatabaseAsync();
+        _factory.ClearCache(); // Added to ensure isolation
 
         // Arrange - Create test country first
         var adminClient = _factory.CreateAuthenticatedClient(
@@ -61,6 +62,8 @@ public class ResilienceTests : IntegrationTestBase
 
         var initialCountry = await initialResponse.Content.ReadFromJsonAsync<CountryResponse>(JsonSerializerOptions);
         Assert.NotNull(initialCountry);
+        
+        // Use a more specific assertion to avoid matching incorrect cached data if any
         Assert.Equal("TA", initialCountry.Iso2);
 
         // Wait a moment to ensure cache is written
@@ -128,6 +131,7 @@ public class ResilienceTests : IntegrationTestBase
     public async Task GetByIso2_AfterCacheWarming_ThenDbStop_ServesFromCache()
     {
         await _factory.CleanDatabaseAsync();
+        _factory.ClearCache(); // Added to ensure isolation
 
         // Arrange - Create test country first
         var adminClient = _factory.CreateAuthenticatedClient(

@@ -1,10 +1,9 @@
 using Asp.Versioning;
+using Maliev.Aspire.ServiceDefaults.Authorization;
 using Maliev.CountryService.Api.Authorization;
 using Maliev.CountryService.Api.Metrics;
 using Maliev.CountryService.Api.Models.Countries;
 using Maliev.CountryService.Api.Services;
-using Maliev.Aspire.ServiceDefaults.Authorization;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 

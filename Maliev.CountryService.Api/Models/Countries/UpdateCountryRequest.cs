@@ -1,5 +1,4 @@
 using System.ComponentModel.DataAnnotations;
-using System.Text.RegularExpressions;
 
 namespace Maliev.CountryService.Api.Models.Countries;
 

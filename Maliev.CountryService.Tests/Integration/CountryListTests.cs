@@ -51,8 +51,14 @@ public class CountryListTests : IntegrationTestBase
     [Fact]
     public async Task ListCountries_ReturnsPaginatedResults_SortedByNameAscendingByDefault()
     {
+        // Ensure some data exists
+        var adminClient = await CreateAdminClient();
+        await CreateTestCountry(adminClient, "AA", "AAA", "Aland Islands");
+        await CreateTestCountry(adminClient, "AF", "AFG", "Afghanistan");
+
         // Arrange
         var client = _client.WithTestAuth(_factory, CountryPermissions.CountriesList);
+
 
 
         // Act

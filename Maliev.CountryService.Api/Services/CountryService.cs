@@ -1,12 +1,10 @@
 using Maliev.CountryService.Api.Models.Common;
 using Maliev.CountryService.Api.Models.Countries;
 using Maliev.CountryService.Data;
+using Maliev.CountryService.Data.Entities; // Added
 using Microsoft.EntityFrameworkCore;
 using System.Security.Cryptography;
-using System.Text;
 using System.Text.Json;
-using Maliev.CountryService.Api.Models; // Added
-using Maliev.CountryService.Data.Entities; // Added
 
 namespace Maliev.CountryService.Api.Services;
 

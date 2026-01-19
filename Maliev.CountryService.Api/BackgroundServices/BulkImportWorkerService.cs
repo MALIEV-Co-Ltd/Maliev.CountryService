@@ -12,20 +12,25 @@ public class BulkImportWorkerService : BackgroundService
 {
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<BulkImportWorkerService> _logger;
-    private readonly TimeSpan _pollInterval = TimeSpan.FromSeconds(10);
+    private readonly TimeSpan _pollInterval;
     private readonly TimeSpan _processingTimeout = TimeSpan.FromMinutes(30); // T114: Processing timeout
     /// <summary>
     /// Initializes a new instance of the <see cref="BulkImportWorkerService"/> class.
     /// </summary>
     /// <param name="scopeFactory">The service scope factory.</param>
     /// <param name="logger">The logger instance.</param>
+    /// <param name="configuration">The configuration instance.</param>
     public BulkImportWorkerService(
         IServiceScopeFactory scopeFactory,
-        ILogger<BulkImportWorkerService> logger)
+        ILogger<BulkImportWorkerService> logger,
+        Microsoft.Extensions.Configuration.IConfiguration configuration)
     {
         _scopeFactory = scopeFactory;
         _logger = logger;
+        var pollSeconds = configuration.GetValue<int>("BulkImport:PollIntervalSeconds", 10);
+        _pollInterval = TimeSpan.FromSeconds(pollSeconds);
     }
+
 
     /// <summary>
     /// Executes the background service to process bulk import jobs.

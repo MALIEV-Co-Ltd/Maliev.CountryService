@@ -1,5 +1,3 @@
-using System;
-
 namespace Maliev.CountryService.Api.Exceptions;
 
 /// <summary>
