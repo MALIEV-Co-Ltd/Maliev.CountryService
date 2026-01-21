@@ -239,8 +239,8 @@ public class BaseIntegrationTestFactory<TProgram, TDbContext> : WebApplicationFa
                 "BulkImportWorkerService"
             };
 
-            var descriptors = services.Where(d => 
-                d.ServiceType == typeof(IHostedService) && 
+            var descriptors = services.Where(d =>
+                d.ServiceType == typeof(IHostedService) &&
                 backgroundServicesToDisable.Contains(d.ImplementationType?.Name)).ToList();
 
             foreach (var descriptor in descriptors)
@@ -384,7 +384,7 @@ public class BaseIntegrationTestFactory<TProgram, TDbContext> : WebApplicationFa
                 {
                     connectionString += ",allowAdmin=true";
                 }
-                
+
                 using var connection = await StackExchange.Redis.ConnectionMultiplexer.ConnectAsync(connectionString);
                 var endpoints = connection.GetEndPoints();
                 foreach (var endpoint in endpoints)

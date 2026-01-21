@@ -62,7 +62,7 @@ public class ResilienceTests : IntegrationTestBase
 
         var initialCountry = await initialResponse.Content.ReadFromJsonAsync<CountryResponse>(JsonSerializerOptions);
         Assert.NotNull(initialCountry);
-        
+
         // Use a more specific assertion to avoid matching incorrect cached data if any
         Assert.Equal("TA", initialCountry.Iso2);
 

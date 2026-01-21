@@ -190,6 +190,33 @@ public class TestDatabaseFixture : IAsyncLifetime
         await context.Database.ExecuteSqlRawAsync("SELECT setval(pg_get_serial_sequence('countries', 'id'), (SELECT MAX(id) FROM countries));");
     }
 
+    /// <summary>
+    /// Cleans all data from the database while preserving schema
+    /// </summary>
+    public async Task CleanDatabaseAsync()
+    {
+        using var context = new CountryDbContext(new DbContextOptionsBuilder<CountryDbContext>().UseNpgsql(ConnectionString).Options);
+
+        var tableNames = context.Model.GetEntityTypes()
+            .Select(t => t.GetTableName())
+            .Where(t => t != null)
+            .Cast<string>()
+            .ToList();
+
+        foreach (var tableName in tableNames)
+        {
+            try
+            {
+#pragma warning disable EF1002, EF1003
+                await context.Database.ExecuteSqlRawAsync($"TRUNCATE TABLE \"{tableName}\" RESTART IDENTITY CASCADE");
+#pragma warning restore EF1002, EF1003
+            }
+            catch (Npgsql.PostgresException ex) when (ex.SqlState == "42P01")
+            {
+            }
+        }
+    }
+
     public async Task DisposeAsync()
     {
         if (PostgresContainer != null)
