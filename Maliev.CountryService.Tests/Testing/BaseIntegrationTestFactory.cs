@@ -59,13 +59,13 @@ public class BaseIntegrationTestFactory<TProgram, TDbContext> : WebApplicationFa
         {
             if (!_containersStarted)
             {
-                _postgresContainer = new PostgreSqlBuilder().WithName("postgres:18-alpine")
+                _postgresContainer = new PostgreSqlBuilder("postgres:18-alpine")
                     .Build();
 
-                _redisContainer = new RedisBuilder().WithName("redis:8.4-alpine")
+                _redisContainer = new RedisBuilder("redis:7.4-alpine")
                     .Build();
 
-                _rabbitmqContainer = new RabbitMqBuilder().WithName("rabbitmq:4.2-alpine")
+                _rabbitmqContainer = new RabbitMqBuilder("rabbitmq:4.0-alpine")
                     .Build();
 
                 // Start all containers in parallel
@@ -123,6 +123,8 @@ public class BaseIntegrationTestFactory<TProgram, TDbContext> : WebApplicationFa
         Environment.SetEnvironmentVariable($"ConnectionStrings__{DbConnectionStringName}", _postgresContainer!.GetConnectionString());
         Environment.SetEnvironmentVariable("ConnectionStrings__redis", _redisContainer!.GetConnectionString());
         Environment.SetEnvironmentVariable("ConnectionStrings__rabbitmq", _rabbitmqContainer!.GetConnectionString());
+        Environment.SetEnvironmentVariable("CORS_ALLOWED_ORIGINS", "http://localhost:3000");
+        Environment.SetEnvironmentVariable("CORS__AllowedOrigins__0", "http://localhost:3000");
     }
 
     public new async Task DisposeAsync()
@@ -131,6 +133,8 @@ public class BaseIntegrationTestFactory<TProgram, TDbContext> : WebApplicationFa
         // Static containers are NOT disposed here to allow reuse across tests
         _testRsa.Dispose();
         Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", null); // Cleanup
+        Environment.SetEnvironmentVariable("CORS_ALLOWED_ORIGINS", null);
+        Environment.SetEnvironmentVariable("CORS__AllowedOrigins__0", null);
     }
 
     protected override IHost CreateHost(IHostBuilder builder)
@@ -165,7 +169,9 @@ public class BaseIntegrationTestFactory<TProgram, TDbContext> : WebApplicationFa
                 ["Jwt:SecurityKey"] = "test-secret-key-at-least-32-characters-long",
                 [$"ConnectionStrings:{DbConnectionStringName}"] = _postgresContainer!.GetConnectionString(),
                 ["ConnectionStrings:redis"] = _redisContainer!.GetConnectionString(),
-                ["ConnectionStrings:rabbitmq"] = _rabbitmqContainer!.GetConnectionString()
+                ["ConnectionStrings:rabbitmq"] = _rabbitmqContainer!.GetConnectionString(),
+                ["CORS:AllowedOrigins:0"] = "http://localhost:3000",
+                ["CORS_ALLOWED_ORIGINS"] = "http://localhost:3000"
             };
 
             foreach (var kv in GetAdditionalConfiguration())

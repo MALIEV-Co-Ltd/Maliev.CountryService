@@ -20,7 +20,7 @@ public class BulkImportWorkerServiceTests : IAsyncLifetime
 
     public BulkImportWorkerServiceTests()
     {
-        _postgresContainer = new PostgreSqlBuilder().WithName("postgres:18-alpine")
+        _postgresContainer = new PostgreSqlBuilder("postgres:18-alpine")
             .Build();
         _loggerMock = new Mock<ILogger<BulkImportWorkerService>>();
         _bulkImportServiceMock = new Mock<IBulkImportService>();

@@ -15,8 +15,7 @@ public class MiddlewareTests : IAsyncLifetime
 
     public MiddlewareTests()
     {
-        _postgresContainer = new Testcontainers.PostgreSql.PostgreSqlBuilder()
-            .WithName("postgres:18-alpine")
+        _postgresContainer = new Testcontainers.PostgreSql.PostgreSqlBuilder("postgres:18-alpine")
             .Build();
     }
 

@@ -2,7 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using Xunit;
 using Maliev.CountryService.Tests.Fixtures;
-using Maliev.CountryService.Api.Models.Countries; 
+using Maliev.CountryService.Api.Models.Countries;
 using Maliev.CountryService.Api.Authorization;
 using Maliev.CountryService.Tests.Testing;
 

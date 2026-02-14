@@ -19,12 +19,12 @@ public class ModelIntegrityTests
             .Options;
 
         using var context = new CountryDbContext(options);
-        
-        // This helper (available in EF Core 9.0+) checks if the current code 
+
+        // This helper (available in EF Core 9.0+) checks if the current code
         // matches the last snapshot in the Migrations folder.
         var hasChanges = context.Database.HasPendingModelChanges();
 
-        Assert.False(hasChanges, 
+        Assert.False(hasChanges,
             "The EF Core model for 'CountryDbContext' has changed but no migration has been added. " +
             "Run 'dotnet ef migrations add <Name> --project Maliev.CountryService.Data --startup-project Maliev.CountryService.Api' to fix this.");
     }

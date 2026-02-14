@@ -20,16 +20,16 @@ public class TestDatabaseFixture : IAsyncLifetime
 
     public async Task InitializeAsync()
     {
-        PostgresContainer = new PostgreSqlBuilder().WithName("postgres:18-alpine")
+        PostgresContainer = new PostgreSqlBuilder("postgres:18-alpine")
             .WithDatabase("test_db")
             .WithUsername("postgres")
             .WithPassword("postgres")
             .Build();
 
-        RedisContainer = new RedisBuilder().WithName("redis:8.4-alpine")
+        RedisContainer = new RedisBuilder("redis:7.4-alpine")
             .Build();
 
-        RabbitMqContainer = new RabbitMqBuilder().WithName("rabbitmq:4.2-alpine")
+        RabbitMqContainer = new RabbitMqBuilder("rabbitmq:4.0-alpine")
             .Build();
 
         // Start all containers in parallel
