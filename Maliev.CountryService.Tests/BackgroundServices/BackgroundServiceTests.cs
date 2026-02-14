@@ -98,9 +98,7 @@ public class BackgroundServiceTests
         mockService.Setup(s => s.ProcessImportAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
             .Returns<Guid, CancellationToken>((guid, token) =>
             {
-                var bytes = guid.ToByteArray();
-                var id = BitConverter.ToInt64(bytes, 0);
-                if (id == job1.Id) throw new Exception("Job 1 Failure");
+                if (guid == job1.Id) throw new Exception("Job 1 Failure");
                 return Task.FromResult(new BulkImportStatusResponse { JobId = guid, Status = "Completed" });
             });
 

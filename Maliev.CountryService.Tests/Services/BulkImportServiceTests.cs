@@ -200,18 +200,9 @@ public class BulkImportServiceTests
         await _context.SaveChangesAsync();
 
         var service = new BulkImportService(_context, _countryService, _logger);
-        var jobId = CreateGuidFromLongId(job.Id);
+        var jobId = job.Id;
 
         // Act & Assert
         await Assert.ThrowsAsync<InvalidOperationException>(() => service.ProcessImportAsync(jobId));
-    }
-
-    private Guid CreateGuidFromLongId(long id)
-    {
-        byte[] bytes = new byte[16];
-        byte[] idBytes = BitConverter.GetBytes(id);
-        if (!BitConverter.IsLittleEndian) Array.Reverse(idBytes);
-        Array.Copy(idBytes, 0, bytes, 0, idBytes.Length);
-        return new Guid(bytes);
     }
 }

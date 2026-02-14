@@ -88,8 +88,9 @@ public class AdminCountryControllerTests
     public async Task Create_ReturnsCreatedAtAction()
     {
         // Arrange
+        var id = Guid.NewGuid();
         var request = new CreateCountryRequest { Name = "Test", Iso2 = "TS", Iso3 = "TST", NumericCode = "123" };
-        var response = new CountryResponse { Id = 1, Name = "Test", Iso2 = "TS" };
+        var response = new CountryResponse { Id = id, Name = "Test", Iso2 = "TS" };
         _countryServiceMock.Setup(x => x.CreateAsync(request, It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(response);
 

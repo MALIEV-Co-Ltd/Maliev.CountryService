@@ -41,7 +41,7 @@ public class AdminCountriesControllerUnitTests
     public async Task Update_Returns428_WhenIfMatchMissing()
     {
         // Act
-        var result = await _controller.Update(1, new UpdateCountryRequest(), default);
+        var result = await _controller.Update(Guid.NewGuid(), new UpdateCountryRequest(), default);
 
         // Assert
         var statusCodeResult = Assert.IsType<ObjectResult>(result);
@@ -53,11 +53,11 @@ public class AdminCountriesControllerUnitTests
     {
         // Arrange
         _controller.Request.Headers["If-Match"] = "etag";
-        _countryServiceMock.Setup(x => x.UpdateAsync(It.IsAny<long>(), It.IsAny<UpdateCountryRequest>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+        _countryServiceMock.Setup(x => x.UpdateAsync(It.IsAny<Guid>(), It.IsAny<UpdateCountryRequest>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidOperationException("Concurrency conflict"));
 
         // Act
-        var result = await _controller.Update(1, new UpdateCountryRequest(), default);
+        var result = await _controller.Update(Guid.NewGuid(), new UpdateCountryRequest(), default);
 
         // Assert
         var statusCodeResult = Assert.IsType<ObjectResult>(result);
@@ -68,13 +68,14 @@ public class AdminCountriesControllerUnitTests
     public async Task Patch_ReturnsOk()
     {
         // Arrange
+        var id = Guid.NewGuid();
         _controller.Request.Headers["If-Match"] = "etag";
-        var response = new CountryResponse { Id = 1, Name = "Patched", Iso2 = "TH", ETag = "new-etag" };
-        _countryServiceMock.Setup(x => x.PatchAsync(It.IsAny<long>(), It.IsAny<PatchCountryRequest>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+        var response = new CountryResponse { Id = id, Name = "Patched", Iso2 = "TH", ETag = "new-etag" };
+        _countryServiceMock.Setup(x => x.PatchAsync(It.IsAny<Guid>(), It.IsAny<PatchCountryRequest>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(response);
 
         // Act
-        var result = await _controller.Patch(1, new PatchCountryRequest(), default);
+        var result = await _controller.Patch(id, new PatchCountryRequest(), default);
 
         // Assert
         var okResult = Assert.IsType<OkObjectResult>(result);
@@ -86,11 +87,11 @@ public class AdminCountriesControllerUnitTests
     public async Task SoftDelete_ReturnsNoContent()
     {
         // Arrange
-        _countryServiceMock.Setup(x => x.SoftDeleteAsync(It.IsAny<long>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+        _countryServiceMock.Setup(x => x.SoftDeleteAsync(It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
 
         // Act
-        var result = await _controller.SoftDelete(1, default);
+        var result = await _controller.SoftDelete(Guid.NewGuid(), default);
 
         // Assert
         Assert.IsType<NoContentResult>(result);
@@ -100,11 +101,11 @@ public class AdminCountriesControllerUnitTests
     public async Task HardDelete_ReturnsNoContent()
     {
         // Arrange
-        _countryServiceMock.Setup(x => x.HardDeleteAsync(It.IsAny<long>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+        _countryServiceMock.Setup(x => x.HardDeleteAsync(It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
 
         // Act
-        var result = await _controller.HardDelete(1, default);
+        var result = await _controller.HardDelete(Guid.NewGuid(), default);
 
         // Assert
         Assert.IsType<NoContentResult>(result);
@@ -114,11 +115,11 @@ public class AdminCountriesControllerUnitTests
     public async Task Restore_ReturnsNoContent()
     {
         // Arrange
-        _countryServiceMock.Setup(x => x.RestoreAsync(It.IsAny<long>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+        _countryServiceMock.Setup(x => x.RestoreAsync(It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
 
         // Act
-        var result = await _controller.Restore(1, default);
+        var result = await _controller.Restore(Guid.NewGuid(), default);
 
         // Assert
         Assert.IsType<NoContentResult>(result);
@@ -142,7 +143,8 @@ public class AdminCountriesControllerUnitTests
     public async Task ExportAll_ReturnsOk()
     {
         // Arrange
-        var list = new List<CountryResponse> { new CountryResponse { Id = 1, Name = "Test" } };
+        var id = Guid.NewGuid();
+        var list = new List<CountryResponse> { new CountryResponse { Id = id, Name = "Test" } };
         _countryServiceMock.Setup(x => x.ListAsync(It.IsAny<CountryListRequest>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new Maliev.CountryService.Api.Models.Common.PaginatedResponse<CountryResponse> { Data = list });
 

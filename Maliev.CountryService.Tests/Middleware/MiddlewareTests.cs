@@ -16,7 +16,7 @@ public class MiddlewareTests : IAsyncLifetime
     public MiddlewareTests()
     {
         _postgresContainer = new Testcontainers.PostgreSql.PostgreSqlBuilder()
-            .WithImage("postgres:18-alpine")
+            .WithName("postgres:18-alpine")
             .Build();
     }
 
@@ -30,7 +30,6 @@ public class MiddlewareTests : IAsyncLifetime
             .Options;
         var context = new CountryDbContext(options);
         context.Database.Migrate();
-        context.Database.ExecuteSqlRaw("SELECT setval('countries_id_seq', (SELECT MAX(id) FROM countries))");
         return context;
     }
 

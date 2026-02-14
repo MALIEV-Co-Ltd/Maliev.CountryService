@@ -63,7 +63,7 @@ public class CachingTests : IntegrationTestBase
         var etag = country.ETag;
 
         // Act - Second request with If-None-Match
-        var request = new HttpRequestMessage(HttpMethod.Get, "/country/v1/countries/1");
+        var request = new HttpRequestMessage(HttpMethod.Get, $"/country/v1/countries/{created!.Id}");
         request.Headers.Add("If-None-Match", etag);
 
         // Need to add auth to the request message or use the authenticated client

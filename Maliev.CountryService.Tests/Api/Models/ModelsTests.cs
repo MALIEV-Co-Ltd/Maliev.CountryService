@@ -30,7 +30,7 @@ public class ModelsTests
     {
         var request = new CountryListRequest();
         Assert.Equal(1, request.Page);
-        Assert.Equal(20, request.PageSize);
+        Assert.Equal(250, request.PageSize);
         Assert.Equal("name", request.SortBy);
         Assert.Equal("asc", request.SortOrder);
     }

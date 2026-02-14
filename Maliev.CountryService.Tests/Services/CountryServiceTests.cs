@@ -32,7 +32,8 @@ public class CountryServiceTests
     public async Task GetByIdAsync_ReturnsFromCache_IfAvailable()
     {
         // Arrange
-        var cachedResponse = new CountryResponse { Id = 1, Name = "Cached", Iso2 = "CH" };
+        var id = Guid.NewGuid();
+        var cachedResponse = new CountryResponse { Id = id, Name = "Cached", Iso2 = "CH" };
         _cacheServiceMock.Setup(x => x.GetAsync<CountryResponse>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(cachedResponse);
 
@@ -40,7 +41,7 @@ public class CountryServiceTests
         var service = new Maliev.CountryService.Api.Services.CountryService(context, _cacheServiceMock.Object, _loggerMock.Object, _degradationContext);
 
         // Act
-        var result = await service.GetByIdAsync(1);
+        var result = await service.GetByIdAsync(id);
 
         // Assert
         Assert.NotNull(result);
@@ -107,7 +108,8 @@ public class CountryServiceTests
     public async Task GetByIso3Async_ReturnsFromCache_IfAvailable()
     {
         // Arrange
-        var cachedResponse = new CountryResponse { Id = 1, Name = "Cached", Iso3 = "USA" };
+        var id = Guid.NewGuid();
+        var cachedResponse = new CountryResponse { Id = id, Name = "Cached", Iso3 = "USA" };
         _cacheServiceMock.Setup(x => x.GetAsync<CountryResponse>(It.Is<string>(k => k.Contains("iso3:USA")), It.IsAny<CancellationToken>()))
             .ReturnsAsync(cachedResponse);
 

@@ -20,8 +20,7 @@ public class BulkImportWorkerServiceTests : IAsyncLifetime
 
     public BulkImportWorkerServiceTests()
     {
-        _postgresContainer = new PostgreSqlBuilder()
-            .WithImage("postgres:18-alpine")
+        _postgresContainer = new PostgreSqlBuilder().WithName("postgres:18-alpine")
             .Build();
         _loggerMock = new Mock<ILogger<BulkImportWorkerService>>();
         _bulkImportServiceMock = new Mock<IBulkImportService>();
@@ -37,9 +36,6 @@ public class BulkImportWorkerServiceTests : IAsyncLifetime
 
         using var dbContext = new CountryDbContext(options);
         await dbContext.Database.MigrateAsync();
-
-        // Reset sequence after migration seeding
-        await dbContext.Database.ExecuteSqlRawAsync("SELECT setval('countries_id_seq', (SELECT MAX(id) FROM countries))");
     }
 
     public async Task DisposeAsync()

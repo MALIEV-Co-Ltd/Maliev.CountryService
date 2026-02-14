@@ -17,7 +17,7 @@ public class CountryLookupExtendedTests : IntegrationTestBase
     public async Task GetById_ReturnsNotFound_ForNonExistentCountry()
     {
         var client = _client.WithTestAuth(_factory, CountryPermissions.CountriesRead);
-        var response = await client.GetAsync("/country/v1/countries/9999");
+        var response = await client.GetAsync($"/country/v1/countries/{Guid.NewGuid()}");
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 

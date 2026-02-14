@@ -20,19 +20,16 @@ public class TestDatabaseFixture : IAsyncLifetime
 
     public async Task InitializeAsync()
     {
-        PostgresContainer = new PostgreSqlBuilder()
-            .WithImage("postgres:18-alpine")
+        PostgresContainer = new PostgreSqlBuilder().WithName("postgres:18-alpine")
             .WithDatabase("test_db")
             .WithUsername("postgres")
             .WithPassword("postgres")
             .Build();
 
-        RedisContainer = new RedisBuilder()
-            .WithImage("redis:8.4-alpine")
+        RedisContainer = new RedisBuilder().WithName("redis:8.4-alpine")
             .Build();
 
-        RabbitMqContainer = new RabbitMqBuilder()
-            .WithImage("rabbitmq:4.2-alpine")
+        RabbitMqContainer = new RabbitMqBuilder().WithName("rabbitmq:4.2-alpine")
             .Build();
 
         // Start all containers in parallel
@@ -65,7 +62,7 @@ public class TestDatabaseFixture : IAsyncLifetime
         {
             new Maliev.CountryService.Data.Entities.Country
             {
-                Id = 1, Iso2 = "US", Iso3 = "USA", Name = "United States", OfficialName = "United States of America",
+                Iso2 = "US", Iso3 = "USA", Name = "United States", OfficialName = "United States of America",
                 Region = "Americas", Subregion = "North America", Population = 330000000, AreaKm2 = 9833520,
                 Timezones = "[\"-12:00\",\"-11:00\",\"-10:00\",\"-09:00\",\"-08:00\",\"-07:00\",\"-06:00\",\"-05:00\",\"-04:00\",\"+10:00\",\"+12:00\"]",
                 Borders = "[\"CAN\",\"MEX\"]",
@@ -79,7 +76,7 @@ public class TestDatabaseFixture : IAsyncLifetime
             },
             new Maliev.CountryService.Data.Entities.Country
             {
-                Id = 2, Iso2 = "CA", Iso3 = "CAN", Name = "Canada", OfficialName = "Canada",
+                Iso2 = "CA", Iso3 = "CAN", Name = "Canada", OfficialName = "Canada",
                 Region = "Americas", Subregion = "North America", Population = 38000000, AreaKm2 = 9984670,
                 Timezones = "[\"-08:00\",\"-07:00\",\"-06:00\",\"-05:00\",\"-04:00\",\"-03:30\"]",
                 Borders = "[\"USA\"]",
@@ -93,7 +90,7 @@ public class TestDatabaseFixture : IAsyncLifetime
             },
             new Maliev.CountryService.Data.Entities.Country
             {
-                Id = 3, Iso2 = "GB", Iso3 = "GBR", Name = "United Kingdom", OfficialName = "United Kingdom of Great Britain and Northern Ireland",
+                Iso2 = "GB", Iso3 = "GBR", Name = "United Kingdom", OfficialName = "United Kingdom of Great Britain and Northern Ireland",
                 Region = "Europe", Subregion = "Northern Europe", Population = 67000000, AreaKm2 = 242900,
                 Timezones = "[\"Europe/London\"]",
                 Borders = "[\"IRL\"]",
@@ -107,7 +104,7 @@ public class TestDatabaseFixture : IAsyncLifetime
             },
             new Maliev.CountryService.Data.Entities.Country
             {
-                Id = 4, Iso2 = "FR", Iso3 = "FRA", Name = "France", OfficialName = "French Republic",
+                Iso2 = "FR", Iso3 = "FRA", Name = "France", OfficialName = "French Republic",
                 Region = "Europe", Subregion = "Western Europe", Population = 67000000, AreaKm2 = 551695,
                 Timezones = "[\"Europe/Paris\"]", Borders = "[\"BEL\",\"DEU\",\"ESP\"]",
                 CallingCodes = "[\"33\"]", TopLevelDomains = "[\".fr\"]",
@@ -118,7 +115,7 @@ public class TestDatabaseFixture : IAsyncLifetime
             },
             new Maliev.CountryService.Data.Entities.Country
             {
-                Id = 5, Iso2 = "DE", Iso3 = "DEU", Name = "Germany", OfficialName = "Federal Republic of Germany",
+                Iso2 = "DE", Iso3 = "DEU", Name = "Germany", OfficialName = "Federal Republic of Germany",
                 Region = "Europe", Subregion = "Western Europe", Population = 83000000, AreaKm2 = 357022,
                 Timezones = "[\"Europe/Berlin\"]", Borders = "[\"FRA\",\"POL\"]",
                 CallingCodes = "[\"49\"]", TopLevelDomains = "[\".de\"]",
@@ -129,7 +126,7 @@ public class TestDatabaseFixture : IAsyncLifetime
             },
             new Maliev.CountryService.Data.Entities.Country
             {
-                Id = 6, Iso2 = "JP", Iso3 = "JPN", Name = "Japan", OfficialName = "Japan",
+                Iso2 = "JP", Iso3 = "JPN", Name = "Japan", OfficialName = "Japan",
                 Region = "Asia", Subregion = "Eastern Asia", Population = 125000000, AreaKm2 = 377975,
                 Timezones = "[\"Asia/Tokyo\"]", Borders = "[]",
                 CallingCodes = "[\"81\"]", TopLevelDomains = "[\".jp\"]",
@@ -140,7 +137,7 @@ public class TestDatabaseFixture : IAsyncLifetime
             },
             new Maliev.CountryService.Data.Entities.Country
             {
-                Id = 7, Iso2 = "AU", Iso3 = "AUS", Name = "Australia", OfficialName = "Commonwealth of Australia",
+                Iso2 = "AU", Iso3 = "AUS", Name = "Australia", OfficialName = "Commonwealth of Australia",
                 Region = "Oceania", Subregion = "Australia and New Zealand", Population = 25000000, AreaKm2 = 7692024,
                 Timezones = "[\"Australia/Sydney\"]", Borders = "[]",
                 CallingCodes = "[\"61\"]", TopLevelDomains = "[\".au\"]",
@@ -151,7 +148,7 @@ public class TestDatabaseFixture : IAsyncLifetime
             },
             new Maliev.CountryService.Data.Entities.Country
             {
-                Id = 8, Iso2 = "BR", Iso3 = "BRA", Name = "Brazil", OfficialName = "Federative Republic of Brazil",
+                Iso2 = "BR", Iso3 = "BRA", Name = "Brazil", OfficialName = "Federative Republic of Brazil",
                 Region = "Americas", Subregion = "South America", Population = 212000000, AreaKm2 = 8515767,
                 Timezones = "[\"America/Sao_Paulo\"]", Borders = "[\"ARG\"]",
                 CallingCodes = "[\"55\"]", TopLevelDomains = "[\".br\"]",
@@ -162,7 +159,7 @@ public class TestDatabaseFixture : IAsyncLifetime
             },
             new Maliev.CountryService.Data.Entities.Country
             {
-                Id = 9, Iso2 = "IN", Iso3 = "IND", Name = "India", OfficialName = "Republic of India",
+                Iso2 = "IN", Iso3 = "IND", Name = "India", OfficialName = "Republic of India",
                 Region = "Asia", Subregion = "Southern Asia", Population = 1380000000, AreaKm2 = 3287590,
                 Timezones = "[\"Asia/Kolkata\"]", Borders = "[\"PAK\"]",
                 CallingCodes = "[\"91\"]", TopLevelDomains = "[\".in\"]",
@@ -173,7 +170,7 @@ public class TestDatabaseFixture : IAsyncLifetime
             },
             new Maliev.CountryService.Data.Entities.Country
             {
-                Id = 10, Iso2 = "MX", Iso3 = "MEX", Name = "Mexico", OfficialName = "United Mexican States",
+                Iso2 = "MX", Iso3 = "MEX", Name = "Mexico", OfficialName = "United Mexican States",
                 Region = "Americas", Subregion = "Central America", Population = 128000000, AreaKm2 = 1964375,
                 Timezones = "[\"America/Mexico_City\"]", Borders = "[\"USA\"]",
                 CallingCodes = "[\"52\"]", TopLevelDomains = "[\".mx\"]",
@@ -185,9 +182,6 @@ public class TestDatabaseFixture : IAsyncLifetime
         };
         context.Countries.AddRange(countries);
         await context.SaveChangesAsync();
-
-        // Reset the sequence to continue from the last seeded ID
-        await context.Database.ExecuteSqlRawAsync("SELECT setval(pg_get_serial_sequence('countries', 'id'), (SELECT MAX(id) FROM countries));");
     }
 
     /// <summary>
