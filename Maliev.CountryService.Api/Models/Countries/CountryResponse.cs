@@ -12,7 +12,7 @@ public class CountryResponse
     /// <summary>
     /// Gets or sets the unique identifier of the country.
     /// </summary>
-    public long Id { get; set; }
+    public Guid Id { get; set; }
 
     /// <summary>
     /// Gets or sets the ISO 3166-1 alpha-2 code (2-letter code).

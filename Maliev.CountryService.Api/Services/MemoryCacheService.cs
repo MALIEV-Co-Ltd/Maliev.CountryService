@@ -56,7 +56,8 @@ public class MemoryCacheService : ICacheService
     {
         var options = new MemoryCacheEntryOptions
         {
-            AbsoluteExpirationRelativeToNow = expiration ?? TimeSpan.FromMinutes(15) // Default 15 minutes
+            AbsoluteExpirationRelativeToNow = expiration ?? TimeSpan.FromMinutes(15), // Default 15 minutes
+            Size = 1 // Required when SizeLimit is set on MemoryCache
         };
         options.RegisterPostEvictionCallback((k, v, reason, state) =>
         {

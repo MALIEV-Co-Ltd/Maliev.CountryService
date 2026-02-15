@@ -4,7 +4,7 @@ namespace Maliev.CountryService.Data.Entities;
 
 public class Country
 {
-    public long Id { get; set; }
+    public Guid Id { get; set; } = Guid.NewGuid();
 
     [Required, StringLength(2)]
     public string Iso2 { get; set; } = string.Empty;

@@ -35,12 +35,12 @@ public class CountriesController : ControllerBase
     /// <param name="ifNoneMatch">Optional. An ETag from a previous request. If the ETag matches, a 304 Not Modified response is returned.</param>
     /// <param name="cancellationToken">A token to cancel the operation.</param>
     /// <returns>A single country by ID.</returns>
-    [HttpGet("{id}")]
+    [HttpGet("{id:guid}")]
     [RequirePermission(CountryPermissions.CountriesRead)]
     [ProducesResponseType(typeof(CountryResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status304NotModified)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> GetById(long id, [FromHeader(Name = "If-None-Match")] string? ifNoneMatch, CancellationToken cancellationToken)
+    public async Task<IActionResult> GetById(Guid id, [FromHeader(Name = "If-None-Match")] string? ifNoneMatch, CancellationToken cancellationToken)
     {
         var country = await _countryService.GetByIdAsync(id, cancellationToken);
         if (country == null)
@@ -143,13 +143,14 @@ public class CountriesController : ControllerBase
     }
 
     /// <summary>
-    /// Gets a paginated list of countries with optional filtering and sorting.
+    /// Gets a list of countries. Returns all countries by default, or paginated if parameters are provided.
     /// </summary>
     /// <param name="request">Query parameters for pagination, filtering by region/subregion, and sorting.</param>
     /// <param name="cancellationToken">A token to cancel the operation.</param>
-    /// <returns>A paginated list of countries.</returns>
+    /// <returns>A list of countries.</returns>
     [HttpGet]
-    [RequirePermission(CountryPermissions.CountriesList)]
+    [Microsoft.AspNetCore.Authorization.Authorize]
+    [ResponseCache(Duration = 3600, VaryByQueryKeys = ["*"])]
     [ProducesResponseType(typeof(PaginatedResponse<CountryResponse>), StatusCodes.Status200OK)]
     public async Task<IActionResult> List([FromQuery] CountryListRequest request, CancellationToken cancellationToken)
     {

@@ -47,7 +47,7 @@ public class BackgroundServiceTests
             CreatedBy = "test",
             CreatedAtUtc = DateTime.UtcNow,
             ValidationErrors = "[]",
-            PayloadData = "{\"Countries\":[{\"Iso2\":\"XX\",\"Name\":\"Test\"}]}",
+            PayloadData = "{\"Countries\":[{\"Iso2\":\"XX\",\"Iso3\":\"XXX\",\"Name\":\"Test\"}]}",
             UserId = "test"
         };
         context.BulkImportJobs.Add(job);
@@ -84,9 +84,9 @@ public class BackgroundServiceTests
         var context = _factory.GetDbContext();
 
         // Job 1 will fail (mocked service throws)
-        var job1 = new BulkImportJob { Status = "Validated", TotalRecords = 1, CreatedBy = "test", CreatedAtUtc = DateTime.UtcNow, ValidationErrors = "[]", PayloadData = "{}", UserId = "test" };
+        var job1 = new BulkImportJob { Status = "Validated", TotalRecords = 1, CreatedBy = "test", CreatedAtUtc = DateTime.UtcNow, ValidationErrors = "[]", PayloadData = "{\"Countries\":[{\"Iso2\":\"X1\",\"Iso3\":\"XX1\",\"Name\":\"Fail\"}]}", UserId = "test" };
         // Job 2 will succeed
-        var job2 = new BulkImportJob { Status = "Validated", TotalRecords = 1, CreatedBy = "test", CreatedAtUtc = DateTime.UtcNow.AddSeconds(1), ValidationErrors = "[]", PayloadData = "{}", UserId = "test" };
+        var job2 = new BulkImportJob { Status = "Validated", TotalRecords = 1, CreatedBy = "test", CreatedAtUtc = DateTime.UtcNow.AddSeconds(1), ValidationErrors = "[]", PayloadData = "{\"Countries\":[{\"Iso2\":\"X2\",\"Iso3\":\"XX2\",\"Name\":\"Success\"}]}", UserId = "test" };
 
         context.BulkImportJobs.AddRange(job1, job2);
         await context.SaveChangesAsync();

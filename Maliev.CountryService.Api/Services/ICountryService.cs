@@ -14,7 +14,7 @@ public interface ICountryService
     /// <param name="id">The unique identifier of the country.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>The country response, or null if not found.</returns>
-    Task<CountryResponse?> GetByIdAsync(long id, CancellationToken cancellationToken = default);
+    Task<CountryResponse?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
     /// <summary>
     /// Retrieves a country by its ISO2 code.
     /// </summary>
@@ -69,7 +69,7 @@ public interface ICountryService
     /// <param name="userId">The ID of the user performing the operation.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>The updated country response.</returns>
-    Task<CountryResponse> UpdateAsync(long id, UpdateCountryRequest request, string ifMatch, string userId, CancellationToken cancellationToken = default);
+    Task<CountryResponse> UpdateAsync(Guid id, UpdateCountryRequest request, string ifMatch, string userId, CancellationToken cancellationToken = default);
     /// <summary>
     /// Partially updates an existing country. (Admin operation)
     /// </summary>
@@ -79,7 +79,7 @@ public interface ICountryService
     /// <param name="userId">The ID of the user performing the operation.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>The patched country response.</returns>
-    Task<CountryResponse> PatchAsync(long id, PatchCountryRequest request, string ifMatch, string userId, CancellationToken cancellationToken = default);
+    Task<CountryResponse> PatchAsync(Guid id, PatchCountryRequest request, string ifMatch, string userId, CancellationToken cancellationToken = default);
     /// <summary>
     /// Soft deletes a country, marking it as deleted without removing it from the database. (Admin operation)
     /// </summary>
@@ -87,7 +87,7 @@ public interface ICountryService
     /// <param name="userId">The ID of the user performing the operation.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>A task that represents the asynchronous operation.</returns>
-    Task SoftDeleteAsync(long id, string userId, CancellationToken cancellationToken = default);
+    Task SoftDeleteAsync(Guid id, string userId, CancellationToken cancellationToken = default);
     /// <summary>
     /// Hard deletes a country, permanently removing it from the database. (Admin operation)
     /// </summary>
@@ -95,7 +95,7 @@ public interface ICountryService
     /// <param name="userId">The ID of the user performing the operation.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>A task that represents the asynchronous operation.</returns>
-    Task HardDeleteAsync(long id, string userId, CancellationToken cancellationToken = default);
+    Task HardDeleteAsync(Guid id, string userId, CancellationToken cancellationToken = default);
     /// <summary>
     /// Restores a soft-deleted country by marking it as active. (Admin operation)
     /// </summary>
@@ -103,5 +103,5 @@ public interface ICountryService
     /// <param name="userId">The ID of the user performing the operation.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>A task that represents the asynchronous operation.</returns>
-    Task RestoreAsync(long id, string userId, CancellationToken cancellationToken = default);
+    Task RestoreAsync(Guid id, string userId, CancellationToken cancellationToken = default);
 }

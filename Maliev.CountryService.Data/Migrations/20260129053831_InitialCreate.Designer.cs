@@ -12,27 +12,27 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Maliev.CountryService.Data.Migrations
 {
     [DbContext(typeof(CountryDbContext))]
-    [Migration("20260110152658_UpdateAuditAndImportEntities")]
-    partial class UpdateAuditAndImportEntities
+    [Migration("20260129053831_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "10.0.1")
+                .HasAnnotation("ProductVersion", "10.0.2")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
+            NpgsqlModelBuilderExtensions.HasPostgresExtension(modelBuilder, "pg_trgm");
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
             modelBuilder.Entity("Maliev.CountryService.Data.Entities.AuditLog", b =>
                 {
-                    b.Property<long>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint")
-                        .HasColumnName("id");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+                        .HasColumnType("uuid")
+                        .HasColumnName("id")
+                        .HasDefaultValueSql("gen_random_uuid()");
 
                     b.Property<string>("Action")
                         .IsRequired()
@@ -41,16 +41,18 @@ namespace Maliev.CountryService.Data.Migrations
 
                     b.Property<string>("AfterSnapshot")
                         .IsRequired()
-                        .HasColumnType("text")
+                        .HasColumnType("jsonb")
                         .HasColumnName("after_snapshot");
 
                     b.Property<string>("BeforeSnapshot")
-                        .HasColumnType("text")
+                        .HasColumnType("jsonb")
                         .HasColumnName("before_snapshot");
 
                     b.Property<string>("ChangedFields")
                         .IsRequired()
-                        .HasColumnType("text")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("jsonb")
+                        .HasDefaultValue("[]")
                         .HasColumnName("changed_fields");
 
                     b.Property<string>("Changes")
@@ -61,21 +63,25 @@ namespace Maliev.CountryService.Data.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("correlation_id");
 
-                    b.Property<long?>("CountryId")
-                        .HasColumnType("bigint")
+                    b.Property<Guid?>("CountryId")
+                        .HasColumnType("uuid")
                         .HasColumnName("country_id");
 
                     b.Property<DateTime>("CreatedAtUtc")
+                        .ValueGeneratedOnAdd()
                         .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at_utc");
+                        .HasColumnName("created_at_utc")
+                        .HasDefaultValueSql("NOW()");
 
                     b.Property<string>("IpAddress")
-                        .HasColumnType("text")
+                        .HasMaxLength(45)
+                        .HasColumnType("character varying(45)")
                         .HasColumnName("ip_address");
 
                     b.Property<string>("Operation")
                         .IsRequired()
-                        .HasColumnType("text")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
                         .HasColumnName("operation");
 
                     b.Property<DateTime>("TimestampUtc")
@@ -83,40 +89,53 @@ namespace Maliev.CountryService.Data.Migrations
                         .HasColumnName("timestamp_utc");
 
                     b.Property<string>("UserAgent")
-                        .HasColumnType("text")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
                         .HasColumnName("user_agent");
 
                     b.Property<string>("UserEmail")
-                        .HasColumnType("text")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
                         .HasColumnName("user_email");
 
                     b.Property<string>("UserId")
                         .IsRequired()
-                        .HasColumnType("text")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
                         .HasColumnName("user_id");
 
                     b.Property<string>("UserRoles")
                         .IsRequired()
-                        .HasColumnType("text")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("jsonb")
+                        .HasDefaultValue("[]")
                         .HasColumnName("user_roles");
 
                     b.HasKey("Id")
                         .HasName("pk_audit_logs");
 
+                    b.HasIndex("CorrelationId")
+                        .HasDatabaseName("ix_audit_logs_correlation_id");
+
                     b.HasIndex("CountryId")
                         .HasDatabaseName("ix_audit_logs_country_id");
 
-                    b.ToTable("audit_logs");
+                    b.HasIndex("CreatedAtUtc")
+                        .HasDatabaseName("ix_audit_logs_created_at_utc");
+
+                    b.HasIndex("UserId")
+                        .HasDatabaseName("ix_audit_logs_user_id");
+
+                    b.ToTable("audit_logs", (string)null);
                 });
 
             modelBuilder.Entity("Maliev.CountryService.Data.Entities.BulkImportJob", b =>
                 {
-                    b.Property<long>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint")
-                        .HasColumnName("id");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+                        .HasColumnType("uuid")
+                        .HasColumnName("id")
+                        .HasDefaultValueSql("gen_random_uuid()");
 
                     b.Property<DateTime?>("CompletedAtUtc")
                         .HasColumnType("timestamp with time zone")
@@ -127,8 +146,10 @@ namespace Maliev.CountryService.Data.Migrations
                         .HasColumnName("correlation_id");
 
                     b.Property<DateTime>("CreatedAtUtc")
+                        .ValueGeneratedOnAdd()
                         .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at_utc");
+                        .HasColumnName("created_at_utc")
+                        .HasDefaultValueSql("NOW()");
 
                     b.Property<string>("CreatedBy")
                         .IsRequired()
@@ -141,11 +162,14 @@ namespace Maliev.CountryService.Data.Migrations
                         .HasColumnName("error_message");
 
                     b.Property<int>("FailedRecords")
+                        .ValueGeneratedOnAdd()
                         .HasColumnType("integer")
+                        .HasDefaultValue(0)
                         .HasColumnName("failed_records");
 
                     b.Property<string>("IpAddress")
-                        .HasColumnType("text")
+                        .HasMaxLength(45)
+                        .HasColumnType("character varying(45)")
                         .HasColumnName("ip_address");
 
                     b.Property<string>("PayloadData")
@@ -153,7 +177,9 @@ namespace Maliev.CountryService.Data.Migrations
                         .HasColumnName("payload_data");
 
                     b.Property<int>("ProcessedRecords")
+                        .ValueGeneratedOnAdd()
                         .HasColumnType("integer")
+                        .HasDefaultValue(0)
                         .HasColumnName("processed_records");
 
                     b.Property<DateTime?>("StartedAtUtc")
@@ -162,8 +188,10 @@ namespace Maliev.CountryService.Data.Migrations
 
                     b.Property<string>("Status")
                         .IsRequired()
+                        .ValueGeneratedOnAdd()
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)")
+                        .HasDefaultValue("Pending")
                         .HasColumnName("status");
 
                     b.Property<int>("TotalRecords")
@@ -171,7 +199,8 @@ namespace Maliev.CountryService.Data.Migrations
                         .HasColumnName("total_records");
 
                     b.Property<string>("UserEmail")
-                        .HasColumnType("text")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
                         .HasColumnName("user_email");
 
                     b.Property<string>("UserId")
@@ -181,37 +210,55 @@ namespace Maliev.CountryService.Data.Migrations
                         .HasColumnName("user_id");
 
                     b.Property<string>("ValidationErrors")
-                        .IsRequired()
+                        .ValueGeneratedOnAdd()
                         .HasColumnType("jsonb")
+                        .HasDefaultValue("[]")
                         .HasColumnName("validation_errors");
 
                     b.HasKey("Id")
                         .HasName("pk_bulk_import_jobs");
 
-                    b.ToTable("bulk_import_jobs");
+                    b.HasIndex("CorrelationId")
+                        .HasDatabaseName("ix_bulk_import_jobs_correlation_id");
+
+                    b.HasIndex("CreatedAtUtc")
+                        .IsDescending()
+                        .HasDatabaseName("ix_bulk_import_jobs_created_at_utc");
+
+                    b.HasIndex("Status")
+                        .HasDatabaseName("ix_bulk_import_jobs_status");
+
+                    b.HasIndex("UserId")
+                        .HasDatabaseName("ix_bulk_import_jobs_user_id");
+
+                    b.ToTable("bulk_import_jobs", (string)null);
                 });
 
             modelBuilder.Entity("Maliev.CountryService.Data.Entities.Country", b =>
                 {
-                    b.Property<long>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint")
-                        .HasColumnName("id");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+                        .HasColumnType("uuid")
+                        .HasColumnName("id")
+                        .HasDefaultValueSql("gen_random_uuid()");
 
                     b.Property<double?>("AreaKm2")
+                        .HasPrecision(15, 2)
                         .HasColumnType("double precision")
                         .HasColumnName("area_km2");
 
                     b.Property<string>("Borders")
                         .IsRequired()
+                        .ValueGeneratedOnAdd()
                         .HasColumnType("jsonb")
+                        .HasDefaultValue("[]")
                         .HasColumnName("borders");
 
                     b.Property<string>("CallingCodes")
                         .IsRequired()
+                        .ValueGeneratedOnAdd()
                         .HasColumnType("jsonb")
+                        .HasDefaultValue("[]")
                         .HasColumnName("calling_codes");
 
                     b.Property<string>("Capital")
@@ -224,8 +271,10 @@ namespace Maliev.CountryService.Data.Migrations
                         .HasColumnName("coat_of_arms");
 
                     b.Property<DateTime>("CreatedAtUtc")
+                        .ValueGeneratedOnAdd()
                         .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at_utc");
+                        .HasColumnName("created_at_utc")
+                        .HasDefaultValueSql("NOW()");
 
                     b.Property<string>("CreatedBy")
                         .IsRequired()
@@ -235,7 +284,9 @@ namespace Maliev.CountryService.Data.Migrations
 
                     b.Property<string>("Currencies")
                         .IsRequired()
+                        .ValueGeneratedOnAdd()
                         .HasColumnType("jsonb")
+                        .HasDefaultValue("{}")
                         .HasColumnName("currencies");
 
                     b.Property<DateTime?>("DeletedAt")
@@ -249,52 +300,66 @@ namespace Maliev.CountryService.Data.Migrations
 
                     b.Property<string>("Flags")
                         .IsRequired()
+                        .ValueGeneratedOnAdd()
                         .HasColumnType("jsonb")
+                        .HasDefaultValue("{}")
                         .HasColumnName("flags");
 
                     b.Property<double?>("GiniCoefficient")
+                        .HasPrecision(4, 2)
                         .HasColumnType("double precision")
                         .HasColumnName("gini_coefficient");
 
                     b.Property<bool>("Independent")
+                        .ValueGeneratedOnAdd()
                         .HasColumnType("boolean")
+                        .HasDefaultValue(false)
                         .HasColumnName("independent");
 
                     b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
                         .HasColumnType("boolean")
+                        .HasDefaultValue(true)
                         .HasColumnName("is_active");
 
                     b.Property<string>("Iso2")
                         .IsRequired()
                         .HasMaxLength(2)
-                        .HasColumnType("character(2)")
-                        .HasColumnName("iso2")
-                        .IsFixedLength();
+                        .HasColumnType("character varying(2)")
+                        .HasColumnName("iso2");
 
                     b.Property<string>("Iso3")
+                        .IsRequired()
                         .HasMaxLength(3)
-                        .HasColumnType("character(3)")
-                        .HasColumnName("iso3")
-                        .IsFixedLength();
+                        .HasColumnType("character varying(3)")
+                        .HasColumnName("iso3");
 
                     b.Property<bool>("Landlocked")
+                        .ValueGeneratedOnAdd()
                         .HasColumnType("boolean")
+                        .HasDefaultValue(false)
                         .HasColumnName("landlocked");
 
                     b.Property<string>("Languages")
                         .IsRequired()
+                        .ValueGeneratedOnAdd()
                         .HasColumnType("jsonb")
+                        .HasDefaultValue("{}")
                         .HasColumnName("languages");
 
                     b.Property<DateTime>("LastModifiedUtc")
+                        .ValueGeneratedOnAdd()
                         .HasColumnType("timestamp with time zone")
-                        .HasColumnName("last_modified_utc");
+                        .HasColumnName("last_modified_utc")
+                        .HasDefaultValueSql("NOW()");
 
                     b.Property<double?>("Latitude")
+                        .HasPrecision(10, 8)
                         .HasColumnType("double precision")
                         .HasColumnName("latitude");
 
                     b.Property<double?>("Longitude")
+                        .HasPrecision(11, 8)
                         .HasColumnType("double precision")
                         .HasColumnName("longitude");
 
@@ -330,21 +395,29 @@ namespace Maliev.CountryService.Data.Migrations
 
                     b.Property<string>("Timezones")
                         .IsRequired()
+                        .ValueGeneratedOnAdd()
                         .HasColumnType("jsonb")
+                        .HasDefaultValue("[]")
                         .HasColumnName("timezones");
 
                     b.Property<string>("TopLevelDomains")
                         .IsRequired()
+                        .ValueGeneratedOnAdd()
                         .HasColumnType("jsonb")
+                        .HasDefaultValue("[]")
                         .HasColumnName("top_level_domains");
 
                     b.Property<string>("Translations")
                         .IsRequired()
+                        .ValueGeneratedOnAdd()
                         .HasColumnType("jsonb")
+                        .HasDefaultValue("{}")
                         .HasColumnName("translations");
 
                     b.Property<bool>("UnMember")
+                        .ValueGeneratedOnAdd()
                         .HasColumnType("boolean")
+                        .HasDefaultValue(false)
                         .HasColumnName("un_member");
 
                     b.Property<string>("UpdatedBy")
@@ -355,28 +428,32 @@ namespace Maliev.CountryService.Data.Migrations
 
                     b.Property<Guid>("Version")
                         .IsConcurrencyToken()
+                        .ValueGeneratedOnAdd()
                         .HasColumnType("uuid")
-                        .HasColumnName("version");
+                        .HasColumnName("version")
+                        .HasDefaultValueSql("gen_random_uuid()");
 
                     b.HasKey("Id")
                         .HasName("pk_countries");
 
+                    b.HasIndex("IsActive")
+                        .HasDatabaseName("ix_countries_is_active");
+
                     b.HasIndex("Iso2")
                         .IsUnique()
-                        .HasDatabaseName("ix_countries_iso2");
+                        .HasDatabaseName("uq_countries_iso2");
 
                     b.HasIndex("Iso3")
                         .IsUnique()
-                        .HasDatabaseName("ix_countries_iso3")
-                        .HasFilter("iso3 IS NOT NULL");
+                        .HasDatabaseName("uq_countries_iso3");
 
                     b.HasIndex("Name")
-                        .HasDatabaseName("ix_countries_name");
+                        .HasDatabaseName("ix_countries_name_gin");
 
-                    NpgsqlIndexBuilderExtensions.HasMethod(b.HasIndex("Name"), "gin");
-                    NpgsqlIndexBuilderExtensions.HasOperators(b.HasIndex("Name"), new[] { "gin_trgm_ops" });
+                    b.HasIndex("Region")
+                        .HasDatabaseName("ix_countries_region");
 
-                    b.ToTable("countries");
+                    b.ToTable("countries", (string)null);
                 });
 
             modelBuilder.Entity("Maliev.CountryService.Data.Entities.AuditLog", b =>
@@ -385,7 +462,7 @@ namespace Maliev.CountryService.Data.Migrations
                         .WithMany()
                         .HasForeignKey("CountryId")
                         .OnDelete(DeleteBehavior.SetNull)
-                        .HasConstraintName("fk_audit_logs__countries_country_id");
+                        .HasConstraintName("fk_audit_logs_countries_country_id");
 
                     b.Navigation("Country");
                 });

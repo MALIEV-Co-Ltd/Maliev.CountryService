@@ -5,7 +5,7 @@ namespace Maliev.CountryService.Data.Entities;
 
 public class BulkImportJob
 {
-    public long Id { get; set; }
+    public Guid Id { get; set; } = Guid.NewGuid();
 
     [Required]
     [StringLength(20)]

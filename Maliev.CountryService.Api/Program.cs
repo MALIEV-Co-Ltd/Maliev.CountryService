@@ -3,9 +3,8 @@ using Maliev.CountryService.Api.BackgroundServices;
 using Maliev.CountryService.Api.Middleware;
 using Maliev.CountryService.Api.Services;
 using Maliev.CountryService.Data;
+using Maliev.CountryService.Data.SeedData;
 using Microsoft.AspNetCore.HttpOverrides;
-using System.Threading.RateLimiting;
-
 // Initialize bootstrap logging
 using var loggerFactory = LoggerFactory.Create(logBuilder => logBuilder.AddConsole());
 var bootstrapLogger = loggerFactory.CreateLogger("Program");
@@ -31,7 +30,7 @@ try
     builder.AddPostgresDbContext<CountryDbContext>(connectionName: "CountryDbContext"); // PostgreSQL with retry logic
 
     // --- API Configuration ---
-    builder.AddDefaultCors(); // CORS from CORS:AllowedOrigins config
+    builder.AddStandardCors(); // CORS with fail-fast validation
     builder.AddDefaultApiVersioning(); // API versioning with URL segment reader
 
     // JWT Authentication (tests override via PostConfigureAll with dynamic RSA keys)
@@ -50,62 +49,20 @@ try
 
     builder.Services.AddControllers();
 
+    // Add Response Caching
+    builder.Services.AddResponseCaching();
+
     // Configure memory cache
     builder.Services.AddMemoryCache();
 
     // Redis Distributed Cache (ServiceDefaults)
-    builder.AddRedisDistributedCache(instanceName: "country:");
+    builder.AddStandardCache("country:"); // Redis + in-memory fallback, memory-optimized
 
     // MassTransit with RabbitMQ
     builder.AddMassTransitWithRabbitMq();
 
     // Configure rate limiting
-    builder.Services.AddRateLimiter(options =>
-    {
-        // Read endpoints: 100 requests per minute per IP
-        options.AddPolicy("read-endpoints", context =>
-            RateLimitPartition.GetSlidingWindowLimiter(
-                partitionKey: context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
-                factory: _ => new SlidingWindowRateLimiterOptions
-                {
-                    PermitLimit = 100,
-                    Window = TimeSpan.FromMinutes(1),
-                    SegmentsPerWindow = 2,
-                    QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
-                    QueueLimit = 10
-                }));
-
-        // Admin endpoints: 20 requests per minute per user (JWT sub claim)
-        options.AddPolicy("admin-endpoints", context =>
-        {
-            var userId = context.User?.FindFirst("sub")?.Value ??
-                        context.Connection.RemoteIpAddress?.ToString() ??
-                        "unknown";
-
-            return RateLimitPartition.GetSlidingWindowLimiter(
-                partitionKey: userId,
-                factory: _ => new SlidingWindowRateLimiterOptions
-                {
-                    PermitLimit = 20,
-                    Window = TimeSpan.FromMinutes(1),
-                    SegmentsPerWindow = 2,
-                    QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
-                    QueueLimit = 5
-                });
-        });
-
-        options.OnRejected = async (context, token) =>
-        {
-            context.HttpContext.Response.StatusCode = 429;
-            context.HttpContext.Response.Headers["Retry-After"] = "60";
-            await context.HttpContext.Response.WriteAsJsonAsync(new
-            {
-                error = "RATE_LIMIT_EXCEEDED",
-                message = "Rate limit exceeded. Please try again later.",
-                retryAfter = 60
-            }, cancellationToken: token);
-        };
-    });
+    builder.AddStandardRateLimiting(); // Memory-optimized for low-spec nodes
 
     builder.Services.Configure<ForwardedHeadersOptions>(options =>
     {
@@ -143,6 +100,7 @@ try
 
     // --- Database Migrations ---
     await app.MigrateDatabaseAsync<CountryDbContext>();
+    await app.SeedCountriesAsync();
 
     app.UseForwardedHeaders();
 
@@ -156,6 +114,7 @@ try
     }
     app.UseRateLimiter();
     app.UseCors();
+    app.UseResponseCaching();
 
     // JWT Authentication & Authorization
     app.UseAuthentication();
@@ -163,6 +122,7 @@ try
 
     // Log permission denials
     app.UseMiddleware<PermissionDenialLoggingMiddleware>();
+
 
     // Map health check and metrics endpoints via ServiceDefaults
     app.MapDefaultEndpoints("country");

@@ -1,4 +1,5 @@
 using Asp.Versioning;
+using Maliev.Aspire.ServiceDefaults;
 using Maliev.Aspire.ServiceDefaults.Authorization;
 using Maliev.CountryService.Api.Authorization;
 using Maliev.CountryService.Api.Metrics;
@@ -17,7 +18,7 @@ namespace Maliev.CountryService.Api.Controllers;
 [ApiController]
 [ApiVersion("1.0")]
 [Route("country/v{version:apiVersion}/admin/bulk-import")]
-[EnableRateLimiting("admin-endpoints")]
+[EnableRateLimiting(RateLimitPolicies.Batch)]
 public class BulkImportController : ControllerBase
 {
     private readonly IBulkImportService _bulkImportService;

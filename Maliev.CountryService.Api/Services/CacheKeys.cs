@@ -15,7 +15,7 @@ public static class CacheKeys
     /// </summary>
     /// <param name="id">The country ID.</param>
     /// <returns>A cache key string in the format "country:id:{id}".</returns>
-    public static string CountryById(int id) => $"country:id:{id}";
+    public static string CountryById(Guid id) => $"country:id:{id}";
 
     /// <summary>
     /// Generates a cache key for country search results based on search parameters.

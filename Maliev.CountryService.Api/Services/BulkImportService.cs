@@ -239,9 +239,8 @@ public partial class BulkImportService : IBulkImportService
     /// </summary>
     public async Task<BulkImportStatusResponse> ProcessImportAsync(Guid jobId, CancellationToken cancellationToken = default)
     {
-        var longId = GetLongIdFromGuid(jobId);
         var job = await _context.BulkImportJobs
-            .FirstOrDefaultAsync(j => j.Id == longId, cancellationToken);
+            .FirstOrDefaultAsync(j => j.Id == jobId, cancellationToken);
 
         if (job == null)
         {
@@ -267,7 +266,8 @@ public partial class BulkImportService : IBulkImportService
                 throw new InvalidOperationException("Job payload data is missing");
             }
 
-            var request = JsonSerializer.Deserialize<BulkImportRequest>(job.PayloadData);
+            var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+            var request = JsonSerializer.Deserialize<BulkImportRequest>(job.PayloadData, options);
             if (request == null || request.Countries == null)
             {
                 throw new InvalidOperationException("Failed to deserialize job payload data");
@@ -361,9 +361,8 @@ public partial class BulkImportService : IBulkImportService
     /// </summary>
     public async Task<BulkImportStatusResponse?> GetJobStatusAsync(Guid jobId, CancellationToken cancellationToken = default)
     {
-        var longId = GetLongIdFromGuid(jobId);
         var job = await _context.BulkImportJobs
-            .FirstOrDefaultAsync(j => j.Id == longId, cancellationToken);
+            .FirstOrDefaultAsync(j => j.Id == jobId, cancellationToken);
 
         if (job == null)
         {
@@ -388,7 +387,7 @@ public partial class BulkImportService : IBulkImportService
 
         return new BulkImportStatusResponse
         {
-            JobId = CreateGuidFromLongId(job.Id),
+            JobId = job.Id,
             Status = job.Status,
             TotalRecords = job.TotalRecords,
             ProcessedRecords = job.ProcessedRecords,
@@ -400,33 +399,5 @@ public partial class BulkImportService : IBulkImportService
         };
     }
 
-    private Guid CreateGuidFromLongId(long id)
-    {
-        // Create deterministic GUID from long ID
-        byte[] bytes = new byte[16];
-        byte[] idBytes = BitConverter.GetBytes(id);
-
-        // Ensure little-endian byte order for cross-platform consistency
-        if (!BitConverter.IsLittleEndian)
-        {
-            Array.Reverse(idBytes);
-        }
-
-        Array.Copy(idBytes, 0, bytes, 0, idBytes.Length);
-        return new Guid(bytes);
-    }
-
-    private long GetLongIdFromGuid(Guid guid)
-    {
-        // Extract long ID from GUID
-        byte[] bytes = guid.ToByteArray();
-
-        // Ensure little-endian byte order for cross-platform consistency
-        if (!BitConverter.IsLittleEndian)
-        {
-            Array.Reverse(bytes, 0, 8); // Long is the first 8 bytes
-        }
-
-        return BitConverter.ToInt64(bytes, 0);
-    }
+    // CreateGuidFromLongId and GetLongIdFromGuid helpers removed as we now use Guid natively for IDs.
 }

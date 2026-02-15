@@ -12,7 +12,8 @@ public class BulkImportJobConfiguration : IEntityTypeConfiguration<BulkImportJob
 
         // Primary Key
         builder.HasKey(b => b.Id);
-        builder.Property(b => b.Id).HasColumnName("id").ValueGeneratedOnAdd();
+        builder.Property(b => b.Id).HasColumnName("id")
+            .HasDefaultValueSql("gen_random_uuid()");
 
         // Status tracking
         builder.Property(b => b.Status).HasColumnName("status").HasMaxLength(20).HasDefaultValue("Pending");

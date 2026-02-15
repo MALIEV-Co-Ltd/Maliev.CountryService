@@ -47,14 +47,8 @@ public class CacheWarmingServiceTests
 
         // Act
         var cts = new CancellationTokenSource();
-        // Since it has a 5s delay, I'll use a short timeout and hope for the best or mock it if possible
-        // Actually, 5s is too long for a test. I might want to change the code to allow smaller delay in tests,
-        // but I shouldn't change the code unless necessary.
-        // Let's try to run it.
-        var startTask = service.StartAsync(cts.Token);
-
-        // Wait for it to finish or timeout
-        await Task.WhenAny(startTask, Task.Delay(6000));
+        // Since we reduced the delay to 50ms in Testing env, it should finish quickly
+        await service.StartAsync(cts.Token);
 
         // Assert
         _countryServiceMock.Verify(x => x.GetByIso2Async("TH", It.IsAny<CancellationToken>()), Times.AtLeastOnce);

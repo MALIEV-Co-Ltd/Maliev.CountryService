@@ -27,70 +27,94 @@ public class CacheWarmingService : IHostedService
     /// <returns>A task representing the asynchronous operation.</returns>
     public async Task StartAsync(CancellationToken cancellationToken)
     {
-        _logger.LogInformation("Cache warming service starting - waiting 5 seconds before warming cache");
-        await Task.Delay(TimeSpan.FromSeconds(5), cancellationToken);
+        var isTesting = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") == "Testing";
+        var initialDelay = isTesting ? TimeSpan.FromMilliseconds(50) : TimeSpan.FromSeconds(15);
 
-        try
+        _logger.LogInformation("Cache warming service starting - waiting {Delay} for infrastructure", initialDelay);
+        await Task.Delay(initialDelay, cancellationToken);
+
+        // Retry cache warming with exponential backoff if Redis is still warming up
+        var maxRetries = 3;
+        var retryDelay = TimeSpan.FromSeconds(5);
+
+        for (int attempt = 1; attempt <= maxRetries; attempt++)
         {
-            // Load top 50 ISO2 codes from configuration file
-            var iso2Codes = await LoadTop50CountryCodesAsync(cancellationToken);
-
-            _logger.LogInformation("Warming cache for {Count} top countries (Thailand prioritized)", iso2Codes.Count);
-
-            // Prioritize Thailand (TH) - cache it first since the app is served in Thailand region
-            if (iso2Codes.Contains("TH"))
+            try
             {
-                try
-                {
-                    using var scope = _scopeFactory.CreateScope();
-                    var countryService = scope.ServiceProvider.GetRequiredService<ICountryService>();
+                _logger.LogInformation("Cache warming attempt {Attempt}/{MaxRetries}", attempt, maxRetries);
 
-                    var thailand = await countryService.GetByIso2Async("TH", cancellationToken);
-                    if (thailand != null)
+                // Load top 50 ISO2 codes from configuration file
+                var iso2Codes = await LoadTop50CountryCodesAsync(cancellationToken);
+
+                _logger.LogInformation("Warming cache for {Count} top countries (Thailand prioritized)", iso2Codes.Count);
+
+                // Prioritize Thailand (TH) - cache it first since the app is served in Thailand region
+                if (iso2Codes.Contains("TH"))
+                {
+                    try
                     {
-                        _logger.LogInformation("Pre-cached PRIORITY country: TH - {Name}", thailand.Name);
+                        using var scope = _scopeFactory.CreateScope();
+                        var countryService = scope.ServiceProvider.GetRequiredService<ICountryService>();
+
+                        var thailand = await countryService.GetByIso2Async("TH", cancellationToken);
+                        if (thailand != null)
+                        {
+                            _logger.LogInformation("Pre-cached PRIORITY country: TH - {Name}", thailand.Name);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Failed to pre-cache priority country TH");
                     }
                 }
-                catch (Exception ex)
+
+                // Cache remaining countries in parallel (excluding TH since it's already cached)
+                var remainingCodes = iso2Codes.Where(code => code != "TH").ToList();
+
+                // Each parallel task needs its own scope to avoid DbContext threading issues
+                var tasks = remainingCodes.Select(async iso2 =>
                 {
-                    _logger.LogError(ex, "Failed to pre-cache priority country TH");
+                    try
+                    {
+                        // Create a new scope for each country to ensure thread-safe DbContext usage
+                        using var scope = _scopeFactory.CreateScope();
+                        var countryService = scope.ServiceProvider.GetRequiredService<ICountryService>();
+
+                        var country = await countryService.GetByIso2Async(iso2, cancellationToken);
+                        if (country != null)
+                        {
+                            _logger.LogDebug("Pre-cached country: {Iso2} - {Name}", iso2, country.Name);
+                        }
+                        else
+                        {
+                            _logger.LogWarning("Country not found for ISO2: {Iso2}", iso2);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Failed to pre-cache country {Iso2}", iso2);
+                    }
+                });
+
+                await Task.WhenAll(tasks);
+                _logger.LogInformation("Cache warming completed successfully");
+                break; // Success - exit retry loop
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Cache warming attempt {Attempt}/{MaxRetries} failed", attempt, maxRetries);
+
+                if (attempt < maxRetries)
+                {
+                    _logger.LogInformation("Retrying cache warming in {RetryDelay} seconds", retryDelay.TotalSeconds);
+                    await Task.Delay(retryDelay, cancellationToken);
+                    retryDelay = TimeSpan.FromSeconds(retryDelay.TotalSeconds * 2); // Exponential backoff
+                }
+                else
+                {
+                    _logger.LogError(ex, "Cache warming failed after {MaxRetries} attempts - will use fallback cache", maxRetries);
                 }
             }
-
-            // Cache remaining countries in parallel (excluding TH since it's already cached)
-            var remainingCodes = iso2Codes.Where(code => code != "TH").ToList();
-
-            // Each parallel task needs its own scope to avoid DbContext threading issues
-            var tasks = remainingCodes.Select(async iso2 =>
-            {
-                try
-                {
-                    // Create a new scope for each country to ensure thread-safe DbContext usage
-                    using var scope = _scopeFactory.CreateScope();
-                    var countryService = scope.ServiceProvider.GetRequiredService<ICountryService>();
-
-                    var country = await countryService.GetByIso2Async(iso2, cancellationToken);
-                    if (country != null)
-                    {
-                        _logger.LogDebug("Pre-cached country: {Iso2} - {Name}", iso2, country.Name);
-                    }
-                    else
-                    {
-                        _logger.LogWarning("Country not found for ISO2: {Iso2}", iso2);
-                    }
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "Failed to pre-cache country {Iso2}", iso2);
-                }
-            });
-
-            await Task.WhenAll(tasks);
-            _logger.LogInformation("Cache warming completed successfully");
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Cache warming failed");
         }
     }
     /// <summary>

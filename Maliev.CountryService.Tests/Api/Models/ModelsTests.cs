@@ -29,8 +29,8 @@ public class ModelsTests
     public void CountryListRequest_Defaults_AreSet()
     {
         var request = new CountryListRequest();
-        Assert.Equal(1, request.Page);
-        Assert.Equal(250, request.PageSize);
+        Assert.Null(request.Page);
+        Assert.Null(request.PageSize);
         Assert.Equal("name", request.SortBy);
         Assert.Equal("asc", request.SortOrder);
     }

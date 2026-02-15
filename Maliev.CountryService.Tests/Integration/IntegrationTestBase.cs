@@ -32,7 +32,11 @@ public abstract class IntegrationTestBase : IAsyncLifetime
         await _factory.CleanDatabaseAsync();
     }
 
-    public virtual Task DisposeAsync() => Task.CompletedTask;
+    public virtual Task DisposeAsync()
+    {
+        _client.Dispose();
+        return Task.CompletedTask;
+    }
 
 
 

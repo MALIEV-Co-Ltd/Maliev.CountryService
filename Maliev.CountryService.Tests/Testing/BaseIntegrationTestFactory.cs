@@ -6,13 +6,16 @@ using Microsoft.Extensions.Logging;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.IdentityModel.Tokens;
+using Moq;
 using Testcontainers.PostgreSql;
 using Testcontainers.RabbitMq;
 using Testcontainers.Redis;
@@ -171,7 +174,16 @@ public class BaseIntegrationTestFactory<TProgram, TDbContext> : WebApplicationFa
                 ["ConnectionStrings:redis"] = _redisContainer!.GetConnectionString(),
                 ["ConnectionStrings:rabbitmq"] = _rabbitmqContainer!.GetConnectionString(),
                 ["CORS:AllowedOrigins:0"] = "http://localhost:3000",
-                ["CORS_ALLOWED_ORIGINS"] = "http://localhost:3000"
+                ["CORS_ALLOWED_ORIGINS"] = "http://localhost:3000",
+                ["IAM:RegistrationDelaySeconds"] = "0",
+                ["RateLimiting:PermitLimit"] = "10000",
+                ["RateLimiting:WindowMinutes"] = "1",
+                ["RateLimiting:Admin:PermitLimit"] = "10000",
+                ["RateLimiting:Auth:PermitLimit"] = "10000",
+                ["RateLimiting:Public:PermitLimit"] = "10000",
+                ["RateLimiting:Batch:PermitLimit"] = "10000",
+                ["RateLimiting:Read:PermitLimit"] = "10000",
+                ["RateLimiting:Write:PermitLimit"] = "10000"
             };
 
             foreach (var kv in GetAdditionalConfiguration())
@@ -184,6 +196,29 @@ public class BaseIntegrationTestFactory<TProgram, TDbContext> : WebApplicationFa
 
         builder.ConfigureTestServices(services =>
         {
+            // Manual Redis registration for tests because AddStandardCache skips it in 'Testing' env
+            var redisConnectionString = _redisContainer!.GetConnectionString();
+            services.AddSingleton<StackExchange.Redis.IConnectionMultiplexer>(sp =>
+            {
+                return StackExchange.Redis.ConnectionMultiplexer.Connect(redisConnectionString);
+            });
+
+            // Mock IAM service to fail fast and fallback to JWT claims
+            var iamMock = new Mock<Maliev.Aspire.ServiceDefaults.IAM.IIamServiceClient>();
+            iamMock.Setup(x => x.CheckPermissionAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(false);
+            iamMock.Setup(x => x.GetUserPermissionsAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(Enumerable.Empty<string>());
+            services.AddSingleton(iamMock.Object);
+
+            // Mock IAM registration status to always be healthy
+            var statusTracker = new Maliev.Aspire.ServiceDefaults.IAM.IAMRegistrationStatusTracker();
+            statusTracker.MarkRegistered();
+            services.AddSingleton(statusTracker);
+
+            // Rate limiting policies are already registered in Program.cs via builder.AddStandardRateLimiting()
+            // No need to manually add them here, as it would cause duplicate policy exceptions.
+
             // Configure JWT Bearer authentication with test RSA key
             services.PostConfigureAll<JwtBearerOptions>(options =>
             {
@@ -240,7 +275,8 @@ public class BaseIntegrationTestFactory<TProgram, TDbContext> : WebApplicationFa
             var backgroundServicesToDisable = new[]
             {
                 "CacheWarmingService",
-                "BulkImportWorkerService"
+                "BulkImportWorkerService",
+                "BackgroundIAMRegistrationService"
             };
 
             var descriptors = services.Where(d =>

@@ -12,11 +12,18 @@ public class AuditLogConfiguration : IEntityTypeConfiguration<AuditLog>
 
         // Primary Key
         builder.HasKey(a => a.Id);
-        builder.Property(a => a.Id).HasColumnName("id").ValueGeneratedOnAdd();
+        builder.Property(a => a.Id).HasColumnName("id")
+            .HasDefaultValueSql("gen_random_uuid()");
 
-        // Foreign Key (NO constraint - allow audit after hard delete)
-        builder.Property(a => a.CountryId).HasColumnName("country_id").IsRequired();
+        // Foreign Key
+        builder.Property(a => a.CountryId).HasColumnName("country_id");
         builder.HasIndex(a => a.CountryId).HasDatabaseName("IX_audit_logs_country_id");
+
+        builder.HasOne(a => a.Country)
+               .WithMany()
+               .HasForeignKey(a => a.CountryId)
+               .IsRequired(false)
+               .OnDelete(DeleteBehavior.SetNull);
 
         // Operation and user tracking
         builder.Property(a => a.Operation).HasColumnName("operation").HasMaxLength(20).IsRequired();

@@ -12,7 +12,8 @@ public class CountryConfiguration : IEntityTypeConfiguration<Country>
 
         // Primary Key
         builder.HasKey(c => c.Id);
-        builder.Property(c => c.Id).HasColumnName("id").ValueGeneratedOnAdd();
+        builder.Property(c => c.Id).HasColumnName("id")
+            .HasDefaultValueSql("gen_random_uuid()");
 
         // ISO Codes with unique indexes
         builder.Property(c => c.Iso2).HasColumnName("iso2").HasMaxLength(2).IsRequired();
@@ -64,6 +65,7 @@ public class CountryConfiguration : IEntityTypeConfiguration<Country>
         // Soft delete
         builder.Property(c => c.IsActive).HasColumnName("is_active").HasDefaultValue(true);
         builder.HasIndex(c => c.IsActive).HasDatabaseName("IX_countries_is_active");
+        builder.HasQueryFilter(c => c.IsActive);
 
         // Concurrency token
         builder.Property(c => c.Version).HasColumnName("version")

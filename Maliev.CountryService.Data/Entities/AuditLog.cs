@@ -2,8 +2,8 @@ namespace Maliev.CountryService.Data.Entities;
 
 public class AuditLog
 {
-    public long Id { get; set; }
-    public long? CountryId { get; set; }
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public Guid? CountryId { get; set; }
     public string Operation { get; set; } = string.Empty;
     public string Action { get; set; } = string.Empty; // Keep for backward compatibility
     public string UserId { get; set; } = string.Empty;

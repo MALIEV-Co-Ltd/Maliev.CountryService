@@ -1,4 +1,5 @@
 using System.Net;
+using System.Linq;
 using System.Text.Json;
 using System.Net.Http.Json;
 using Microsoft.Extensions.Logging;
@@ -62,7 +63,7 @@ public class CountryListTests : IntegrationTestBase
 
 
         // Act
-        var response = await client.GetAsync("/country/v1/countries");
+        var response = await client.GetAsync("/country/v1/countries?page=1&pageSize=20");
         response.EnsureSuccessStatusCode();
         var content = await response.Content.ReadAsStringAsync();
         var paginatedResponse = JsonSerializer.Deserialize<PaginatedResponse<CountryResponse>>(content, JsonSerializerOptions)!;
@@ -71,12 +72,45 @@ public class CountryListTests : IntegrationTestBase
         Assert.NotNull(paginatedResponse);
         Assert.NotEmpty(paginatedResponse.Data);
         Assert.Equal(1, paginatedResponse.Page);
-        Assert.Equal(20, paginatedResponse.PageSize); // Default page size
+        Assert.Equal(20, paginatedResponse.PageSize); // Requested page size
         Assert.True(paginatedResponse.TotalCount > 0);
         // Verify ascending order by name
         var names = paginatedResponse.Data.Select(c => c.Name).ToList();
         var sortedNames = names.OrderBy(n => n).ToList();
         Assert.Equal(sortedNames, names);
+    }
+
+    [Fact]
+    public async Task ListCountries_NoParameters_ReturnsAllCountries()
+    {
+        await _factory.CleanDatabaseAsync();
+
+        // Arrange - Create 5 test countries
+        var adminClient = await CreateAdminClient();
+        for (int i = 0; i < 5; i++)
+        {
+            char suffix = (char)('A' + i);
+            await CreateTestCountry(adminClient, $"T{suffix}", $"TE{suffix}", $"Test Country {suffix}");
+        }
+
+        var client = _client.WithTestAuth(_factory, CountryPermissions.CountriesList);
+
+        // Act
+        var response = await client.GetAsync("/country/v1/countries");
+        if (!response.IsSuccessStatusCode)
+        {
+            var errorBody = await response.Content.ReadAsStringAsync();
+            throw new Exception($"Request failed with {response.StatusCode}: {errorBody}");
+        }
+        var content = await response.Content.ReadAsStringAsync();
+        var paginatedResponse = JsonSerializer.Deserialize<PaginatedResponse<CountryResponse>>(content, JsonSerializerOptions)!;
+
+        // Assert
+        Assert.NotNull(paginatedResponse);
+        Assert.True(paginatedResponse.Data.Count() >= 5);
+        Assert.True(paginatedResponse.TotalCount >= 5);
+        Assert.Equal(paginatedResponse.TotalCount, paginatedResponse.PageSize);
+        Assert.Equal(1, paginatedResponse.Page);
     }
 
     [Fact]

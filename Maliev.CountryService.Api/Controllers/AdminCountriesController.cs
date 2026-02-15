@@ -1,4 +1,5 @@
 using Asp.Versioning;
+using Maliev.Aspire.ServiceDefaults;
 using Maliev.Aspire.ServiceDefaults.Authorization;
 using Maliev.CountryService.Api.Authorization;
 using Maliev.CountryService.Api.Metrics;
@@ -17,7 +18,7 @@ namespace Maliev.CountryService.Api.Controllers;
 [ApiController]
 [ApiVersion(1.0)]
 [Route("country/v{version:apiVersion}/admin/countries")]
-[EnableRateLimiting("admin-endpoints")]
+[EnableRateLimiting(RateLimitPolicies.Admin)]
 public class AdminCountriesController : ControllerBase
 {
     private readonly ICountryService _countryService;
@@ -52,9 +53,6 @@ public class AdminCountriesController : ControllerBase
     /// <response code="409">Conflict - ISO2 or ISO3 code already exists for another country.</response>
     [HttpPost]
     [RequirePermission(CountryPermissions.CountriesCreate)]
-    [ProducesResponseType(StatusCodes.Status201Created)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status409Conflict)]
     public async Task<IActionResult> Create([FromBody] CreateCountryRequest request, CancellationToken cancellationToken)
     {
         var stopwatch = System.Diagnostics.Stopwatch.StartNew();
@@ -102,7 +100,7 @@ public class AdminCountriesController : ControllerBase
     /// <response code="409">Conflict - ISO code already exists for another country.</response>
     /// <response code="412">Precondition failed - ETag mismatch, country was modified by another user.</response>
     /// <response code="428">Precondition required - If-Match header is missing.</response>
-    [HttpPut("{id:long}")]
+    [HttpPut("{id:guid}")]
     [RequirePermission(CountryPermissions.CountriesUpdate)]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -110,7 +108,7 @@ public class AdminCountriesController : ControllerBase
     [ProducesResponseType(StatusCodes.Status409Conflict)]
     [ProducesResponseType(StatusCodes.Status412PreconditionFailed)]
     [ProducesResponseType(StatusCodes.Status428PreconditionRequired)]
-    public async Task<IActionResult> Update(long id, [FromBody] UpdateCountryRequest request, CancellationToken cancellationToken)
+    public async Task<IActionResult> Update(Guid id, [FromBody] UpdateCountryRequest request, CancellationToken cancellationToken)
     {
         var stopwatch = System.Diagnostics.Stopwatch.StartNew();
         var userId = GetUserId();
@@ -177,7 +175,7 @@ public class AdminCountriesController : ControllerBase
     /// <response code="409">Conflict - ISO code already exists for another country.</response>
     /// <response code="412">Precondition failed - ETag mismatch.</response>
     /// <response code="428">Precondition required - If-Match header is missing.</response>
-    [HttpPatch("{id:long}")]
+    [HttpPatch("{id:guid}")]
     [RequirePermission(CountryPermissions.CountriesUpdate)]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -185,7 +183,7 @@ public class AdminCountriesController : ControllerBase
     [ProducesResponseType(StatusCodes.Status409Conflict)]
     [ProducesResponseType(StatusCodes.Status412PreconditionFailed)]
     [ProducesResponseType(StatusCodes.Status428PreconditionRequired)]
-    public async Task<IActionResult> Patch(long id, [FromBody] PatchCountryRequest request, CancellationToken cancellationToken)
+    public async Task<IActionResult> Patch(Guid id, [FromBody] PatchCountryRequest request, CancellationToken cancellationToken)
     {
         var stopwatch = System.Diagnostics.Stopwatch.StartNew();
         var userId = GetUserId();
@@ -244,11 +242,11 @@ public class AdminCountriesController : ControllerBase
     /// <returns>No content on success.</returns>
     /// <response code="204">Country soft deleted successfully.</response>
     /// <response code="404">Country not found.</response>
-    [HttpDelete("{id:long}")]
+    [HttpDelete("{id:guid}")]
     [RequirePermission(CountryPermissions.CountriesDelete)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> SoftDelete(long id, CancellationToken cancellationToken)
+    public async Task<IActionResult> SoftDelete(Guid id, CancellationToken cancellationToken)
     {
         var stopwatch = System.Diagnostics.Stopwatch.StartNew();
         var userId = GetUserId();
@@ -286,11 +284,11 @@ public class AdminCountriesController : ControllerBase
     /// <returns>No content on success.</returns>
     /// <response code="204">Country permanently deleted.</response>
     /// <response code="404">Country not found.</response>
-    [HttpDelete("{id:long}/hard-delete")]
+    [HttpDelete("{id:guid}/hard-delete")]
     [RequirePermission(CountryPermissions.CountriesHardDelete)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> HardDelete(long id, CancellationToken cancellationToken)
+    public async Task<IActionResult> HardDelete(Guid id, CancellationToken cancellationToken)
     {
         var stopwatch = System.Diagnostics.Stopwatch.StartNew();
         var userId = GetUserId();
@@ -327,11 +325,11 @@ public class AdminCountriesController : ControllerBase
     /// <returns>No content on success.</returns>
     /// <response code="204">Country restored successfully.</response>
     /// <response code="404">Country not found.</response>
-    [HttpPost("{id:long}/restore")]
+    [HttpPost("{id:guid}/restore")]
     [RequirePermission(CountryPermissions.CountriesRestore)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> Restore(long id, CancellationToken cancellationToken)
+    public async Task<IActionResult> Restore(Guid id, CancellationToken cancellationToken)
     {
         var stopwatch = System.Diagnostics.Stopwatch.StartNew();
         var userId = GetUserId();

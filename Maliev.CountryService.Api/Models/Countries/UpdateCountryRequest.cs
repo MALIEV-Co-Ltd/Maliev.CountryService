@@ -16,11 +16,12 @@ public class UpdateCountryRequest
     public string Iso2 { get; set; } = string.Empty;
 
     /// <summary>
-    /// Gets or sets the ISO 3166-1 alpha-3 code (3-letter code). Optional.
+    /// Gets or sets the ISO 3166-1 alpha-3 code (3-letter code). Required.
     /// </summary>
+    [Required(ErrorMessage = "ISO3 code is required.")]
     [StringLength(3, MinimumLength = 3, ErrorMessage = "ISO3 code must be 3 characters.")]
     [RegularExpression("^[A-Z]{3}$", ErrorMessage = "ISO3 code must consist of 3 uppercase letters.")]
-    public string? Iso3 { get; set; } // Can be null as per spec
+    public string Iso3 { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the common English name of the country. Required.

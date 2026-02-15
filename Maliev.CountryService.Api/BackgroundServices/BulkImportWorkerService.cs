@@ -89,10 +89,7 @@ public class BulkImportWorkerService : BackgroundService
 
             _logger.LogInformation("Processing bulk import job {JobId}", job.Id);
 
-            // Convert long ID to Guid (simplified - in production would use proper GUID)
-            var jobGuid = CreateGuidFromLongId(job.Id);
-
-            await bulkImportService.ProcessImportAsync(jobGuid, linkedCts.Token);
+            await bulkImportService.ProcessImportAsync(job.Id, linkedCts.Token);
 
             _logger.LogInformation("Successfully processed bulk import job {JobId}", job.Id);
         }
@@ -118,18 +115,5 @@ public class BulkImportWorkerService : BackgroundService
         }
     }
 
-    private Guid CreateGuidFromLongId(long id)
-    {
-        byte[] bytes = new byte[16];
-        byte[] idBytes = BitConverter.GetBytes(id);
-
-        // Ensure little-endian byte order for cross-platform consistency
-        if (!BitConverter.IsLittleEndian)
-        {
-            Array.Reverse(idBytes);
-        }
-
-        Array.Copy(idBytes, 0, bytes, 0, idBytes.Length);
-        return new Guid(bytes);
-    }
+    // CreateGuidFromLongId helper removed as we now use Guid natively for IDs.
 }
