@@ -34,6 +34,8 @@ public class BulkImportJob
     public DateTime? StartedAtUtc { get; set; }
     public DateTime? CompletedAtUtc { get; set; }
 
+    public Guid? ClaimedByWorkerId { get; set; }
+
     public string? IpAddress { get; set; }
     public Guid? CorrelationId { get; set; }
 

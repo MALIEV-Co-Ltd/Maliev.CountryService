@@ -19,6 +19,10 @@ public class BulkImportJobConfiguration : IEntityTypeConfiguration<BulkImportJob
         builder.Property(b => b.Status).HasColumnName("status").HasMaxLength(20).HasDefaultValue("Pending");
         builder.HasIndex(b => b.Status).HasDatabaseName("IX_bulk_import_jobs_status");
 
+        // Worker claiming for atomic job processing
+        builder.Property(b => b.ClaimedByWorkerId).HasColumnName("claimed_by_worker_id");
+        builder.HasIndex(b => b.ClaimedByWorkerId).HasDatabaseName("ix_bulk_import_jobs_claimed_by_worker_id");
+
         // Record counts
         builder.Property(b => b.TotalRecords).HasColumnName("total_records").IsRequired();
         builder.Property(b => b.ProcessedRecords).HasColumnName("processed_records").HasDefaultValue(0);

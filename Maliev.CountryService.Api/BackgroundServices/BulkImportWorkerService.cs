@@ -64,23 +64,35 @@ public class BulkImportWorkerService : BackgroundService
         var context = scope.ServiceProvider.GetRequiredService<CountryDbContext>();
         var bulkImportService = scope.ServiceProvider.GetRequiredService<IBulkImportService>();
 
-        // T113: Select and lock the next validated job using 'SKIP LOCKED'
-        var job = await context.BulkImportJobs
-            .FromSqlRaw("SELECT * FROM bulk_import_jobs WHERE status = 'Validated' ORDER BY created_at_utc FOR UPDATE SKIP LOCKED")
-            .OrderBy(j => j.CreatedAtUtc) // Ensure deterministic ordering for EF Core
-            .FirstOrDefaultAsync(cancellationToken);
+        // Atomically claim the next validated job using pure EF Core with ExecuteUpdateAsync.
+        // The ClaimedByWorkerId ensures atomic claiming - no race conditions between workers.
+        var claimId = Guid.NewGuid();
 
+        var updatedCount = await context.BulkImportJobs
+            .Where(j => j.Status == "Validated")
+            .OrderBy(j => j.CreatedAtUtc)
+            .Take(1)
+            .ExecuteUpdateAsync(s => s
+                .SetProperty(j => j.Status, "Processing")
+                .SetProperty(j => j.StartedAtUtc, DateTime.UtcNow)
+                .SetProperty(j => j.ClaimedByWorkerId, claimId),
+                cancellationToken);
+
+        if (updatedCount == 0)
+        {
+            return;
+        }
+
+        // Retrieve the claimed job by claim ID
+        var job = await context.BulkImportJobs
+            .FirstOrDefaultAsync(j => j.ClaimedByWorkerId == claimId, cancellationToken);
 
         if (job == null)
         {
             return;
         }
 
-        // Mark as Processing immediately inside the scope
-        job.Status = "Processing";
-        await context.SaveChangesAsync(cancellationToken);
-
-        _logger.LogInformation("Selected validated job {JobId} for processing", job.Id);
+        _logger.LogInformation("Claimed validated job {JobId} for processing", job.Id);
 
         try
         {

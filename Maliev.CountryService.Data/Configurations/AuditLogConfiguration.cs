@@ -27,6 +27,7 @@ public class AuditLogConfiguration : IEntityTypeConfiguration<AuditLog>
 
         // Operation and user tracking
         builder.Property(a => a.Operation).HasColumnName("operation").HasMaxLength(20).IsRequired();
+        builder.Property(a => a.Action).HasColumnName("action").IsRequired();
         builder.Property(a => a.UserId).HasColumnName("user_id").HasMaxLength(100).IsRequired();
         builder.HasIndex(a => a.UserId).HasDatabaseName("IX_audit_logs_user_id");
 
@@ -46,6 +47,7 @@ public class AuditLogConfiguration : IEntityTypeConfiguration<AuditLog>
         builder.HasIndex(a => a.CorrelationId).HasDatabaseName("IX_audit_logs_correlation_id");
 
         // Timestamp
+        builder.Property(a => a.TimestampUtc).HasColumnName("timestamp_utc").IsRequired();
         builder.Property(a => a.CreatedAtUtc).HasColumnName("created_at_utc").HasDefaultValueSql("NOW()");
         builder.HasIndex(a => a.CreatedAtUtc).HasDatabaseName("IX_audit_logs_created_at_utc");
     }
