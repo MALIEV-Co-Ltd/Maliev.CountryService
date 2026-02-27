@@ -61,7 +61,7 @@ public class AdminCountryTests : IntegrationTestBase
         // Arrange
         var permissions = CountryPredefinedRoles.GetPermissionsForRole(CountryAdminRoles[0]).ToArray();
         var adminClient = _factory.CreateAuthenticatedClient("testuser", CountryAdminRoles, permissions);
-        var iso2 = "QA" + (char)_random.Next(65, 91); // 3 letters? No, ISO2 is 2 letters. 
+        var iso2 = "QA" + (char)_random.Next(65, 91); // 3 letters? No, ISO2 is 2 letters.
         // Let's use a very safe range.
         iso2 = GetRandomIso2();
 
