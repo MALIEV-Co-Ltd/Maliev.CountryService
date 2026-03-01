@@ -1,6 +1,6 @@
 using Maliev.CountryService.Api.Middleware;
-using Maliev.CountryService.Api.Services;
-using Maliev.CountryService.Data;
+using Maliev.CountryService.Infrastructure.Data;
+using Maliev.CountryService.Infrastructure.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;

@@ -1,9 +1,9 @@
 using Asp.Versioning;
 using Maliev.Aspire.ServiceDefaults.Authorization;
 using Maliev.CountryService.Api.Authorization;
-using Maliev.CountryService.Api.Models.Common;
-using Maliev.CountryService.Api.Models.Countries;
-using Maliev.CountryService.Api.Services;
+using Maliev.CountryService.Application.Interfaces;
+using Maliev.CountryService.Application.Models.Common;
+using Maliev.CountryService.Application.Models.Countries;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Maliev.CountryService.Api.Controllers;
@@ -149,7 +149,7 @@ public class CountriesController : ControllerBase
     /// <param name="cancellationToken">A token to cancel the operation.</param>
     /// <returns>A list of countries.</returns>
     [HttpGet]
-    [Microsoft.AspNetCore.Authorization.Authorize]
+    [RequirePermission(CountryPermissions.CountriesList)]
     [ResponseCache(Duration = 3600, VaryByQueryKeys = ["*"])]
     [ProducesResponseType(typeof(PaginatedResponse<CountryResponse>), StatusCodes.Status200OK)]
     public async Task<IActionResult> List([FromQuery] CountryListRequest request, CancellationToken cancellationToken)

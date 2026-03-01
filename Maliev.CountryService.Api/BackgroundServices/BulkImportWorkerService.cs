@@ -1,11 +1,10 @@
-using Maliev.CountryService.Api.Services;
-using Maliev.CountryService.Data;
+using Maliev.CountryService.Application.Interfaces;
 using Microsoft.EntityFrameworkCore;
 
 namespace Maliev.CountryService.Api.BackgroundServices;
 
 /// <summary>
-/// T113-T114: Background worker service for processing validated bulk import jobs.
+/// Background worker service for processing validated bulk import jobs.
 /// Polls for jobs in "Validated" status and processes them asynchronously.
 /// </summary>
 public class BulkImportWorkerService : BackgroundService
@@ -13,7 +12,8 @@ public class BulkImportWorkerService : BackgroundService
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<BulkImportWorkerService> _logger;
     private readonly TimeSpan _pollInterval;
-    private readonly TimeSpan _processingTimeout = TimeSpan.FromMinutes(30); // T114: Processing timeout
+    private readonly TimeSpan _processingTimeout = TimeSpan.FromMinutes(30);
+
     /// <summary>
     /// Initializes a new instance of the <see cref="BulkImportWorkerService"/> class.
     /// </summary>
@@ -30,7 +30,6 @@ public class BulkImportWorkerService : BackgroundService
         var pollSeconds = configuration.GetValue<int>("BulkImport:PollIntervalSeconds", 10);
         _pollInterval = TimeSpan.FromSeconds(pollSeconds);
     }
-
 
     /// <summary>
     /// Executes the background service to process bulk import jobs.
@@ -61,10 +60,10 @@ public class BulkImportWorkerService : BackgroundService
     private async Task ProcessPendingJobsAsync(CancellationToken cancellationToken)
     {
         using var scope = _scopeFactory.CreateScope();
-        var context = scope.ServiceProvider.GetRequiredService<CountryDbContext>();
+        var context = scope.ServiceProvider.GetRequiredService<ICountryDbContext>();
         var bulkImportService = scope.ServiceProvider.GetRequiredService<IBulkImportService>();
 
-        // Atomically claim the next validated job using pure EF Core with ExecuteUpdateAsync.
+        // Atomically claim the next validated job using the database context.
         // The ClaimedByWorkerId ensures atomic claiming - no race conditions between workers.
         var claimId = Guid.NewGuid();
 
@@ -126,6 +125,4 @@ public class BulkImportWorkerService : BackgroundService
             // Error handling is done in BulkImportService.ProcessImportAsync
         }
     }
-
-    // CreateGuidFromLongId helper removed as we now use Guid natively for IDs.
 }

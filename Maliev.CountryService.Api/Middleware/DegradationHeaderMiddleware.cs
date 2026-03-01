@@ -1,4 +1,4 @@
-using Maliev.CountryService.Api.Services;
+using Maliev.CountryService.Application.Interfaces;
 
 namespace Maliev.CountryService.Api.Middleware;
 
@@ -27,7 +27,7 @@ public class DegradationHeaderMiddleware
     /// <param name="context">The HTTP context.</param>
     /// <param name="degradationContext">The degradation context containing degradation state.</param>
     /// <returns>A task representing the asynchronous operation.</returns>
-    public async Task InvokeAsync(HttpContext context, DegradationContext degradationContext)
+    public async Task InvokeAsync(HttpContext context, IDegradationContext degradationContext)
     {
         await _next(context);
 

@@ -1,4 +1,4 @@
-using Maliev.CountryService.Data;
+using Maliev.CountryService.Infrastructure.Data;
 using Maliev.CountryService.Tests.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;

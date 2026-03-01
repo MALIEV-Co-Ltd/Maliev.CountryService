@@ -1,9 +1,10 @@
 using System.Text.Json;
-using Maliev.CountryService.Api.Models.BulkImport;
-using Maliev.CountryService.Api.Models.Countries;
-using Maliev.CountryService.Api.Services;
-using Maliev.CountryService.Data;
-using Maliev.CountryService.Data.Entities;
+using Maliev.CountryService.Application.Interfaces;
+using Maliev.CountryService.Application.Models.BulkImport;
+using Maliev.CountryService.Application.Models.Countries;
+using Maliev.CountryService.Application.Services;
+using Maliev.CountryService.Domain.Entities;
+using Maliev.CountryService.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -16,7 +17,7 @@ namespace Maliev.CountryService.Tests.Services;
 public class BulkImportServiceTests
 {
     private readonly TestWebApplicationFactory _factory;
-    private readonly CountryDbContext _context;
+    private readonly ICountryDbContext _context;
     private readonly ICountryService _countryService;
     private readonly ILogger<BulkImportService> _logger;
 
@@ -108,7 +109,7 @@ public class BulkImportServiceTests
         var service = new BulkImportService(_context, _countryService, _logger);
 
         // Seed database
-        _context.Countries.Add(new Data.Entities.Country
+        _context.Countries.Add(new Country
         {
             Iso2 = "AA",
             Iso3 = "AAA",

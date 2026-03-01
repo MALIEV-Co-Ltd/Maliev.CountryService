@@ -1,7 +1,7 @@
 using Maliev.CountryService.Api.Controllers;
 using Maliev.CountryService.Api.Metrics;
-using Maliev.CountryService.Api.Models.Countries;
-using Maliev.CountryService.Api.Services;
+using Maliev.CountryService.Application.Interfaces;
+using Maliev.CountryService.Application.Models.Countries;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;

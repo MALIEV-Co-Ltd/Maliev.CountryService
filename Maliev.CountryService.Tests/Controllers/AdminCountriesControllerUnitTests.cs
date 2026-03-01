@@ -1,6 +1,7 @@
 using Maliev.CountryService.Api.Controllers;
-using Maliev.CountryService.Api.Models.Countries;
-using Maliev.CountryService.Api.Services;
+using Maliev.CountryService.Application.Interfaces;
+using Maliev.CountryService.Application.Models.Common;
+using Maliev.CountryService.Application.Models.Countries;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
@@ -146,7 +147,7 @@ public class AdminCountriesControllerUnitTests
         var id = Guid.NewGuid();
         var list = new List<CountryResponse> { new CountryResponse { Id = id, Name = "Test" } };
         _countryServiceMock.Setup(x => x.ListAsync(It.IsAny<CountryListRequest>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new Maliev.CountryService.Api.Models.Common.PaginatedResponse<CountryResponse> { Data = list });
+            .ReturnsAsync(new PaginatedResponse<CountryResponse> { Data = list });
 
         // Act
         var result = await _controller.ExportAll(default);

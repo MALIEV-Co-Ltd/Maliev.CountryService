@@ -1,4 +1,4 @@
-using Maliev.CountryService.Data;
+using Maliev.CountryService.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Xunit;
 

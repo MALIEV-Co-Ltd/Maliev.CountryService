@@ -1,8 +1,10 @@
-using Maliev.CountryService.Api.Models.Countries;
-using Maliev.CountryService.Api.Services;
-using Maliev.CountryService.Data;
-using Maliev.CountryService.Data.Entities;
+using Maliev.CountryService.Application.Interfaces;
+using Maliev.CountryService.Application.Models.Countries;
+using Maliev.CountryService.Domain.Entities;
+using Maliev.CountryService.Infrastructure.Data;
+using Maliev.CountryService.Infrastructure.Services;
 using Maliev.CountryService.Tests.Fixtures;
+using AppCountryService = Maliev.CountryService.Application.Services.CountryService;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -15,14 +17,14 @@ public class CountryServiceTests
 {
     private readonly TestWebApplicationFactory _factory;
     private readonly Mock<ICacheService> _cacheServiceMock;
-    private readonly Mock<ILogger<Maliev.CountryService.Api.Services.CountryService>> _loggerMock;
+    private readonly Mock<ILogger<AppCountryService>> _loggerMock;
     private readonly DegradationContext _degradationContext;
 
     public CountryServiceTests(TestWebApplicationFactory factory)
     {
         _factory = factory;
         _cacheServiceMock = new Mock<ICacheService>();
-        _loggerMock = new Mock<ILogger<Maliev.CountryService.Api.Services.CountryService>>();
+        _loggerMock = new Mock<ILogger<AppCountryService>>();
         _degradationContext = new DegradationContext();
     }
 
@@ -38,7 +40,7 @@ public class CountryServiceTests
             .ReturnsAsync(cachedResponse);
 
         var context = GetDbContext();
-        var service = new Maliev.CountryService.Api.Services.CountryService(context, _cacheServiceMock.Object, _loggerMock.Object, _degradationContext);
+        var service = new Maliev.CountryService.Application.Services.CountryService(context, _cacheServiceMock.Object, _loggerMock.Object, _degradationContext);
 
         // Act
         var result = await service.GetByIdAsync(id);
@@ -55,7 +57,7 @@ public class CountryServiceTests
         // Arrange
         await _factory.CleanDatabaseAsync();
         var context = GetDbContext();
-        var service = new Maliev.CountryService.Api.Services.CountryService(context, _cacheServiceMock.Object, _loggerMock.Object, _degradationContext);
+        var service = new Maliev.CountryService.Application.Services.CountryService(context, _cacheServiceMock.Object, _loggerMock.Object, _degradationContext);
         var request = new CreateCountryRequest { Name = "New Country", Iso2 = "NC", Iso3 = "NCU", NumericCode = "999" };
 
         // Act
@@ -78,7 +80,7 @@ public class CountryServiceTests
         context.Countries.Add(country);
         await context.SaveChangesAsync();
 
-        var service = new Maliev.CountryService.Api.Services.CountryService(context, _cacheServiceMock.Object, _loggerMock.Object, _degradationContext);
+        var service = new Maliev.CountryService.Application.Services.CountryService(context, _cacheServiceMock.Object, _loggerMock.Object, _degradationContext);
 
         // Act
         await service.SoftDeleteAsync(country.Id, "test-user");
@@ -95,7 +97,7 @@ public class CountryServiceTests
         // Arrange
         await _factory.CleanDatabaseAsync();
         var context = GetDbContext();
-        var service = new Maliev.CountryService.Api.Services.CountryService(context, _cacheServiceMock.Object, _loggerMock.Object, _degradationContext);
+        var service = new Maliev.CountryService.Application.Services.CountryService(context, _cacheServiceMock.Object, _loggerMock.Object, _degradationContext);
 
         // Act
         var result = await service.GetByIso2Async("XX");
@@ -114,7 +116,7 @@ public class CountryServiceTests
             .ReturnsAsync(cachedResponse);
 
         var context = GetDbContext();
-        var service = new Maliev.CountryService.Api.Services.CountryService(context, _cacheServiceMock.Object, _loggerMock.Object, _degradationContext);
+        var service = new Maliev.CountryService.Application.Services.CountryService(context, _cacheServiceMock.Object, _loggerMock.Object, _degradationContext);
 
         // Act
         var result = await service.GetByIso3Async("USA");
@@ -134,7 +136,7 @@ public class CountryServiceTests
         context.Countries.Add(country);
         await context.SaveChangesAsync();
 
-        var service = new Maliev.CountryService.Api.Services.CountryService(context, _cacheServiceMock.Object, _loggerMock.Object, _degradationContext);
+        var service = new Maliev.CountryService.Application.Services.CountryService(context, _cacheServiceMock.Object, _loggerMock.Object, _degradationContext);
         var request = new CountryListRequest { IncludeInactive = true, PageSize = 1000 };
 
         // Act
@@ -154,7 +156,7 @@ public class CountryServiceTests
         context.Countries.Add(country);
         await context.SaveChangesAsync();
 
-        var service = new Maliev.CountryService.Api.Services.CountryService(context, _cacheServiceMock.Object, _loggerMock.Object, _degradationContext);
+        var service = new Maliev.CountryService.Application.Services.CountryService(context, _cacheServiceMock.Object, _loggerMock.Object, _degradationContext);
 
         // Act
         var result = await service.SearchAsync("Republic", 1, 10);
@@ -170,7 +172,7 @@ public class CountryServiceTests
         // Arrange
         await _factory.CleanDatabaseAsync();
         var context = GetDbContext();
-        var service = new Maliev.CountryService.Api.Services.CountryService(context, _cacheServiceMock.Object, _loggerMock.Object, _degradationContext);
+        var service = new Maliev.CountryService.Application.Services.CountryService(context, _cacheServiceMock.Object, _loggerMock.Object, _degradationContext);
 
         // Act
         var result1 = await service.SearchAsync("", 1, 10);
@@ -191,7 +193,7 @@ public class CountryServiceTests
         context.Countries.Add(country);
         await context.SaveChangesAsync();
 
-        var service = new Maliev.CountryService.Api.Services.CountryService(context, _cacheServiceMock.Object, _loggerMock.Object, _degradationContext);
+        var service = new Maliev.CountryService.Application.Services.CountryService(context, _cacheServiceMock.Object, _loggerMock.Object, _degradationContext);
 
         // Act
         await service.RestoreAsync(country.Id, "test-user");
@@ -212,7 +214,7 @@ public class CountryServiceTests
         context.Countries.Add(country);
         await context.SaveChangesAsync();
 
-        var service = new Maliev.CountryService.Api.Services.CountryService(context, _cacheServiceMock.Object, _loggerMock.Object, _degradationContext);
+        var service = new Maliev.CountryService.Application.Services.CountryService(context, _cacheServiceMock.Object, _loggerMock.Object, _degradationContext);
         var patch = new PatchCountryRequest { Region = "New" };
 
         var countryResponse = await service.GetByIdAsync(country.Id);
@@ -235,7 +237,7 @@ public class CountryServiceTests
         context.Countries.Add(country);
         await context.SaveChangesAsync();
 
-        var service = new Maliev.CountryService.Api.Services.CountryService(context, _cacheServiceMock.Object, _loggerMock.Object, _degradationContext);
+        var service = new AppCountryService(context, _cacheServiceMock.Object, _loggerMock.Object, _degradationContext);
 
         // Act
         await service.HardDeleteAsync(country.Id, "test-user");
@@ -255,7 +257,7 @@ public class CountryServiceTests
         context.Countries.Add(country);
         await context.SaveChangesAsync();
 
-        var service = new Maliev.CountryService.Api.Services.CountryService(context, _cacheServiceMock.Object, _loggerMock.Object, _degradationContext);
+        var service = new AppCountryService(context, _cacheServiceMock.Object, _loggerMock.Object, _degradationContext);
         var update = new UpdateCountryRequest { Name = "C2", Iso2 = "C1", Iso3 = "C11" };
 
         // Act & Assert
@@ -273,7 +275,7 @@ public class CountryServiceTests
         context.Countries.Add(country);
         await context.SaveChangesAsync();
 
-        var service = new Maliev.CountryService.Api.Services.CountryService(context, _cacheServiceMock.Object, _loggerMock.Object, _degradationContext);
+        var service = new AppCountryService(context, _cacheServiceMock.Object, _loggerMock.Object, _degradationContext);
         var request = new CreateCountryRequest { Name = "C2", Iso2 = "C1", Iso3 = "C22" };
 
         // Act & Assert
@@ -322,7 +324,7 @@ public class CountryServiceTests
         context.Countries.Add(country);
         await context.SaveChangesAsync();
 
-        var service = new Maliev.CountryService.Api.Services.CountryService(context, _cacheServiceMock.Object, _loggerMock.Object, _degradationContext);
+        var service = new AppCountryService(context, _cacheServiceMock.Object, _loggerMock.Object, _degradationContext);
 
         // Act
         var result = await service.GetByIdAsync(country.Id);

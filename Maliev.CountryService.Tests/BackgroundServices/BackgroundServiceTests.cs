@@ -1,8 +1,8 @@
 using Maliev.CountryService.Api.BackgroundServices;
-using Maliev.CountryService.Api.Services;
-using Maliev.CountryService.Api.Models.BulkImport;
-using Maliev.CountryService.Data;
-using Maliev.CountryService.Data.Entities;
+using Maliev.CountryService.Application.Interfaces;
+using Maliev.CountryService.Application.Models.BulkImport;
+using Maliev.CountryService.Domain.Entities;
+using Maliev.CountryService.Infrastructure.Data;
 using Maliev.CountryService.Tests.Fixtures;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -106,6 +106,7 @@ public class BackgroundServiceTests
         services.AddSingleton(logger.Object);
         services.AddSingleton(mockService.Object);
         services.AddSingleton(context);
+        services.AddSingleton<ICountryDbContext>(context);
         var scopeFactoryMock = new Mock<IServiceScopeFactory>();
         var scopeMock = new Mock<IServiceScope>();
         scopeFactoryMock.Setup(s => s.CreateScope()).Returns(scopeMock.Object);

@@ -1,6 +1,6 @@
 using DotNet.Testcontainers.Builders;
 using DotNet.Testcontainers.Containers;
-using Maliev.CountryService.Data;
+using Maliev.CountryService.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Testcontainers.PostgreSql;
 using Testcontainers.Redis;
@@ -58,9 +58,9 @@ public class TestDatabaseFixture : IAsyncLifetime
         await context.Database.EnsureCreatedAsync(); // Create schema from model
 
         // Seed initial data for tests
-        var countries = new List<Maliev.CountryService.Data.Entities.Country>
+        var countries = new List<Maliev.CountryService.Domain.Entities.Country>
         {
-            new Maliev.CountryService.Data.Entities.Country
+            new Maliev.CountryService.Domain.Entities.Country
             {
                 Iso2 = "US", Iso3 = "USA", Name = "United States", OfficialName = "United States of America",
                 Region = "Americas", Subregion = "North America", Population = 330000000, AreaKm2 = 9833520,
@@ -74,7 +74,7 @@ public class TestDatabaseFixture : IAsyncLifetime
                 Flags = "{\"png\":\"https://flagcdn.com/w320/us.png\",\"svg\":\"https://flagcdn.com/us.svg\"}",
                 Independent = true, UnMember = true, Landlocked = false, IsActive = true, CreatedBy = "test", UpdatedBy = "test", Version = Guid.NewGuid()
             },
-            new Maliev.CountryService.Data.Entities.Country
+            new Maliev.CountryService.Domain.Entities.Country
             {
                 Iso2 = "CA", Iso3 = "CAN", Name = "Canada", OfficialName = "Canada",
                 Region = "Americas", Subregion = "North America", Population = 38000000, AreaKm2 = 9984670,
@@ -88,7 +88,7 @@ public class TestDatabaseFixture : IAsyncLifetime
                 Flags = "{\"png\":\"https://flagcdn.com/w320/ca.png\",\"svg\":\"https://flagcdn.com/ca.svg\"}",
                 Independent = true, UnMember = true, Landlocked = false, IsActive = true, CreatedBy = "test", UpdatedBy = "test", Version = Guid.NewGuid()
             },
-            new Maliev.CountryService.Data.Entities.Country
+            new Maliev.CountryService.Domain.Entities.Country
             {
                 Iso2 = "GB", Iso3 = "GBR", Name = "United Kingdom", OfficialName = "United Kingdom of Great Britain and Northern Ireland",
                 Region = "Europe", Subregion = "Northern Europe", Population = 67000000, AreaKm2 = 242900,
@@ -102,7 +102,7 @@ public class TestDatabaseFixture : IAsyncLifetime
                 Flags = "{\"png\":\"https://flagcdn.com/w320/gb.png\",\"svg\":\"https://flagcdn.com/gb.svg\"}",
                 Independent = true, UnMember = true, Landlocked = false, IsActive = true, CreatedBy = "test", UpdatedBy = "test", Version = Guid.NewGuid()
             },
-            new Maliev.CountryService.Data.Entities.Country
+            new Maliev.CountryService.Domain.Entities.Country
             {
                 Iso2 = "FR", Iso3 = "FRA", Name = "France", OfficialName = "French Republic",
                 Region = "Europe", Subregion = "Western Europe", Population = 67000000, AreaKm2 = 551695,
@@ -113,7 +113,7 @@ public class TestDatabaseFixture : IAsyncLifetime
                 Translations = "{}", Flags = "{\"png\":\"https://flagcdn.com/w320/fr.png\",\"svg\":\"https://flagcdn.com/fr.svg\"}",
                 Independent = true, UnMember = true, Landlocked = false, IsActive = true, CreatedBy = "test", UpdatedBy = "test", Version = Guid.NewGuid()
             },
-            new Maliev.CountryService.Data.Entities.Country
+            new Maliev.CountryService.Domain.Entities.Country
             {
                 Iso2 = "DE", Iso3 = "DEU", Name = "Germany", OfficialName = "Federal Republic of Germany",
                 Region = "Europe", Subregion = "Western Europe", Population = 83000000, AreaKm2 = 357022,
@@ -124,7 +124,7 @@ public class TestDatabaseFixture : IAsyncLifetime
                 Translations = "{}", Flags = "{\"png\":\"https://flagcdn.com/w320/de.png\",\"svg\":\"https://flagcdn.com/de.svg\"}",
                 Independent = true, UnMember = true, Landlocked = false, IsActive = true, CreatedBy = "test", UpdatedBy = "test", Version = Guid.NewGuid()
             },
-            new Maliev.CountryService.Data.Entities.Country
+            new Maliev.CountryService.Domain.Entities.Country
             {
                 Iso2 = "JP", Iso3 = "JPN", Name = "Japan", OfficialName = "Japan",
                 Region = "Asia", Subregion = "Eastern Asia", Population = 125000000, AreaKm2 = 377975,
@@ -135,7 +135,7 @@ public class TestDatabaseFixture : IAsyncLifetime
                 Translations = "{}", Flags = "{\"png\":\"https://flagcdn.com/w320/jp.png\",\"svg\":\"https://flagcdn.com/jp.svg\"}",
                 Independent = true, UnMember = true, Landlocked = false, IsActive = true, CreatedBy = "test", UpdatedBy = "test", Version = Guid.NewGuid()
             },
-            new Maliev.CountryService.Data.Entities.Country
+            new Maliev.CountryService.Domain.Entities.Country
             {
                 Iso2 = "AU", Iso3 = "AUS", Name = "Australia", OfficialName = "Commonwealth of Australia",
                 Region = "Oceania", Subregion = "Australia and New Zealand", Population = 25000000, AreaKm2 = 7692024,
@@ -146,7 +146,7 @@ public class TestDatabaseFixture : IAsyncLifetime
                 Translations = "{}", Flags = "{\"png\":\"https://flagcdn.com/w320/au.png\",\"svg\":\"https://flagcdn.com/au.svg\"}",
                 Independent = true, UnMember = true, Landlocked = false, IsActive = true, CreatedBy = "test", UpdatedBy = "test", Version = Guid.NewGuid()
             },
-            new Maliev.CountryService.Data.Entities.Country
+            new Maliev.CountryService.Domain.Entities.Country
             {
                 Iso2 = "BR", Iso3 = "BRA", Name = "Brazil", OfficialName = "Federative Republic of Brazil",
                 Region = "Americas", Subregion = "South America", Population = 212000000, AreaKm2 = 8515767,
@@ -157,7 +157,7 @@ public class TestDatabaseFixture : IAsyncLifetime
                 Translations = "{}", Flags = "{\"png\":\"https://flagcdn.com/w320/br.png\",\"svg\":\"https://flagcdn.com/br.svg\"}",
                 Independent = true, UnMember = true, Landlocked = false, IsActive = true, CreatedBy = "test", UpdatedBy = "test", Version = Guid.NewGuid()
             },
-            new Maliev.CountryService.Data.Entities.Country
+            new Maliev.CountryService.Domain.Entities.Country
             {
                 Iso2 = "IN", Iso3 = "IND", Name = "India", OfficialName = "Republic of India",
                 Region = "Asia", Subregion = "Southern Asia", Population = 1380000000, AreaKm2 = 3287590,
@@ -168,7 +168,7 @@ public class TestDatabaseFixture : IAsyncLifetime
                 Translations = "{}", Flags = "{\"png\":\"https://flagcdn.com/w320/in.png\",\"svg\":\"https://flagcdn.com/in.svg\"}",
                 Independent = true, UnMember = true, Landlocked = false, IsActive = true, CreatedBy = "test", UpdatedBy = "test", Version = Guid.NewGuid()
             },
-            new Maliev.CountryService.Data.Entities.Country
+            new Maliev.CountryService.Domain.Entities.Country
             {
                 Iso2 = "MX", Iso3 = "MEX", Name = "Mexico", OfficialName = "United Mexican States",
                 Region = "Americas", Subregion = "Central America", Population = 128000000, AreaKm2 = 1964375,
