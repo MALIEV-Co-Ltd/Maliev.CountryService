@@ -12,7 +12,7 @@ namespace Maliev.CountryService.Infrastructure.Data.SeedData;
 public static class DatabaseSeeder
 {
     /// <summary>
-    /// Seeds the countries table from the bundled SQL file if the table is empty.
+    /// Seeds the countries table from the bundled C# seed data if the table is empty.
     /// </summary>
     /// <param name="host">The application host to resolve services from.</param>
     /// <returns>A task representing the asynchronous seeding operation.</returns>
@@ -30,43 +30,15 @@ public static class DatabaseSeeder
                 return;
             }
 
-            var seedFilePath = Path.Combine(AppContext.BaseDirectory, "SeedData", "countries_seed.sql");
-            if (!File.Exists(seedFilePath))
-            {
-                logger.LogWarning("Seed file not found at {Path}. Skipping seed.", seedFilePath);
-                return;
-            }
-
-            logger.LogInformation("Seeding countries from {Path}...", seedFilePath);
-            var sql = await File.ReadAllTextAsync(seedFilePath);
+            logger.LogInformation("Seeding countries from C# seed data...");
+            var countries = CountrySeedData.GetAll().ToList();
 
             var strategy = context.Database.CreateExecutionStrategy();
             await strategy.ExecuteAsync(async () =>
             {
-                using var transaction = await context.Database.BeginTransactionAsync();
-                try
-                {
-                    // Use ADO.NET directly to avoid EF Core's string.Format parsing of curly braces in JSONB
-                    var connection = context.Database.GetDbConnection();
-                    if (connection.State != System.Data.ConnectionState.Open)
-                    {
-                        await connection.OpenAsync();
-                    }
-
-                    using var command = connection.CreateCommand();
-                    command.CommandText = sql;
-                    command.Transaction = transaction.GetDbTransaction();
-                    await command.ExecuteNonQueryAsync();
-
-                    await transaction.CommitAsync();
-                    logger.LogInformation("Successfully seeded countries.");
-                }
-                catch (Exception ex)
-                {
-                    await transaction.RollbackAsync();
-                    logger.LogError(ex, "Failed to execute seed SQL.");
-                    throw;
-                }
+                await context.Countries.AddRangeAsync(countries);
+                await context.SaveChangesAsync();
+                logger.LogInformation("Successfully seeded {Count} countries.", countries.Count);
             });
         }
         catch (Exception ex)
