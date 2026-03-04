@@ -1,9 +1,10 @@
 using System.Text.Json;
-using Maliev.CountryService.Api.Models.BulkImport;
-using Maliev.CountryService.Api.Models.Countries;
-using Maliev.CountryService.Api.Services;
-using Maliev.CountryService.Data;
-using Maliev.CountryService.Data.Entities;
+using Maliev.CountryService.Application.Interfaces;
+using Maliev.CountryService.Application.Models.BulkImport;
+using Maliev.CountryService.Application.Models.Countries;
+using Maliev.CountryService.Application.Services;
+using Maliev.CountryService.Domain.Entities;
+using Maliev.CountryService.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -16,7 +17,7 @@ namespace Maliev.CountryService.Tests.Services;
 public class BulkImportServiceTests
 {
     private readonly TestWebApplicationFactory _factory;
-    private readonly CountryDbContext _context;
+    private readonly ICountryDbContext _context;
     private readonly ICountryService _countryService;
     private readonly ILogger<BulkImportService> _logger;
 
@@ -108,7 +109,7 @@ public class BulkImportServiceTests
         var service = new BulkImportService(_context, _countryService, _logger);
 
         // Seed database
-        _context.Countries.Add(new Data.Entities.Country
+        _context.Countries.Add(new Country
         {
             Iso2 = "AA",
             Iso3 = "AAA",
@@ -204,5 +205,77 @@ public class BulkImportServiceTests
 
         // Act & Assert
         await Assert.ThrowsAsync<InvalidOperationException>(() => service.ProcessImportAsync(jobId));
+    }
+
+    [Fact]
+    public async Task GetJobStatusAsync_ReturnsNull_WhenNotFound()
+    {
+        // Arrange
+        var service = new BulkImportService(_context, _countryService, _logger);
+
+        // Act
+        var result = await service.GetJobStatusAsync(Guid.NewGuid());
+
+        // Assert
+        Assert.Null(result);
+    }
+
+    [Fact]
+    public async Task GetJobStatusAsync_ReturnsStatus_WhenFound()
+    {
+        // Arrange
+        await _factory.CleanDatabaseAsync();
+        var job = new BulkImportJob
+        {
+            Status = "Validated",
+            TotalRecords = 10,
+            ProcessedRecords = 5,
+            CreatedBy = "user",
+            CreatedAtUtc = DateTime.UtcNow,
+            ValidationErrors = "[]",
+            UserId = "user"
+        };
+        _context.BulkImportJobs.Add(job);
+        await _context.SaveChangesAsync();
+
+        var service = new BulkImportService(_context, _countryService, _logger);
+
+        // Act
+        var result = await service.GetJobStatusAsync(job.Id);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal("Validated", result.Status);
+        Assert.Equal(10, result.TotalRecords);
+        Assert.Equal(5, result.ProcessedRecords);
+    }
+
+    [Fact]
+    public async Task GetJobStatusAsync_ParsesValidationErrors()
+    {
+        // Arrange
+        await _factory.CleanDatabaseAsync();
+        var job = new BulkImportJob
+        {
+            Status = "Failed",
+            TotalRecords = 10,
+            ProcessedRecords = 0,
+            CreatedBy = "user",
+            CreatedAtUtc = DateTime.UtcNow,
+            ValidationErrors = "[{\"Field\":\"Iso2\",\"Message\":\"Invalid\"}]",
+            UserId = "user"
+        };
+        _context.BulkImportJobs.Add(job);
+        await _context.SaveChangesAsync();
+
+        var service = new BulkImportService(_context, _countryService, _logger);
+
+        // Act
+        var result = await service.GetJobStatusAsync(job.Id);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Single(result.ValidationErrors);
+        Assert.Equal("Iso2", result.ValidationErrors[0].Field);
     }
 }

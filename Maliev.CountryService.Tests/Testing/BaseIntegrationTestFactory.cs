@@ -216,6 +216,10 @@ public class BaseIntegrationTestFactory<TProgram, TDbContext> : WebApplicationFa
             statusTracker.MarkRegistered();
             services.AddSingleton(statusTracker);
 
+            // Register repositories for tests
+            services.AddScoped<Maliev.CountryService.Application.Interfaces.ICountryRepository, Maliev.CountryService.Infrastructure.Data.Repositories.CountryRepository>();
+            services.AddScoped<Maliev.CountryService.Application.Interfaces.IBulkImportJobRepository, Maliev.CountryService.Infrastructure.Data.Repositories.BulkImportJobRepository>();
+
             // Rate limiting policies are already registered in Program.cs via builder.AddStandardRateLimiting()
             // No need to manually add them here, as it would cause duplicate policy exceptions.
 

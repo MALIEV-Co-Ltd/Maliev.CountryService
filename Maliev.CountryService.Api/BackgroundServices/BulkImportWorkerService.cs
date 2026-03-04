@@ -1,11 +1,10 @@
-using Maliev.CountryService.Api.Services;
-using Maliev.CountryService.Data;
+using Maliev.CountryService.Application.Interfaces;
 using Microsoft.EntityFrameworkCore;
 
 namespace Maliev.CountryService.Api.BackgroundServices;
 
 /// <summary>
-/// T113-T114: Background worker service for processing validated bulk import jobs.
+/// Background worker service for processing validated bulk import jobs.
 /// Polls for jobs in "Validated" status and processes them asynchronously.
 /// </summary>
 public class BulkImportWorkerService : BackgroundService
@@ -13,13 +12,11 @@ public class BulkImportWorkerService : BackgroundService
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<BulkImportWorkerService> _logger;
     private readonly TimeSpan _pollInterval;
-    private readonly TimeSpan _processingTimeout = TimeSpan.FromMinutes(30); // T114: Processing timeout
+    private readonly TimeSpan _processingTimeout = TimeSpan.FromMinutes(30);
+
     /// <summary>
-    /// Initializes a new instance of the <see cref="BulkImportWorkerService"/> class.
+    /// Initializes a new instance of the BulkImportWorkerService class.
     /// </summary>
-    /// <param name="scopeFactory">The service scope factory.</param>
-    /// <param name="logger">The logger instance.</param>
-    /// <param name="configuration">The configuration instance.</param>
     public BulkImportWorkerService(
         IServiceScopeFactory scopeFactory,
         ILogger<BulkImportWorkerService> logger,
@@ -31,12 +28,9 @@ public class BulkImportWorkerService : BackgroundService
         _pollInterval = TimeSpan.FromSeconds(pollSeconds);
     }
 
-
     /// <summary>
     /// Executes the background service to process bulk import jobs.
     /// </summary>
-    /// <param name="stoppingToken">Token to monitor for cancellation requests.</param>
-    /// <returns>A task representing the asynchronous operation.</returns>
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         _logger.LogInformation("Bulk Import Worker Service starting");
@@ -61,14 +55,11 @@ public class BulkImportWorkerService : BackgroundService
     private async Task ProcessPendingJobsAsync(CancellationToken cancellationToken)
     {
         using var scope = _scopeFactory.CreateScope();
-        var context = scope.ServiceProvider.GetRequiredService<CountryDbContext>();
+        var context = scope.ServiceProvider.GetRequiredService<ICountryDbContext>();
         var bulkImportService = scope.ServiceProvider.GetRequiredService<IBulkImportService>();
 
-        // Atomically claim the next validated job using pure EF Core with ExecuteUpdateAsync.
-        // The ClaimedByWorkerId ensures atomic claiming - no race conditions between workers.
         var claimId = Guid.NewGuid();
-
-        var updatedCount = await context.BulkImportJobs
+        var claimedCount = await context.BulkImportJobs
             .Where(j => j.Status == "Validated")
             .OrderBy(j => j.CreatedAtUtc)
             .Take(1)
@@ -78,7 +69,7 @@ public class BulkImportWorkerService : BackgroundService
                 .SetProperty(j => j.ClaimedByWorkerId, claimId),
                 cancellationToken);
 
-        if (updatedCount == 0)
+        if (claimedCount == 0)
         {
             return;
         }
@@ -108,13 +99,12 @@ public class BulkImportWorkerService : BackgroundService
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
             _logger.LogInformation("Bulk import processing cancelled for job {JobId}", job.Id);
-            throw; // Re-throw to stop the service
+            throw;
         }
         catch (OperationCanceledException)
         {
             _logger.LogWarning("Bulk import processing timed out for job {JobId} after {Timeout}", job.Id, _processingTimeout);
 
-            // Mark job as failed due to timeout
             job.Status = "Failed";
             job.ValidationErrors = System.Text.Json.JsonSerializer.Serialize(new[] { new { message = $"Processing timed out after {_processingTimeout.TotalMinutes} minutes" } });
             job.CompletedAtUtc = DateTime.UtcNow;
@@ -123,9 +113,6 @@ public class BulkImportWorkerService : BackgroundService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error processing bulk import job {JobId}", job.Id);
-            // Error handling is done in BulkImportService.ProcessImportAsync
         }
     }
-
-    // CreateGuidFromLongId helper removed as we now use Guid natively for IDs.
 }

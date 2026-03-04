@@ -8,6 +8,7 @@
         <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <SharedLibraryVersion Condition="'$(SharedLibraryVersion)' == ''">1.0.*-*</SharedLibraryVersion>
   </PropertyGroup>
 
   <ItemGroup>
@@ -34,8 +35,16 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Maliev.CountryService.Api\Maliev.CountryService.Api.csproj" />
-    <ProjectReference Include="..\Maliev.CountryService.Data\Maliev.CountryService.Data.csproj" />
+    <ProjectReference Include="..\Maliev.CountryService.Application\Maliev.CountryService.Application.csproj" />
+    <ProjectReference Include="..\Maliev.CountryService.Infrastructure\Maliev.CountryService.Infrastructure.csproj" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(GITHUB_ACTIONS)' != 'true'">
     <ProjectReference Include="..\..\Maliev.Aspire\Maliev.Aspire.ServiceDefaults\Maliev.Aspire.ServiceDefaults.csproj" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(GITHUB_ACTIONS)' == 'true'">
+    <PackageReference Include="Maliev.Aspire.ServiceDefaults" Version="$(SharedLibraryVersion)" />
   </ItemGroup>
 
   <ItemGroup>
@@ -43,5 +52,3 @@
   </ItemGroup>
 
 </Project>
-
-

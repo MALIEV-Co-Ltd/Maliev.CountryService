@@ -1,4 +1,4 @@
-using Maliev.CountryService.Api.Services;
+using Maliev.CountryService.Application.Interfaces;
 using System.Text.Json;
 
 namespace Maliev.CountryService.Api.BackgroundServices;

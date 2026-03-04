@@ -1,9 +1,10 @@
 using Maliev.Aspire.ServiceDefaults;
 using Maliev.CountryService.Api.BackgroundServices;
 using Maliev.CountryService.Api.Middleware;
-using Maliev.CountryService.Api.Services;
-using Maliev.CountryService.Data;
-using Maliev.CountryService.Data.SeedData;
+using Maliev.CountryService.Application.Interfaces;
+using Maliev.CountryService.Infrastructure.Data;
+using Maliev.CountryService.Infrastructure.Data.SeedData;
+using Maliev.CountryService.Infrastructure.Services;
 using Microsoft.AspNetCore.HttpOverrides;
 // Initialize bootstrap logging
 using var loggerFactory = LoggerFactory.Create(logBuilder => logBuilder.AddConsole());
@@ -71,6 +72,13 @@ try
         options.KnownProxies.Clear();
     });
 
+    // Register ICountryDbContext so middleware/services can inject it by interface
+    builder.Services.AddScoped<ICountryDbContext>(sp => sp.GetRequiredService<CountryDbContext>());
+
+    // Register repositories
+    builder.Services.AddScoped<ICountryRepository, Maliev.CountryService.Infrastructure.Data.Repositories.CountryRepository>();
+    builder.Services.AddScoped<IBulkImportJobRepository, Maliev.CountryService.Infrastructure.Data.Repositories.BulkImportJobRepository>();
+
     // Register application services for fast country lookup
     builder.Services.AddSingleton<MemoryCacheService>();
 
@@ -81,19 +89,19 @@ try
     builder.Services.AddSingleton<Maliev.CountryService.Api.Metrics.BusinessMetrics>();
 
     // Register degradation tracking
-    builder.Services.AddScoped<DegradationContext>();
+    builder.Services.AddScoped<IDegradationContext, DegradationContext>();
 
     // Register ICountryService
-    builder.Services.AddScoped<ICountryService, CountryService>();
+    builder.Services.AddScoped<ICountryService, Maliev.CountryService.Application.Services.CountryService>();
 
     // Register bulk import services
-    builder.Services.AddScoped<IBulkImportService, BulkImportService>();
+    builder.Services.AddScoped<IBulkImportService, Maliev.CountryService.Application.Services.BulkImportService>();
 
     // Register hosted services
     builder.Services.AddHostedService<CacheWarmingService>();
     builder.Services.AddHostedService<BulkImportWorkerService>();
     builder.AddIAMServiceClient("country");
-    builder.Services.AddIAMRegistration<CountryIAMRegistrationService>("country");
+    builder.Services.AddIAMRegistration<Maliev.CountryService.Api.Services.CountryIAMRegistrationService>("country");
 
     var app = builder.Build();
     var logger = app.Services.GetRequiredService<ILogger<Program>>();

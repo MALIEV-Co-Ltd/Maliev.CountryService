@@ -1,7 +1,7 @@
 using Maliev.CountryService.Api.BackgroundServices;
-using Maliev.CountryService.Api.Services;
-using Maliev.CountryService.Data;
-using Maliev.CountryService.Data.Entities;
+using Maliev.CountryService.Application.Interfaces;
+using Maliev.CountryService.Domain.Entities;
+using Maliev.CountryService.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -48,6 +48,7 @@ public class BulkImportWorkerServiceTests : IAsyncLifetime
         var services = new ServiceCollection();
         services.AddDbContext<CountryDbContext>(options =>
             options.UseNpgsql(_postgresContainer.GetConnectionString()));
+        services.AddScoped<ICountryDbContext>(sp => sp.GetRequiredService<CountryDbContext>());
         services.AddSingleton(_bulkImportServiceMock.Object);
         var sp = services.BuildServiceProvider();
         return sp.GetRequiredService<IServiceScopeFactory>();

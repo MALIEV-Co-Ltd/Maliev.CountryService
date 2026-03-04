@@ -1,5 +1,5 @@
-using Maliev.CountryService.Data;
-using Maliev.CountryService.Data.Entities;
+using Maliev.CountryService.Application.Interfaces;
+using Maliev.CountryService.Domain.Entities;
 using System.Security.Claims;
 
 namespace Maliev.CountryService.Api.Middleware;
@@ -12,7 +12,7 @@ public class PermissionDenialLoggingMiddleware(RequestDelegate next)
     /// <summary>
     /// Invokes the middleware.
     /// </summary>
-    public async Task InvokeAsync(HttpContext context, CountryDbContext dbContext, ILogger<PermissionDenialLoggingMiddleware> logger)
+    public async Task InvokeAsync(HttpContext context, ICountryDbContext dbContext, ILogger<PermissionDenialLoggingMiddleware> logger)
     {
         await next(context);
 

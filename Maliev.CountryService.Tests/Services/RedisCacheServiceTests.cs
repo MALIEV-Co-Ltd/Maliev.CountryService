@@ -1,4 +1,4 @@
-using Maliev.CountryService.Api.Services;
+using Maliev.CountryService.Infrastructure.Services;
 using Maliev.CountryService.Tests.Fixtures;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;

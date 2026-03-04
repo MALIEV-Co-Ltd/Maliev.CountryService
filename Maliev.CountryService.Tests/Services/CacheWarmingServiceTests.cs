@@ -1,7 +1,7 @@
 using System.Text.Json;
 using Maliev.CountryService.Api.BackgroundServices;
-using Maliev.CountryService.Api.Models.Countries;
-using Maliev.CountryService.Api.Services;
+using Maliev.CountryService.Application.Interfaces;
+using Maliev.CountryService.Application.Models.Countries;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Moq;

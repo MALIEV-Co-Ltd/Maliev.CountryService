@@ -1,7 +1,8 @@
 using Maliev.CountryService.Api.Controllers;
 using Maliev.CountryService.Api.Metrics;
-using Maliev.CountryService.Api.Models.Countries;
-using Maliev.CountryService.Api.Services;
+using Maliev.CountryService.Application.Interfaces;
+using Maliev.CountryService.Application.Models.Common;
+using Maliev.CountryService.Application.Models.Countries;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
@@ -54,6 +55,174 @@ public class CountryControllerTests
 
         // Assert
         Assert.IsType<NotFoundResult>(result);
+    }
+
+    [Fact]
+    public async Task GetByIso2_Returns304_WhenETagMatches()
+    {
+        // Arrange
+        var etag = "\"abc123\"";
+        _countryServiceMock.Setup(x => x.GetByIso2Async("TH", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CountryResponse { Name = "Thailand", Iso2 = "TH", ETag = etag });
+
+        // Act
+        var result = await _controller.GetByIso2("TH", etag, default);
+
+        // Assert
+        Assert.IsType<StatusCodeResult>(result);
+        Assert.Equal(304, ((StatusCodeResult)result).StatusCode);
+    }
+
+    [Fact]
+    public async Task GetByIso2_SetsCacheHeaders_WhenServedFromCache()
+    {
+        // Arrange
+        _countryServiceMock.Setup(x => x.GetByIso2Async("TH", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CountryResponse { Name = "Thailand", Iso2 = "TH", ETag = "\"etag\"", XServedFromCache = true });
+
+        // Act
+        var result = await _controller.GetByIso2("TH", null, default);
+
+        // Assert
+        var okResult = Assert.IsType<OkObjectResult>(result);
+        Assert.Equal("true", _controller.Response.Headers["X-Served-From-Cache"]);
+    }
+
+    [Fact]
+    public async Task GetByIso3_ReturnsOk()
+    {
+        // Arrange
+        _countryServiceMock.Setup(x => x.GetByIso3Async("THA", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CountryResponse { Name = "Thailand", Iso3 = "THA" });
+
+        // Act
+        var result = await _controller.GetByIso3("THA", null, default);
+
+        // Assert
+        var okResult = Assert.IsType<OkObjectResult>(result);
+        var response = Assert.IsType<CountryResponse>(okResult.Value);
+        Assert.Equal("THA", response.Iso3);
+    }
+
+    [Fact]
+    public async Task GetByIso3_ReturnsNotFound()
+    {
+        // Arrange
+        _countryServiceMock.Setup(x => x.GetByIso3Async("XXX", It.IsAny<CancellationToken>()))
+            .ReturnsAsync((CountryResponse?)null);
+
+        // Act
+        var result = await _controller.GetByIso3("XXX", null, default);
+
+        // Assert
+        Assert.IsType<NotFoundResult>(result);
+    }
+
+    [Fact]
+    public async Task GetById_ReturnsOk()
+    {
+        // Arrange
+        var id = Guid.NewGuid();
+        _countryServiceMock.Setup(x => x.GetByIdAsync(id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CountryResponse { Id = id, Name = "Thailand" });
+
+        // Act
+        var result = await _controller.GetById(id, null, default);
+
+        // Assert
+        var okResult = Assert.IsType<OkObjectResult>(result);
+        var response = Assert.IsType<CountryResponse>(okResult.Value);
+        Assert.Equal(id, response.Id);
+    }
+
+    [Fact]
+    public async Task GetById_ReturnsNotFound()
+    {
+        // Arrange
+        var id = Guid.NewGuid();
+        _countryServiceMock.Setup(x => x.GetByIdAsync(id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((CountryResponse?)null);
+
+        // Act
+        var result = await _controller.GetById(id, null, default);
+
+        // Assert
+        Assert.IsType<NotFoundResult>(result);
+    }
+
+    [Fact]
+    public async Task GetById_Returns304_WhenETagMatches()
+    {
+        // Arrange
+        var id = Guid.NewGuid();
+        var etag = "\"etag123\"";
+        _countryServiceMock.Setup(x => x.GetByIdAsync(id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CountryResponse { Id = id, Name = "Thailand", ETag = etag });
+
+        // Act
+        var result = await _controller.GetById(id, etag, default);
+
+        // Assert
+        Assert.IsType<StatusCodeResult>(result);
+        Assert.Equal(304, ((StatusCodeResult)result).StatusCode);
+    }
+
+    [Fact]
+    public async Task List_ReturnsOk()
+    {
+        // Arrange
+        _countryServiceMock.Setup(x => x.ListAsync(It.IsAny<CountryListRequest>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PaginatedResponse<CountryResponse> { Data = new List<CountryResponse>() });
+
+        // Act
+        var result = await _controller.List(new CountryListRequest(), default);
+
+        // Assert
+        Assert.IsType<OkObjectResult>(result);
+    }
+
+    [Fact]
+    public async Task Search_ReturnsOk()
+    {
+        // Arrange
+        _countryServiceMock.Setup(x => x.SearchAsync("Thai", 1, 20, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PaginatedResponse<CountryResponse> { Data = new List<CountryResponse>() });
+
+        // Act
+        var result = await _controller.Search("Thai", 1, 20, default);
+
+        // Assert
+        Assert.IsType<OkObjectResult>(result);
+    }
+
+    [Fact]
+    public async Task Search_Returns400_WhenQueryEmpty()
+    {
+        // Act
+        var result = await _controller.Search("", 1, 20, default);
+
+        // Assert
+        Assert.IsType<BadRequestObjectResult>(result);
+    }
+
+    [Fact]
+    public async Task Search_Returns400_WhenPageInvalid()
+    {
+        // Act
+        var result = await _controller.Search("test", 0, 20, default);
+
+        // Assert
+        Assert.IsType<BadRequestObjectResult>(result);
+    }
+
+    [Fact]
+    public async Task Search_Returns400_WhenPageSizeTooLarge()
+    {
+        // Act
+        var result = await _controller.Search("test", 1, 2000, default);
+
+        // Assert
+        Assert.IsType<BadRequestObjectResult>(result);
     }
 }
 

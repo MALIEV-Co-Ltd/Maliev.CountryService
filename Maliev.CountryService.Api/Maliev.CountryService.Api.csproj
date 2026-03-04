@@ -16,20 +16,15 @@
   </ItemGroup>
 
   <ItemGroup Condition="'$(GITHUB_ACTIONS)' != 'true'">
-    <ProjectReference Include="..\Maliev.CountryService.Data\Maliev.CountryService.Data.csproj" />
+    <ProjectReference Include="..\Maliev.CountryService.Application\Maliev.CountryService.Application.csproj" />
+    <ProjectReference Include="..\Maliev.CountryService.Infrastructure\Maliev.CountryService.Infrastructure.csproj" />
     <ProjectReference Include="..\..\Maliev.Aspire\Maliev.Aspire.ServiceDefaults\Maliev.Aspire.ServiceDefaults.csproj" />
   </ItemGroup>
 
   <ItemGroup Condition="'$(GITHUB_ACTIONS)' == 'true'">
-    <ProjectReference Include="..\Maliev.CountryService.Data\Maliev.CountryService.Data.csproj" />
+    <ProjectReference Include="..\Maliev.CountryService.Application\Maliev.CountryService.Application.csproj" />
+    <ProjectReference Include="..\Maliev.CountryService.Infrastructure\Maliev.CountryService.Infrastructure.csproj" />
     <PackageReference Include="Maliev.Aspire.ServiceDefaults" Version="$(SharedLibraryVersion)" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.3">
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-      <PrivateAssets>all</PrivateAssets>
-    </PackageReference>
   </ItemGroup>
 
 </Project>

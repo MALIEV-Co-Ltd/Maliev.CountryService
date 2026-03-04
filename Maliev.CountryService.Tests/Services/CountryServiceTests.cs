@@ -1,8 +1,11 @@
-using Maliev.CountryService.Api.Models.Countries;
-using Maliev.CountryService.Api.Services;
-using Maliev.CountryService.Data;
-using Maliev.CountryService.Data.Entities;
+using Maliev.CountryService.Application.Interfaces;
+using Maliev.CountryService.Application.Models.Common;
+using Maliev.CountryService.Application.Models.Countries;
+using Maliev.CountryService.Domain.Entities;
+using Maliev.CountryService.Infrastructure.Data;
+using Maliev.CountryService.Infrastructure.Services;
 using Maliev.CountryService.Tests.Fixtures;
+using AppCountryService = Maliev.CountryService.Application.Services.CountryService;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -15,14 +18,14 @@ public class CountryServiceTests
 {
     private readonly TestWebApplicationFactory _factory;
     private readonly Mock<ICacheService> _cacheServiceMock;
-    private readonly Mock<ILogger<Maliev.CountryService.Api.Services.CountryService>> _loggerMock;
+    private readonly Mock<ILogger<AppCountryService>> _loggerMock;
     private readonly DegradationContext _degradationContext;
 
     public CountryServiceTests(TestWebApplicationFactory factory)
     {
         _factory = factory;
         _cacheServiceMock = new Mock<ICacheService>();
-        _loggerMock = new Mock<ILogger<Maliev.CountryService.Api.Services.CountryService>>();
+        _loggerMock = new Mock<ILogger<AppCountryService>>();
         _degradationContext = new DegradationContext();
     }
 
@@ -38,7 +41,7 @@ public class CountryServiceTests
             .ReturnsAsync(cachedResponse);
 
         var context = GetDbContext();
-        var service = new Maliev.CountryService.Api.Services.CountryService(context, _cacheServiceMock.Object, _loggerMock.Object, _degradationContext);
+        var service = new Maliev.CountryService.Application.Services.CountryService(context, _cacheServiceMock.Object, _loggerMock.Object, _degradationContext);
 
         // Act
         var result = await service.GetByIdAsync(id);
@@ -55,7 +58,7 @@ public class CountryServiceTests
         // Arrange
         await _factory.CleanDatabaseAsync();
         var context = GetDbContext();
-        var service = new Maliev.CountryService.Api.Services.CountryService(context, _cacheServiceMock.Object, _loggerMock.Object, _degradationContext);
+        var service = new Maliev.CountryService.Application.Services.CountryService(context, _cacheServiceMock.Object, _loggerMock.Object, _degradationContext);
         var request = new CreateCountryRequest { Name = "New Country", Iso2 = "NC", Iso3 = "NCU", NumericCode = "999" };
 
         // Act
@@ -78,7 +81,7 @@ public class CountryServiceTests
         context.Countries.Add(country);
         await context.SaveChangesAsync();
 
-        var service = new Maliev.CountryService.Api.Services.CountryService(context, _cacheServiceMock.Object, _loggerMock.Object, _degradationContext);
+        var service = new Maliev.CountryService.Application.Services.CountryService(context, _cacheServiceMock.Object, _loggerMock.Object, _degradationContext);
 
         // Act
         await service.SoftDeleteAsync(country.Id, "test-user");
@@ -95,7 +98,7 @@ public class CountryServiceTests
         // Arrange
         await _factory.CleanDatabaseAsync();
         var context = GetDbContext();
-        var service = new Maliev.CountryService.Api.Services.CountryService(context, _cacheServiceMock.Object, _loggerMock.Object, _degradationContext);
+        var service = new Maliev.CountryService.Application.Services.CountryService(context, _cacheServiceMock.Object, _loggerMock.Object, _degradationContext);
 
         // Act
         var result = await service.GetByIso2Async("XX");
@@ -114,7 +117,7 @@ public class CountryServiceTests
             .ReturnsAsync(cachedResponse);
 
         var context = GetDbContext();
-        var service = new Maliev.CountryService.Api.Services.CountryService(context, _cacheServiceMock.Object, _loggerMock.Object, _degradationContext);
+        var service = new Maliev.CountryService.Application.Services.CountryService(context, _cacheServiceMock.Object, _loggerMock.Object, _degradationContext);
 
         // Act
         var result = await service.GetByIso3Async("USA");
@@ -134,7 +137,7 @@ public class CountryServiceTests
         context.Countries.Add(country);
         await context.SaveChangesAsync();
 
-        var service = new Maliev.CountryService.Api.Services.CountryService(context, _cacheServiceMock.Object, _loggerMock.Object, _degradationContext);
+        var service = new Maliev.CountryService.Application.Services.CountryService(context, _cacheServiceMock.Object, _loggerMock.Object, _degradationContext);
         var request = new CountryListRequest { IncludeInactive = true, PageSize = 1000 };
 
         // Act
@@ -154,7 +157,7 @@ public class CountryServiceTests
         context.Countries.Add(country);
         await context.SaveChangesAsync();
 
-        var service = new Maliev.CountryService.Api.Services.CountryService(context, _cacheServiceMock.Object, _loggerMock.Object, _degradationContext);
+        var service = new Maliev.CountryService.Application.Services.CountryService(context, _cacheServiceMock.Object, _loggerMock.Object, _degradationContext);
 
         // Act
         var result = await service.SearchAsync("Republic", 1, 10);
@@ -170,7 +173,7 @@ public class CountryServiceTests
         // Arrange
         await _factory.CleanDatabaseAsync();
         var context = GetDbContext();
-        var service = new Maliev.CountryService.Api.Services.CountryService(context, _cacheServiceMock.Object, _loggerMock.Object, _degradationContext);
+        var service = new Maliev.CountryService.Application.Services.CountryService(context, _cacheServiceMock.Object, _loggerMock.Object, _degradationContext);
 
         // Act
         var result1 = await service.SearchAsync("", 1, 10);
@@ -191,7 +194,7 @@ public class CountryServiceTests
         context.Countries.Add(country);
         await context.SaveChangesAsync();
 
-        var service = new Maliev.CountryService.Api.Services.CountryService(context, _cacheServiceMock.Object, _loggerMock.Object, _degradationContext);
+        var service = new Maliev.CountryService.Application.Services.CountryService(context, _cacheServiceMock.Object, _loggerMock.Object, _degradationContext);
 
         // Act
         await service.RestoreAsync(country.Id, "test-user");
@@ -212,7 +215,7 @@ public class CountryServiceTests
         context.Countries.Add(country);
         await context.SaveChangesAsync();
 
-        var service = new Maliev.CountryService.Api.Services.CountryService(context, _cacheServiceMock.Object, _loggerMock.Object, _degradationContext);
+        var service = new Maliev.CountryService.Application.Services.CountryService(context, _cacheServiceMock.Object, _loggerMock.Object, _degradationContext);
         var patch = new PatchCountryRequest { Region = "New" };
 
         var countryResponse = await service.GetByIdAsync(country.Id);
@@ -235,7 +238,7 @@ public class CountryServiceTests
         context.Countries.Add(country);
         await context.SaveChangesAsync();
 
-        var service = new Maliev.CountryService.Api.Services.CountryService(context, _cacheServiceMock.Object, _loggerMock.Object, _degradationContext);
+        var service = new AppCountryService(context, _cacheServiceMock.Object, _loggerMock.Object, _degradationContext);
 
         // Act
         await service.HardDeleteAsync(country.Id, "test-user");
@@ -255,7 +258,7 @@ public class CountryServiceTests
         context.Countries.Add(country);
         await context.SaveChangesAsync();
 
-        var service = new Maliev.CountryService.Api.Services.CountryService(context, _cacheServiceMock.Object, _loggerMock.Object, _degradationContext);
+        var service = new AppCountryService(context, _cacheServiceMock.Object, _loggerMock.Object, _degradationContext);
         var update = new UpdateCountryRequest { Name = "C2", Iso2 = "C1", Iso3 = "C11" };
 
         // Act & Assert
@@ -273,7 +276,7 @@ public class CountryServiceTests
         context.Countries.Add(country);
         await context.SaveChangesAsync();
 
-        var service = new Maliev.CountryService.Api.Services.CountryService(context, _cacheServiceMock.Object, _loggerMock.Object, _degradationContext);
+        var service = new AppCountryService(context, _cacheServiceMock.Object, _loggerMock.Object, _degradationContext);
         var request = new CreateCountryRequest { Name = "C2", Iso2 = "C1", Iso3 = "C22" };
 
         // Act & Assert
@@ -322,7 +325,7 @@ public class CountryServiceTests
         context.Countries.Add(country);
         await context.SaveChangesAsync();
 
-        var service = new Maliev.CountryService.Api.Services.CountryService(context, _cacheServiceMock.Object, _loggerMock.Object, _degradationContext);
+        var service = new AppCountryService(context, _cacheServiceMock.Object, _loggerMock.Object, _degradationContext);
 
         // Act
         var result = await service.GetByIdAsync(country.Id);
@@ -347,5 +350,326 @@ public class CountryServiceTests
         Assert.Equal(country.UnMember, result.UnMember);
         Assert.Equal(country.Landlocked, result.Landlocked);
         Assert.NotNull(result.ETag);
+    }
+
+    [Fact]
+    public async Task CreateAsync_DuplicateIso3_ThrowsInvalidOperationException()
+    {
+        // Arrange
+        await _factory.CleanDatabaseAsync();
+        var context = GetDbContext();
+        var country = new Country { Name = "C1", Iso2 = "C1", Iso3 = "C11", CreatedBy = "user", UpdatedBy = "user", Version = Guid.NewGuid(), IsActive = true };
+        context.Countries.Add(country);
+        await context.SaveChangesAsync();
+
+        var service = new AppCountryService(context, _cacheServiceMock.Object, _loggerMock.Object, _degradationContext);
+        var request = new CreateCountryRequest { Name = "C2", Iso2 = "C2", Iso3 = "C11" };
+
+        // Act & Assert
+        await Assert.ThrowsAsync<InvalidOperationException>(() => service.CreateAsync(request, "user"));
+    }
+
+    [Fact]
+    public async Task SoftDeleteAsync_AlreadyInactive_ThrowsInvalidOperationException()
+    {
+        // Arrange
+        await _factory.CleanDatabaseAsync();
+        var context = GetDbContext();
+        var country = new Country { Name = "Inactive", Iso2 = "IN", Iso3 = "INA", CreatedBy = "user", UpdatedBy = "user", Version = Guid.NewGuid(), IsActive = false };
+        context.Countries.Add(country);
+        await context.SaveChangesAsync();
+
+        var service = new AppCountryService(context, _cacheServiceMock.Object, _loggerMock.Object, _degradationContext);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<InvalidOperationException>(() => service.SoftDeleteAsync(country.Id, "test-user"));
+    }
+
+    [Fact]
+    public async Task RestoreAsync_AlreadyActive_ThrowsInvalidOperationException()
+    {
+        // Arrange
+        await _factory.CleanDatabaseAsync();
+        var context = GetDbContext();
+        var country = new Country { Name = "Active", Iso2 = "AC", Iso3 = "ACT", CreatedBy = "user", UpdatedBy = "user", Version = Guid.NewGuid(), IsActive = true };
+        context.Countries.Add(country);
+        await context.SaveChangesAsync();
+
+        var service = new AppCountryService(context, _cacheServiceMock.Object, _loggerMock.Object, _degradationContext);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<InvalidOperationException>(() => service.RestoreAsync(country.Id, "test-user"));
+    }
+
+    [Fact]
+    public async Task UpdateAsync_DuplicateIso2_ThrowsInvalidOperationException()
+    {
+        // Arrange
+        await _factory.CleanDatabaseAsync();
+        var context = GetDbContext();
+        var country1 = new Country { Name = "C1", Iso2 = "C1", Iso3 = "C11", CreatedBy = "user", UpdatedBy = "user", Version = Guid.NewGuid(), IsActive = true };
+        var country2 = new Country { Name = "C2", Iso2 = "C2", Iso3 = "C22", CreatedBy = "user", UpdatedBy = "user", Version = Guid.NewGuid(), IsActive = true };
+        context.Countries.AddRange(country1, country2);
+        await context.SaveChangesAsync();
+
+        var service = new AppCountryService(context, _cacheServiceMock.Object, _loggerMock.Object, _degradationContext);
+        var response = await service.GetByIdAsync(country2.Id);
+        var update = new UpdateCountryRequest { Name = "Updated", Iso2 = "C1", Iso3 = "C22" };
+
+        // Act & Assert
+        await Assert.ThrowsAsync<InvalidOperationException>(() => service.UpdateAsync(country2.Id, update, response!.ETag, "user"));
+    }
+
+    [Fact]
+    public async Task UpdateAsync_DuplicateIso3_ThrowsInvalidOperationException()
+    {
+        // Arrange
+        await _factory.CleanDatabaseAsync();
+        var context = GetDbContext();
+        var country1 = new Country { Name = "C1", Iso2 = "C1", Iso3 = "C11", CreatedBy = "user", UpdatedBy = "user", Version = Guid.NewGuid(), IsActive = true };
+        var country2 = new Country { Name = "C2", Iso2 = "C2", Iso3 = "C22", CreatedBy = "user", UpdatedBy = "user", Version = Guid.NewGuid(), IsActive = true };
+        context.Countries.AddRange(country1, country2);
+        await context.SaveChangesAsync();
+
+        var service = new AppCountryService(context, _cacheServiceMock.Object, _loggerMock.Object, _degradationContext);
+        var response = await service.GetByIdAsync(country2.Id);
+        var update = new UpdateCountryRequest { Name = "Updated", Iso2 = "C2", Iso3 = "C11" };
+
+        // Act & Assert
+        await Assert.ThrowsAsync<InvalidOperationException>(() => service.UpdateAsync(country2.Id, update, response!.ETag, "user"));
+    }
+
+    [Fact]
+    public async Task PatchAsync_DuplicateIso2_ThrowsInvalidOperationException()
+    {
+        // Arrange
+        await _factory.CleanDatabaseAsync();
+        var context = GetDbContext();
+        var country1 = new Country { Name = "C1", Iso2 = "C1", Iso3 = "C11", CreatedBy = "user", UpdatedBy = "user", Version = Guid.NewGuid(), IsActive = true };
+        var country2 = new Country { Name = "C2", Iso2 = "C2", Iso3 = "C22", CreatedBy = "user", UpdatedBy = "user", Version = Guid.NewGuid(), IsActive = true };
+        context.Countries.AddRange(country1, country2);
+        await context.SaveChangesAsync();
+
+        var service = new AppCountryService(context, _cacheServiceMock.Object, _loggerMock.Object, _degradationContext);
+        var response = await service.GetByIdAsync(country2.Id);
+        var patch = new PatchCountryRequest { Iso2 = "C1" };
+
+        // Act & Assert
+        await Assert.ThrowsAsync<InvalidOperationException>(() => service.PatchAsync(country2.Id, patch, response!.ETag, "user"));
+    }
+
+    [Fact]
+    public async Task PatchAsync_DuplicateIso3_ThrowsInvalidOperationException()
+    {
+        // Arrange
+        await _factory.CleanDatabaseAsync();
+        var context = GetDbContext();
+        var country1 = new Country { Name = "C1", Iso2 = "C1", Iso3 = "C11", CreatedBy = "user", UpdatedBy = "user", Version = Guid.NewGuid(), IsActive = true };
+        var country2 = new Country { Name = "C2", Iso2 = "C2", Iso3 = "C22", CreatedBy = "user", UpdatedBy = "user", Version = Guid.NewGuid(), IsActive = true };
+        context.Countries.AddRange(country1, country2);
+        await context.SaveChangesAsync();
+
+        var service = new AppCountryService(context, _cacheServiceMock.Object, _loggerMock.Object, _degradationContext);
+        var response = await service.GetByIdAsync(country2.Id);
+        var patch = new PatchCountryRequest { Iso3 = "C11" };
+
+        // Act & Assert
+        await Assert.ThrowsAsync<InvalidOperationException>(() => service.PatchAsync(country2.Id, patch, response!.ETag, "user"));
+    }
+
+    [Fact]
+    public async Task SearchAsync_ReturnsFromCache_IfAvailable()
+    {
+        // Arrange
+        await _factory.CleanDatabaseAsync();
+        var context = GetDbContext();
+        var cachedResponse = new PaginatedResponse<CountryResponse> { Data = new List<CountryResponse> { new() { Name = "Cached" } } };
+        _cacheServiceMock.Setup(x => x.GetAsync<PaginatedResponse<CountryResponse>>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(cachedResponse);
+
+        var service = new AppCountryService(context, _cacheServiceMock.Object, _loggerMock.Object, _degradationContext);
+
+        // Act
+        var result = await service.SearchAsync("test", 1, 10);
+
+        // Assert
+        Assert.Single(result.Data);
+        Assert.Equal("Cached", result.Data.First().Name);
+    }
+
+    [Fact]
+    public async Task ListAsync_ReturnsFromCache_IfAvailable()
+    {
+        // Arrange
+        await _factory.CleanDatabaseAsync();
+        var context = GetDbContext();
+        var cachedResponse = new PaginatedResponse<CountryResponse> { Data = new List<CountryResponse> { new() { Name = "CachedList" } }, TotalCount = 1 };
+        _cacheServiceMock.Setup(x => x.GetAsync<PaginatedResponse<CountryResponse>>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(cachedResponse);
+
+        var service = new AppCountryService(context, _cacheServiceMock.Object, _loggerMock.Object, _degradationContext);
+
+        // Act
+        var result = await service.ListAsync(new CountryListRequest());
+
+        // Assert
+        Assert.Single(result.Data);
+        Assert.Equal("CachedList", result.Data.First().Name);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_NotFound_ThrowsKeyNotFoundException()
+    {
+        // Arrange
+        await _factory.CleanDatabaseAsync();
+        var context = GetDbContext();
+        var service = new AppCountryService(context, _cacheServiceMock.Object, _loggerMock.Object, _degradationContext);
+        var update = new UpdateCountryRequest { Name = "Updated", Iso2 = "XX", Iso3 = "XXX" };
+
+        // Act & Assert
+        await Assert.ThrowsAsync<KeyNotFoundException>(() => service.UpdateAsync(Guid.NewGuid(), update, "", "user"));
+    }
+
+    [Fact]
+    public async Task PatchAsync_NotFound_ThrowsKeyNotFoundException()
+    {
+        // Arrange
+        await _factory.CleanDatabaseAsync();
+        var context = GetDbContext();
+        var service = new AppCountryService(context, _cacheServiceMock.Object, _loggerMock.Object, _degradationContext);
+        var patch = new PatchCountryRequest { Name = "Patched" };
+
+        // Act & Assert
+        await Assert.ThrowsAsync<KeyNotFoundException>(() => service.PatchAsync(Guid.NewGuid(), patch, "", "user"));
+    }
+
+    [Fact]
+    public async Task SoftDeleteAsync_NotFound_ThrowsKeyNotFoundException()
+    {
+        // Arrange
+        await _factory.CleanDatabaseAsync();
+        var context = GetDbContext();
+        var service = new AppCountryService(context, _cacheServiceMock.Object, _loggerMock.Object, _degradationContext);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<KeyNotFoundException>(() => service.SoftDeleteAsync(Guid.NewGuid(), "user"));
+    }
+
+    [Fact]
+    public async Task HardDeleteAsync_NotFound_ThrowsKeyNotFoundException()
+    {
+        // Arrange
+        await _factory.CleanDatabaseAsync();
+        var context = GetDbContext();
+        var service = new AppCountryService(context, _cacheServiceMock.Object, _loggerMock.Object, _degradationContext);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<KeyNotFoundException>(() => service.HardDeleteAsync(Guid.NewGuid(), "user"));
+    }
+
+    [Fact]
+    public async Task RestoreAsync_NotFound_ThrowsKeyNotFoundException()
+    {
+        // Arrange
+        await _factory.CleanDatabaseAsync();
+        var context = GetDbContext();
+        var service = new AppCountryService(context, _cacheServiceMock.Object, _loggerMock.Object, _degradationContext);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<KeyNotFoundException>(() => service.RestoreAsync(Guid.NewGuid(), "user"));
+    }
+
+    [Fact]
+    public async Task ListAsync_WithRegionFilter_ReturnsFiltered()
+    {
+        // Arrange
+        await _factory.CleanDatabaseAsync();
+        var context = GetDbContext();
+        context.Countries.Add(new Country { Name = "Asia Country", Region = "Asia", Iso2 = "AC", Iso3 = "ACT", CreatedBy = "user", UpdatedBy = "user", Version = Guid.NewGuid() });
+        context.Countries.Add(new Country { Name = "Europe Country", Region = "Europe", Iso2 = "EC", Iso3 = "ECT", CreatedBy = "user", UpdatedBy = "user", Version = Guid.NewGuid() });
+        await context.SaveChangesAsync();
+
+        var service = new AppCountryService(context, _cacheServiceMock.Object, _loggerMock.Object, _degradationContext);
+
+        // Act
+        var result = await service.ListAsync(new CountryListRequest { Region = "Asia" });
+
+        // Assert
+        Assert.Single(result.Data);
+        Assert.Equal("Asia Country", result.Data.First().Name);
+    }
+
+    [Fact]
+    public async Task ListAsync_WithSubregionFilter_ReturnsFiltered()
+    {
+        // Arrange
+        await _factory.CleanDatabaseAsync();
+        var context = GetDbContext();
+        context.Countries.Add(new Country { Name = "SE Asia", Region = "Asia", Subregion = "Southeast Asia", Iso2 = "SA", Iso3 = "SEA", CreatedBy = "user", UpdatedBy = "user", Version = Guid.NewGuid() });
+        context.Countries.Add(new Country { Name = "E Asia", Region = "Asia", Subregion = "East Asia", Iso2 = "EA", Iso3 = "EAS", CreatedBy = "user", UpdatedBy = "user", Version = Guid.NewGuid() });
+        await context.SaveChangesAsync();
+
+        var service = new AppCountryService(context, _cacheServiceMock.Object, _loggerMock.Object, _degradationContext);
+
+        // Act
+        var result = await service.ListAsync(new CountryListRequest { Subregion = "Southeast Asia" });
+
+        // Assert
+        Assert.Single(result.Data);
+        Assert.Equal("SE Asia", result.Data.First().Name);
+    }
+
+    [Fact]
+    public async Task ListAsync_WithSorting_SortsCorrectly()
+    {
+        // Arrange
+        await _factory.CleanDatabaseAsync();
+        var context = GetDbContext();
+        context.Countries.Add(new Country { Name = "Zebra", Population = 1000, Iso2 = "ZA", Iso3 = "ZAB", CreatedBy = "user", UpdatedBy = "user", Version = Guid.NewGuid() });
+        context.Countries.Add(new Country { Name = "Alpha", Population = 5000, Iso2 = "AA", Iso3 = "AAB", CreatedBy = "user", UpdatedBy = "user", Version = Guid.NewGuid() });
+        await context.SaveChangesAsync();
+
+        var service = new AppCountryService(context, _cacheServiceMock.Object, _loggerMock.Object, _degradationContext);
+
+        // Act - Sort by name desc
+        var resultDesc = await service.ListAsync(new CountryListRequest { SortBy = "name", SortOrder = "desc" });
+
+        // Assert
+        Assert.Equal("Zebra", resultDesc.Data.First().Name);
+    }
+
+    [Fact]
+    public async Task ListAsync_SortByIso2_SortsCorrectly()
+    {
+        // Arrange
+        await _factory.CleanDatabaseAsync();
+        var context = GetDbContext();
+        context.Countries.Add(new Country { Name = "Zeta", Iso2 = "ZZ", Iso3 = "ZZZ", CreatedBy = "user", UpdatedBy = "user", Version = Guid.NewGuid() });
+        context.Countries.Add(new Country { Name = "Alpha", Iso2 = "AA", Iso3 = "AAA", CreatedBy = "user", UpdatedBy = "user", Version = Guid.NewGuid() });
+        await context.SaveChangesAsync();
+
+        var service = new AppCountryService(context, _cacheServiceMock.Object, _loggerMock.Object, _degradationContext);
+
+        // Act
+        var result = await service.ListAsync(new CountryListRequest { SortBy = "iso2", SortOrder = "asc" });
+
+        // Assert
+        Assert.Equal("Alpha", result.Data.First().Name);
+    }
+
+    [Fact]
+    public async Task InvalidateListCachesAsync_CallsCacheService()
+    {
+        // Arrange
+        await _factory.CleanDatabaseAsync();
+        var context = GetDbContext();
+        var service = new AppCountryService(context, _cacheServiceMock.Object, _loggerMock.Object, _degradationContext);
+
+        // Act
+        await service.InvalidateListCachesAsync();
+
+        // Assert
+        _cacheServiceMock.Verify(x => x.RemovePatternAsync("country:list:*", It.IsAny<CancellationToken>()), Times.Once);
+        _cacheServiceMock.Verify(x => x.RemovePatternAsync("country:search:*", It.IsAny<CancellationToken>()), Times.Once);
     }
 }
