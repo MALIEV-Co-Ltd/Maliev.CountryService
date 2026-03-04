@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
@@ -31,6 +31,7 @@ namespace Maliev.CountryService.Infrastructure.Migrations
                     created_at_utc = table.Column<DateTime>(type: "timestamp with time zone", nullable: false, defaultValueSql: "NOW()"),
                     started_at_utc = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
                     completed_at_utc = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    claimed_by_worker_id = table.Column<Guid>(type: "uuid", nullable: true),
                     ip_address = table.Column<string>(type: "character varying(45)", maxLength: 45, nullable: true),
                     correlation_id = table.Column<Guid>(type: "uuid", nullable: true),
                     payload_data = table.Column<string>(type: "jsonb", nullable: true)
@@ -135,6 +136,11 @@ namespace Maliev.CountryService.Infrastructure.Migrations
                 name: "ix_audit_logs_user_id",
                 table: "audit_logs",
                 column: "user_id");
+
+            migrationBuilder.CreateIndex(
+                name: "ix_bulk_import_jobs_claimed_by_worker_id",
+                table: "bulk_import_jobs",
+                column: "claimed_by_worker_id");
 
             migrationBuilder.CreateIndex(
                 name: "ix_bulk_import_jobs_correlation_id",

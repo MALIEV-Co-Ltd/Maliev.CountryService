@@ -195,4 +195,92 @@ public class ModelsTests
         Assert.Equal("Name", request.SortBy);
         Assert.Equal("asc", request.SortDirection);
     }
+
+    [Fact]
+    public void UpdateCountryRequest_Properties_Work()
+    {
+        var request = new UpdateCountryRequest
+        {
+            Name = "New Name",
+            OfficialName = "New Official Name",
+            Region = "Asia"
+        };
+
+        Assert.Equal("New Name", request.Name);
+        Assert.Equal("New Official Name", request.OfficialName);
+        Assert.Equal("Asia", request.Region);
+    }
+
+    [Fact]
+    public void PatchCountryRequest_Properties_Work()
+    {
+        var request = new PatchCountryRequest
+        {
+            Name = "Patched Name",
+            Region = "Europe"
+        };
+
+        Assert.Equal("Patched Name", request.Name);
+        Assert.Equal("Europe", request.Region);
+    }
+
+    [Fact]
+    public void BulkImportRequest_Properties_Work()
+    {
+        var request = new BulkImportRequest
+        {
+            Countries = new List<CreateCountryRequest>
+            {
+                new CreateCountryRequest { Name = "Test" }
+            }
+        };
+
+        Assert.Single(request.Countries);
+    }
+
+    [Fact]
+    public void BulkImportStatusResponse_Properties_Work()
+    {
+        var response = new BulkImportStatusResponse
+        {
+            JobId = Guid.NewGuid(),
+            Status = "Completed",
+            TotalRecords = 100,
+            ProcessedRecords = 100,
+            ValidationErrors = new List<ValidationErrorResponse>()
+        };
+
+        Assert.Equal("Completed", response.Status);
+        Assert.Equal(100, response.TotalRecords);
+    }
+
+    [Fact]
+    public void CountryResponse_Properties_Work()
+    {
+        var response = new CountryResponse
+        {
+            Id = Guid.NewGuid(),
+            Name = "Thailand",
+            Iso2 = "TH",
+            Iso3 = "THA",
+            Region = "Asia",
+            Population = 70000000
+        };
+
+        Assert.Equal("Thailand", response.Name);
+        Assert.Equal("TH", response.Iso2);
+        Assert.Equal("THA", response.Iso3);
+    }
+
+    [Fact]
+    public void PagedResult_Properties_Work()
+    {
+        var result = new PagedResult<CountryDto>(
+            new List<CountryDto> { new CountryDto { Name = "Test", Continent = "Asia", ISO2 = "TH", ISO3 = "THA" } },
+            1, 10, 100);
+
+        Assert.Single(result.Data);
+        Assert.Equal(1, result.Page);
+        Assert.Equal(10, result.PageSize);
+    }
 }
