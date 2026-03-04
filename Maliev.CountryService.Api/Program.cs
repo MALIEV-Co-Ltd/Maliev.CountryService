@@ -75,6 +75,10 @@ try
     // Register ICountryDbContext so middleware/services can inject it by interface
     builder.Services.AddScoped<ICountryDbContext>(sp => sp.GetRequiredService<CountryDbContext>());
 
+    // Register repositories
+    builder.Services.AddScoped<ICountryRepository, Maliev.CountryService.Infrastructure.Data.Repositories.CountryRepository>();
+    builder.Services.AddScoped<IBulkImportJobRepository, Maliev.CountryService.Infrastructure.Data.Repositories.BulkImportJobRepository>();
+
     // Register application services for fast country lookup
     builder.Services.AddSingleton<MemoryCacheService>();
 

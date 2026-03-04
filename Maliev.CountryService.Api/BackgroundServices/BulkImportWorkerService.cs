@@ -15,11 +15,8 @@ public class BulkImportWorkerService : BackgroundService
     private readonly TimeSpan _processingTimeout = TimeSpan.FromMinutes(30);
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="BulkImportWorkerService"/> class.
+    /// Initializes a new instance of the BulkImportWorkerService class.
     /// </summary>
-    /// <param name="scopeFactory">The service scope factory.</param>
-    /// <param name="logger">The logger instance.</param>
-    /// <param name="configuration">The configuration instance.</param>
     public BulkImportWorkerService(
         IServiceScopeFactory scopeFactory,
         ILogger<BulkImportWorkerService> logger,
@@ -34,8 +31,6 @@ public class BulkImportWorkerService : BackgroundService
     /// <summary>
     /// Executes the background service to process bulk import jobs.
     /// </summary>
-    /// <param name="stoppingToken">Token to monitor for cancellation requests.</param>
-    /// <returns>A task representing the asynchronous operation.</returns>
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         _logger.LogInformation("Bulk Import Worker Service starting");
@@ -63,11 +58,8 @@ public class BulkImportWorkerService : BackgroundService
         var context = scope.ServiceProvider.GetRequiredService<ICountryDbContext>();
         var bulkImportService = scope.ServiceProvider.GetRequiredService<IBulkImportService>();
 
-        // Atomically claim the next validated job using the database context.
-        // The ClaimedByWorkerId ensures atomic claiming - no race conditions between workers.
         var claimId = Guid.NewGuid();
-
-        var updatedCount = await context.BulkImportJobs
+        var claimedCount = await context.BulkImportJobs
             .Where(j => j.Status == "Validated")
             .OrderBy(j => j.CreatedAtUtc)
             .Take(1)
@@ -77,7 +69,7 @@ public class BulkImportWorkerService : BackgroundService
                 .SetProperty(j => j.ClaimedByWorkerId, claimId),
                 cancellationToken);
 
-        if (updatedCount == 0)
+        if (claimedCount == 0)
         {
             return;
         }
@@ -107,13 +99,12 @@ public class BulkImportWorkerService : BackgroundService
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
             _logger.LogInformation("Bulk import processing cancelled for job {JobId}", job.Id);
-            throw; // Re-throw to stop the service
+            throw;
         }
         catch (OperationCanceledException)
         {
             _logger.LogWarning("Bulk import processing timed out for job {JobId} after {Timeout}", job.Id, _processingTimeout);
 
-            // Mark job as failed due to timeout
             job.Status = "Failed";
             job.ValidationErrors = System.Text.Json.JsonSerializer.Serialize(new[] { new { message = $"Processing timed out after {_processingTimeout.TotalMinutes} minutes" } });
             job.CompletedAtUtc = DateTime.UtcNow;
@@ -122,7 +113,6 @@ public class BulkImportWorkerService : BackgroundService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error processing bulk import job {JobId}", job.Id);
-            // Error handling is done in BulkImportService.ProcessImportAsync
         }
     }
 }
