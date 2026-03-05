@@ -157,10 +157,10 @@ public class Country
     public bool IsActive { get; set; } = true;
 
     /// <summary>
-    /// Gets or sets the optimistic concurrency token.
+    /// Gets or sets the row version for optimistic concurrency.
     /// </summary>
     [ConcurrencyCheck]
-    public Guid Version { get; set; } = Guid.NewGuid();
+    public uint RowVersion { get; set; }
 
     /// <summary>
     /// Gets or sets the identifier of the user who created this record.

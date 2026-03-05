@@ -72,7 +72,7 @@ public class TestDatabaseFixture : IAsyncLifetime
                 Languages = "{\"eng\":\"English\"}",
                 Translations = "{\"ara\":\"الولايات المتحدة\",\"ces\":\"Spojené státy\",\"cym\":\"Unol Daleithiau\",\"deu\":\"Vereinigte Staaten\",\"est\":\"Ühendriigid\",\"fin\":\"Yhdysvallat\",\"fra\":\"États-Unis\",\"hrv\":\"Sjedinjene Američke Države\",\"hun\":\"Egyesült Államok\",\"ita\":\"Stati Uniti d'America\",\"jpn\":\"アメリカ合衆国\",\"kor\":\"미국\",\"nld\":\"Verenigde Staten\",\"per\":\"ایالات متحده آمریکا\",\"pol\":\"Stany Zjednoczone\",\"por\":\"Estados Unidos\",\"rus\":\"Соединённые Штаты Америки\",\"slk\":\"Spojené štáty\",\"spa\":\"Estados Unidos\",\"swe\":\"Förenta staterna\",\"urd\":\"ریاستہائے متحدہ\",\"zho\":\"美国\"}",
                 Flags = "{\"png\":\"https://flagcdn.com/w320/us.png\",\"svg\":\"https://flagcdn.com/us.svg\"}",
-                Independent = true, UnMember = true, Landlocked = false, IsActive = true, CreatedBy = "test", UpdatedBy = "test", Version = Guid.NewGuid()
+                Independent = true, UnMember = true, Landlocked = false, IsActive = true, CreatedBy = "test", UpdatedBy = "test"
             },
             new Maliev.CountryService.Domain.Entities.Country
             {
@@ -86,7 +86,7 @@ public class TestDatabaseFixture : IAsyncLifetime
                 Languages = "{\"eng\":\"English\",\"fra\":\"French\"}",
                 Translations = "{\"ara\":\"كندا\",\"ces\":\"Kanada\",\"cym\":\"Canada\",\"deu\":\"Kanada\",\"est\":\"Kanada\",\"fin\":\"Kanada\",\"fra\":\"Canada\",\"hrv\":\"Kanada\",\"hun\":\"Kanada\",\"ita\":\"Canada\",\"jpn\":\"カナダ\",\"kor\":\"캐나다\",\"nld\":\"Canada\",\"per\":\"کانادا\",\"pol\":\"Kanada\",\"por\":\"Canadá\",\"rus\":\"Канада\",\"slk\":\"Kanada\",\"spa\":\"Canadá\",\"swe\":\"Kanada\",\"urd\":\"کینیڈا\",\"zho\":\"加拿大\"}",
                 Flags = "{\"png\":\"https://flagcdn.com/w320/ca.png\",\"svg\":\"https://flagcdn.com/ca.svg\"}",
-                Independent = true, UnMember = true, Landlocked = false, IsActive = true, CreatedBy = "test", UpdatedBy = "test", Version = Guid.NewGuid()
+                Independent = true, UnMember = true, Landlocked = false, IsActive = true, CreatedBy = "test", UpdatedBy = "test"
             },
             new Maliev.CountryService.Domain.Entities.Country
             {
@@ -100,7 +100,7 @@ public class TestDatabaseFixture : IAsyncLifetime
                 Languages = "{\"eng\":\"English\"}",
                 Translations = "{\"ara\":\"المملكة المتحدة\",\"ces\":\"Spojené království\",\"cym\":\"Teyrnas Unedig\",\"deu\":\"Vereinigtes Königreich\",\"est\":\"Ühendkuningriik\",\"fin\":\"Yhdistynyt kuningaskunta\",\"fra\":\"Royaume-Uni\",\"hrv\":\"Ujedinjeno Kraljevstvo\",\"hun\":\"Egyesült Királyság\",\"ita\":\"Regno Unito\",\"jpn\":\"イギリス\",\"kor\":\"영국\",\"nld\":\"Verenigd Koninkrijk\",\"per\":\"بریتانیا\",\"pol\":\"Zjednoczone Królestwo\",\"por\":\"Reino Unido\",\"rus\":\"Великобритания\",\"slk\":\"Spojené kráľovstvo\",\"spa\":\"Reino Unido\",\"swe\":\"Storbritannien\",\"urd\":\"برطانیہ\",\"zho\":\"英国\"}",
                 Flags = "{\"png\":\"https://flagcdn.com/w320/gb.png\",\"svg\":\"https://flagcdn.com/gb.svg\"}",
-                Independent = true, UnMember = true, Landlocked = false, IsActive = true, CreatedBy = "test", UpdatedBy = "test", Version = Guid.NewGuid()
+                Independent = true, UnMember = true, Landlocked = false, IsActive = true, CreatedBy = "test", UpdatedBy = "test"
             },
             new Maliev.CountryService.Domain.Entities.Country
             {
@@ -111,7 +111,7 @@ public class TestDatabaseFixture : IAsyncLifetime
                 Currencies = "{\"EUR\":{\"name\":\"Euro\",\"symbol\":\"€\"}}",
                 Languages = "{\"fra\":\"French\"}",
                 Translations = "{}", Flags = "{\"png\":\"https://flagcdn.com/w320/fr.png\",\"svg\":\"https://flagcdn.com/fr.svg\"}",
-                Independent = true, UnMember = true, Landlocked = false, IsActive = true, CreatedBy = "test", UpdatedBy = "test", Version = Guid.NewGuid()
+                Independent = true, UnMember = true, Landlocked = false, IsActive = true, CreatedBy = "test", UpdatedBy = "test"
             },
             new Maliev.CountryService.Domain.Entities.Country
             {
@@ -122,7 +122,7 @@ public class TestDatabaseFixture : IAsyncLifetime
                 Currencies = "{\"EUR\":{\"name\":\"Euro\",\"symbol\":\"€\"}}",
                 Languages = "{\"deu\":\"German\"}",
                 Translations = "{}", Flags = "{\"png\":\"https://flagcdn.com/w320/de.png\",\"svg\":\"https://flagcdn.com/de.svg\"}",
-                Independent = true, UnMember = true, Landlocked = false, IsActive = true, CreatedBy = "test", UpdatedBy = "test", Version = Guid.NewGuid()
+                Independent = true, UnMember = true, Landlocked = false, IsActive = true, CreatedBy = "test", UpdatedBy = "test"
             },
             new Maliev.CountryService.Domain.Entities.Country
             {
@@ -133,7 +133,7 @@ public class TestDatabaseFixture : IAsyncLifetime
                 Currencies = "{\"JPY\":{\"name\":\"Japanese yen\",\"symbol\":\"¥\"}}",
                 Languages = "{\"jpn\":\"Japanese\"}",
                 Translations = "{}", Flags = "{\"png\":\"https://flagcdn.com/w320/jp.png\",\"svg\":\"https://flagcdn.com/jp.svg\"}",
-                Independent = true, UnMember = true, Landlocked = false, IsActive = true, CreatedBy = "test", UpdatedBy = "test", Version = Guid.NewGuid()
+                Independent = true, UnMember = true, Landlocked = false, IsActive = true, CreatedBy = "test", UpdatedBy = "test"
             },
             new Maliev.CountryService.Domain.Entities.Country
             {
@@ -144,7 +144,7 @@ public class TestDatabaseFixture : IAsyncLifetime
                 Currencies = "{\"AUD\":{\"name\":\"Australian dollar\",\"symbol\":\"$\"}}",
                 Languages = "{\"eng\":\"English\"}",
                 Translations = "{}", Flags = "{\"png\":\"https://flagcdn.com/w320/au.png\",\"svg\":\"https://flagcdn.com/au.svg\"}",
-                Independent = true, UnMember = true, Landlocked = false, IsActive = true, CreatedBy = "test", UpdatedBy = "test", Version = Guid.NewGuid()
+                Independent = true, UnMember = true, Landlocked = false, IsActive = true, CreatedBy = "test", UpdatedBy = "test"
             },
             new Maliev.CountryService.Domain.Entities.Country
             {
@@ -155,7 +155,7 @@ public class TestDatabaseFixture : IAsyncLifetime
                 Currencies = "{\"BRL\":{\"name\":\"Brazilian real\",\"symbol\":\"R$\"}}",
                 Languages = "{\"por\":\"Portuguese\"}",
                 Translations = "{}", Flags = "{\"png\":\"https://flagcdn.com/w320/br.png\",\"svg\":\"https://flagcdn.com/br.svg\"}",
-                Independent = true, UnMember = true, Landlocked = false, IsActive = true, CreatedBy = "test", UpdatedBy = "test", Version = Guid.NewGuid()
+                Independent = true, UnMember = true, Landlocked = false, IsActive = true, CreatedBy = "test", UpdatedBy = "test"
             },
             new Maliev.CountryService.Domain.Entities.Country
             {
@@ -166,7 +166,7 @@ public class TestDatabaseFixture : IAsyncLifetime
                 Currencies = "{\"INR\":{\"name\":\"Indian rupee\",\"symbol\":\"₹\"}}",
                 Languages = "{\"hin\":\"Hindi\",\"eng\":\"English\"}",
                 Translations = "{}", Flags = "{\"png\":\"https://flagcdn.com/w320/in.png\",\"svg\":\"https://flagcdn.com/in.svg\"}",
-                Independent = true, UnMember = true, Landlocked = false, IsActive = true, CreatedBy = "test", UpdatedBy = "test", Version = Guid.NewGuid()
+                Independent = true, UnMember = true, Landlocked = false, IsActive = true, CreatedBy = "test", UpdatedBy = "test"
             },
             new Maliev.CountryService.Domain.Entities.Country
             {
@@ -177,7 +177,7 @@ public class TestDatabaseFixture : IAsyncLifetime
                 Currencies = "{\"MXN\":{\"name\":\"Mexican peso\",\"symbol\":\"$\"}}",
                 Languages = "{\"spa\":\"Spanish\"}",
                 Translations = "{}", Flags = "{\"png\":\"https://flagcdn.com/w320/mx.png\",\"svg\":\"https://flagcdn.com/mx.svg\"}",
-                Independent = true, UnMember = true, Landlocked = false, IsActive = true, CreatedBy = "test", UpdatedBy = "test", Version = Guid.NewGuid()
+                Independent = true, UnMember = true, Landlocked = false, IsActive = true, CreatedBy = "test", UpdatedBy = "test"
             }
         };
         context.Countries.AddRange(countries);

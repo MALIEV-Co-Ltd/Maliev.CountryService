@@ -5,6 +5,7 @@ using Maliev.CountryService.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 
 namespace Maliev.CountryService.Application.Services;
@@ -305,8 +306,7 @@ public class CountryService : ICountryService
             CreatedAtUtc = DateTime.UtcNow,
             LastModifiedUtc = DateTime.UtcNow,
             CreatedBy = userId,
-            UpdatedBy = userId,
-            Version = Guid.NewGuid()
+            UpdatedBy = userId
         };
 
         _context.Countries.Add(country);
@@ -338,7 +338,7 @@ public class CountryService : ICountryService
         var country = await _context.Countries.FindAsync(new object[] { id }, cancellationToken);
         if (country == null) throw new KeyNotFoundException($"Country with ID {id} not found");
 
-        if (!string.IsNullOrEmpty(ifMatch) && ifMatch != GenerateETag(country.Version))
+        if (!string.IsNullOrEmpty(ifMatch) && ifMatch != GenerateETag(country.RowVersion))
             throw new InvalidOperationException("Precondition failed: ETag mismatch");
 
         if (await _context.Countries.AnyAsync(c => c.Id != id && c.Iso2 == request.Iso2.ToUpperInvariant(), cancellationToken))
@@ -374,7 +374,6 @@ public class CountryService : ICountryService
         country.Landlocked = request.Landlocked ?? false;
         country.LastModifiedUtc = DateTime.UtcNow;
         country.UpdatedBy = userId;
-        country.Version = Guid.NewGuid();
 
         _context.AuditLogs.Add(new AuditLog { CountryId = country.Id, Action = "UPDATE", UserId = userId, TimestampUtc = DateTime.UtcNow, Changes = JsonSerializer.Serialize(request) });
         await _context.SaveChangesAsync(cancellationToken);
@@ -396,7 +395,7 @@ public class CountryService : ICountryService
     {
         var country = await _context.Countries.FindAsync(new object[] { id }, cancellationToken);
         if (country == null) throw new KeyNotFoundException($"Country with ID {id} not found");
-        if (!string.IsNullOrEmpty(ifMatch) && ifMatch != GenerateETag(country.Version)) throw new InvalidOperationException("Precondition failed: ETag mismatch");
+        if (!string.IsNullOrEmpty(ifMatch) && ifMatch != GenerateETag(country.RowVersion)) throw new InvalidOperationException("Precondition failed: ETag mismatch");
 
         if (request.Iso2 != null)
         {
@@ -436,7 +435,6 @@ public class CountryService : ICountryService
         if (request.Landlocked.HasValue) country.Landlocked = request.Landlocked.Value;
         country.LastModifiedUtc = DateTime.UtcNow;
         country.UpdatedBy = userId;
-        country.Version = Guid.NewGuid();
 
         _context.AuditLogs.Add(new AuditLog { CountryId = country.Id, Action = "PATCH", UserId = userId, TimestampUtc = DateTime.UtcNow, Changes = JsonSerializer.Serialize(request) });
         await _context.SaveChangesAsync(cancellationToken);
@@ -462,7 +460,6 @@ public class CountryService : ICountryService
         country.LastModifiedUtc = DateTime.UtcNow;
         country.DeletedAt = DateTime.UtcNow;
         country.UpdatedBy = userId;
-        country.Version = Guid.NewGuid();
 
         _context.AuditLogs.Add(new AuditLog { CountryId = id, Action = "SOFT_DELETE", UserId = userId, TimestampUtc = DateTime.UtcNow, Changes = JsonSerializer.Serialize(new { IsActive = false, DeletedAt = country.DeletedAt }) });
         await _context.SaveChangesAsync(cancellationToken);
@@ -508,7 +505,6 @@ public class CountryService : ICountryService
         country.LastModifiedUtc = DateTime.UtcNow;
         country.DeletedAt = null;
         country.UpdatedBy = userId;
-        country.Version = Guid.NewGuid();
 
         _context.AuditLogs.Add(new AuditLog { CountryId = id, Action = "RESTORE", UserId = userId, TimestampUtc = DateTime.UtcNow, Changes = JsonSerializer.Serialize(new { IsActive = true, RestoredAt = DateTime.UtcNow }) });
         await _context.SaveChangesAsync(cancellationToken);
@@ -518,10 +514,10 @@ public class CountryService : ICountryService
 
     private static string GenerateCacheKey(string type, string value) => $"country:{type}:{value}";
 
-    private static string GenerateETag(Guid version)
+    private static string GenerateETag(uint xmin)
     {
-        var versionBytes = version.ToByteArray();
-        var hashBytes = SHA256.HashData(versionBytes);
+        var xminBytes = BitConverter.GetBytes(xmin);
+        var hashBytes = SHA256.HashData(xminBytes);
         return $"\"{Convert.ToBase64String(hashBytes)}\"";
     }
 
@@ -559,7 +555,7 @@ public class CountryService : ICountryService
             IsActive = country.IsActive,
             CreatedAtUtc = country.CreatedAtUtc,
             LastModifiedUtc = country.LastModifiedUtc,
-            ETag = GenerateETag(country.Version)
+            ETag = GenerateETag(country.RowVersion)
         };
     }
 

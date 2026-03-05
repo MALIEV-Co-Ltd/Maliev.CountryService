@@ -74,10 +74,11 @@ public class CountryConfiguration : IEntityTypeConfiguration<Country>
         builder.HasIndex(c => c.IsActive).HasDatabaseName("IX_countries_is_active");
         builder.HasQueryFilter(c => c.IsActive);
 
-        // Concurrency token
-        builder.Property(c => c.Version).HasColumnName("version")
-            .HasDefaultValueSql("gen_random_uuid()")
-            .IsConcurrencyToken();
+        // Concurrency token - RowVersion for optimistic concurrency
+        builder.Property(c => c.RowVersion)
+            .HasColumnName("xmin")
+            .ValueGeneratedOnAdd()
+            .IsRowVersion();
 
         // Audit columns
         builder.Property(c => c.CreatedBy).HasColumnName("created_by").HasMaxLength(100).IsRequired();

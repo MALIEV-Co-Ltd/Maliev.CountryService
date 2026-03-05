@@ -38,9 +38,9 @@ public class CountryServiceListSortingTests
 
         var countries = new List<Country>
         {
-            new() { Name = "Zambia", Iso2 = "ZM", Iso3 = "ZMB", CreatedBy = "user", UpdatedBy = "user", Version = Guid.NewGuid() },
-            new() { Name = "Albania", Iso2 = "AL", Iso3 = "ALB", CreatedBy = "user", UpdatedBy = "user", Version = Guid.NewGuid() },
-            new() { Name = "Brazil", Iso2 = "BR", Iso3 = "BRA", CreatedBy = "user", UpdatedBy = "user", Version = Guid.NewGuid() }
+            new() { Name = "Zambia", Iso2 = "ZM", Iso3 = "ZMB", CreatedBy = "user", UpdatedBy = "user" },
+            new() { Name = "Albania", Iso2 = "AL", Iso3 = "ALB", CreatedBy = "user", UpdatedBy = "user" },
+            new() { Name = "Brazil", Iso2 = "BR", Iso3 = "BRA", CreatedBy = "user", UpdatedBy = "user" }
         };
         context.Countries.AddRange(countries);
         await context.SaveChangesAsync();
@@ -65,9 +65,9 @@ public class CountryServiceListSortingTests
 
         var countries = new List<Country>
         {
-            new() { Name = "Zambia", Iso2 = "ZM", Iso3 = "ZMB", CreatedBy = "user", UpdatedBy = "user", Version = Guid.NewGuid() },
-            new() { Name = "Albania", Iso2 = "AL", Iso3 = "ALB", CreatedBy = "user", UpdatedBy = "user", Version = Guid.NewGuid() },
-            new() { Name = "Brazil", Iso2 = "BR", Iso3 = "BRA", CreatedBy = "user", UpdatedBy = "user", Version = Guid.NewGuid() }
+            new() { Name = "Zambia", Iso2 = "ZM", Iso3 = "ZMB", CreatedBy = "user", UpdatedBy = "user" },
+            new() { Name = "Albania", Iso2 = "AL", Iso3 = "ALB", CreatedBy = "user", UpdatedBy = "user" },
+            new() { Name = "Brazil", Iso2 = "BR", Iso3 = "BRA", CreatedBy = "user", UpdatedBy = "user" }
         };
         context.Countries.AddRange(countries);
         await context.SaveChangesAsync();
@@ -92,9 +92,9 @@ public class CountryServiceListSortingTests
 
         var countries = new List<Country>
         {
-            new() { Name = "Small", Iso2 = "SM", Iso3 = "SML", AreaKm2 = 100, CreatedBy = "user", UpdatedBy = "user", Version = Guid.NewGuid() },
-            new() { Name = "Large", Iso2 = "LG", Iso3 = "LGE", AreaKm2 = 1000000, CreatedBy = "user", UpdatedBy = "user", Version = Guid.NewGuid() },
-            new() { Name = "Medium", Iso2 = "MD", Iso3 = "MDM", AreaKm2 = 500000, CreatedBy = "user", UpdatedBy = "user", Version = Guid.NewGuid() }
+            new() { Name = "Small", Iso2 = "SM", Iso3 = "SML", AreaKm2 = 100, CreatedBy = "user", UpdatedBy = "user" },
+            new() { Name = "Large", Iso2 = "LG", Iso3 = "LGE", AreaKm2 = 1000000, CreatedBy = "user", UpdatedBy = "user" },
+            new() { Name = "Medium", Iso2 = "MD", Iso3 = "MDM", AreaKm2 = 500000, CreatedBy = "user", UpdatedBy = "user" }
         };
         context.Countries.AddRange(countries);
         await context.SaveChangesAsync();
@@ -119,9 +119,9 @@ public class CountryServiceListSortingTests
 
         var countries = new List<Country>
         {
-            new() { Name = "Many", Iso2 = "MY", Iso3 = "MAN", Population = 1000000, CreatedBy = "user", UpdatedBy = "user", Version = Guid.NewGuid() },
-            new() { Name = "Few", Iso2 = "FW", Iso3 = "FEW", Population = 10000, CreatedBy = "user", UpdatedBy = "user", Version = Guid.NewGuid() },
-            new() { Name = "Some", Iso2 = "SM", Iso3 = "SOM", Population = 500000, CreatedBy = "user", UpdatedBy = "user", Version = Guid.NewGuid() }
+            new() { Name = "Many", Iso2 = "MY", Iso3 = "MAN", Population = 1000000, CreatedBy = "user", UpdatedBy = "user" },
+            new() { Name = "Few", Iso2 = "FW", Iso3 = "FEW", Population = 10000, CreatedBy = "user", UpdatedBy = "user" },
+            new() { Name = "Some", Iso2 = "SM", Iso3 = "SOM", Population = 500000, CreatedBy = "user", UpdatedBy = "user" }
         };
         context.Countries.AddRange(countries);
         await context.SaveChangesAsync();
@@ -146,9 +146,9 @@ public class CountryServiceListSortingTests
 
         var countries = new List<Country>
         {
-            new() { Name = "France", Iso2 = "FR", Iso3 = "FRA", Region = "Europe", Subregion = "Western Europe", CreatedBy = "user", UpdatedBy = "user", Version = Guid.NewGuid() },
-            new() { Name = "Germany", Iso2 = "DE", Iso3 = "DEU", Region = "Europe", Subregion = "Western Europe", CreatedBy = "user", UpdatedBy = "user", Version = Guid.NewGuid() },
-            new() { Name = "Japan", Iso2 = "JP", Iso3 = "JPN", Region = "Asia", Subregion = "Eastern Asia", CreatedBy = "user", UpdatedBy = "user", Version = Guid.NewGuid() }
+            new() { Name = "France", Iso2 = "FR", Iso3 = "FRA", Region = "Europe", Subregion = "Western Europe", CreatedBy = "user", UpdatedBy = "user" },
+            new() { Name = "Germany", Iso2 = "DE", Iso3 = "DEU", Region = "Europe", Subregion = "Western Europe", CreatedBy = "user", UpdatedBy = "user" },
+            new() { Name = "Japan", Iso2 = "JP", Iso3 = "JPN", Region = "Asia", Subregion = "Eastern Asia", CreatedBy = "user", UpdatedBy = "user" }
         };
         context.Countries.AddRange(countries);
         await context.SaveChangesAsync();
@@ -175,9 +175,9 @@ public class CountryServiceListSortingTests
 
         var countries = new List<Country>
         {
-            new() { Name = "Japan", Iso2 = "JP", Iso3 = "JPN", Region = "Asia", Subregion = "Eastern Asia", CreatedBy = "user", UpdatedBy = "user", Version = Guid.NewGuid() },
-            new() { Name = "China", Iso2 = "CN", Iso3 = "CHN", Region = "Asia", Subregion = "Eastern Asia", CreatedBy = "user", UpdatedBy = "user", Version = Guid.NewGuid() },
-            new() { Name = "India", Iso2 = "IN", Iso3 = "IND", Region = "Asia", Subregion = "Southern Asia", CreatedBy = "user", UpdatedBy = "user", Version = Guid.NewGuid() }
+            new() { Name = "Japan", Iso2 = "JP", Iso3 = "JPN", Region = "Asia", Subregion = "Eastern Asia", CreatedBy = "user", UpdatedBy = "user" },
+            new() { Name = "China", Iso2 = "CN", Iso3 = "CHN", Region = "Asia", Subregion = "Eastern Asia", CreatedBy = "user", UpdatedBy = "user" },
+            new() { Name = "India", Iso2 = "IN", Iso3 = "IND", Region = "Asia", Subregion = "Southern Asia", CreatedBy = "user", UpdatedBy = "user" }
         };
         context.Countries.AddRange(countries);
         await context.SaveChangesAsync();
@@ -202,8 +202,7 @@ public class CountryServiceListSortingTests
             Iso2 = "EX",
             Iso3 = "EXI",
             CreatedBy = "user",
-            UpdatedBy = "user",
-            Version = Guid.NewGuid()
+            UpdatedBy = "user"
         };
         context.Countries.Add(country);
         await context.SaveChangesAsync();
@@ -226,8 +225,7 @@ public class CountryServiceListSortingTests
             Iso2 = "C1",
             Iso3 = "C1X",
             CreatedBy = "user",
-            UpdatedBy = "user",
-            Version = Guid.NewGuid()
+            UpdatedBy = "user"
         };
         var country2 = new Country
         {
@@ -235,8 +233,7 @@ public class CountryServiceListSortingTests
             Iso2 = "C2",
             Iso3 = "C2X",
             CreatedBy = "user",
-            UpdatedBy = "user",
-            Version = Guid.NewGuid()
+            UpdatedBy = "user"
         };
         context.Countries.AddRange(country1, country2);
         await context.SaveChangesAsync();
@@ -268,8 +265,7 @@ public class CountryServiceListSortingTests
             Iso2 = "C1",
             Iso3 = "C1X",
             CreatedBy = "user",
-            UpdatedBy = "user",
-            Version = Guid.NewGuid()
+            UpdatedBy = "user"
         };
         var country2 = new Country
         {
@@ -277,8 +273,7 @@ public class CountryServiceListSortingTests
             Iso2 = "C2",
             Iso3 = "C2X",
             CreatedBy = "user",
-            UpdatedBy = "user",
-            Version = Guid.NewGuid()
+            UpdatedBy = "user"
         };
         context.Countries.AddRange(country1, country2);
         await context.SaveChangesAsync();
@@ -306,8 +301,7 @@ public class CountryServiceListSortingTests
             Iso3 = "INA",
             IsActive = false,
             CreatedBy = "user",
-            UpdatedBy = "user",
-            Version = Guid.NewGuid()
+            UpdatedBy = "user"
         };
         context.Countries.Add(country);
         await context.SaveChangesAsync();
@@ -331,8 +325,7 @@ public class CountryServiceListSortingTests
             Iso3 = "ACT",
             IsActive = true,
             CreatedBy = "user",
-            UpdatedBy = "user",
-            Version = Guid.NewGuid()
+            UpdatedBy = "user"
         };
         context.Countries.Add(country);
         await context.SaveChangesAsync();

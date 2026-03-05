@@ -115,8 +115,7 @@ public class BulkImportServiceTests
             Iso3 = "AAA",
             Name = "Existing",
             CreatedBy = "system",
-            UpdatedBy = "system",
-            Version = Guid.NewGuid()
+            UpdatedBy = "system"
         });
         await _context.SaveChangesAsync();
 

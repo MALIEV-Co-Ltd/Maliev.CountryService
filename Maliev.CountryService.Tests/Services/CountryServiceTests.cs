@@ -77,7 +77,7 @@ public class CountryServiceTests
         // Arrange
         await _factory.CleanDatabaseAsync();
         var context = GetDbContext();
-        var country = new Country { Name = "Active", Iso2 = "AC", Iso3 = "ACT", CreatedBy = "user", UpdatedBy = "user", Version = Guid.NewGuid(), IsActive = true };
+        var country = new Country { Name = "Active", Iso2 = "AC", Iso3 = "ACT", CreatedBy = "user", UpdatedBy = "user", IsActive = true };
         context.Countries.Add(country);
         await context.SaveChangesAsync();
 
@@ -133,7 +133,7 @@ public class CountryServiceTests
         // Arrange
         await _factory.CleanDatabaseAsync();
         var context = GetDbContext();
-        var country = new Country { Name = "00-Inactive", Iso2 = "IA", Iso3 = "IAT", CreatedBy = "user", UpdatedBy = "user", Version = Guid.NewGuid(), IsActive = false };
+        var country = new Country { Name = "00-Inactive", Iso2 = "IA", Iso3 = "IAT", CreatedBy = "user", UpdatedBy = "user", IsActive = false };
         context.Countries.Add(country);
         await context.SaveChangesAsync();
 
@@ -153,7 +153,7 @@ public class CountryServiceTests
         // Arrange
         await _factory.CleanDatabaseAsync();
         var context = GetDbContext();
-        var country = new Country { Name = "France", OfficialName = "French Republic", Iso2 = "FR", Iso3 = "FRA", CreatedBy = "user", UpdatedBy = "user", Version = Guid.NewGuid(), IsActive = true };
+        var country = new Country { Name = "France", OfficialName = "French Republic", Iso2 = "FR", Iso3 = "FRA", CreatedBy = "user", UpdatedBy = "user", IsActive = true };
         context.Countries.Add(country);
         await context.SaveChangesAsync();
 
@@ -190,7 +190,7 @@ public class CountryServiceTests
         // Arrange
         await _factory.CleanDatabaseAsync();
         var context = GetDbContext();
-        var country = new Country { Name = "Inactive", Iso2 = "IA", Iso3 = "IAT", CreatedBy = "user", UpdatedBy = "user", Version = Guid.NewGuid(), IsActive = false, DeletedAt = DateTime.UtcNow };
+        var country = new Country { Name = "Inactive", Iso2 = "IA", Iso3 = "IAT", CreatedBy = "user", UpdatedBy = "user", IsActive = false, DeletedAt = DateTime.UtcNow };
         context.Countries.Add(country);
         await context.SaveChangesAsync();
 
@@ -211,7 +211,7 @@ public class CountryServiceTests
         // Arrange
         await _factory.CleanDatabaseAsync();
         var context = GetDbContext();
-        var country = new Country { Name = "Original", Region = "Old", Iso2 = "OR", Iso3 = "ORG", CreatedBy = "user", UpdatedBy = "user", Version = Guid.NewGuid(), IsActive = true };
+        var country = new Country { Name = "Original", Region = "Old", Iso2 = "OR", Iso3 = "ORG", CreatedBy = "user", UpdatedBy = "user", IsActive = true };
         context.Countries.Add(country);
         await context.SaveChangesAsync();
 
@@ -234,7 +234,7 @@ public class CountryServiceTests
         // Arrange
         await _factory.CleanDatabaseAsync();
         var context = GetDbContext();
-        var country = new Country { Name = "To Delete", Iso2 = "TD", Iso3 = "TDE", CreatedBy = "user", UpdatedBy = "user", Version = Guid.NewGuid(), IsActive = true };
+        var country = new Country { Name = "To Delete", Iso2 = "TD", Iso3 = "TDE", CreatedBy = "user", UpdatedBy = "user", IsActive = true };
         context.Countries.Add(country);
         await context.SaveChangesAsync();
 
@@ -254,7 +254,7 @@ public class CountryServiceTests
         // Arrange
         await _factory.CleanDatabaseAsync();
         var context = GetDbContext();
-        var country = new Country { Name = "C1", Iso2 = "C1", Iso3 = "C11", CreatedBy = "user", UpdatedBy = "user", Version = Guid.NewGuid(), IsActive = true };
+        var country = new Country { Name = "C1", Iso2 = "C1", Iso3 = "C11", CreatedBy = "user", UpdatedBy = "user", IsActive = true };
         context.Countries.Add(country);
         await context.SaveChangesAsync();
 
@@ -272,7 +272,7 @@ public class CountryServiceTests
         // Arrange
         await _factory.CleanDatabaseAsync();
         var context = GetDbContext();
-        var country = new Country { Name = "C1", Iso2 = "C1", Iso3 = "C11", CreatedBy = "user", UpdatedBy = "user", Version = Guid.NewGuid(), IsActive = true };
+        var country = new Country { Name = "C1", Iso2 = "C1", Iso3 = "C11", CreatedBy = "user", UpdatedBy = "user", IsActive = true };
         context.Countries.Add(country);
         await context.SaveChangesAsync();
 
@@ -319,8 +319,7 @@ public class CountryServiceTests
             Landlocked = false,
             IsActive = true,
             CreatedBy = "user",
-            UpdatedBy = "user",
-            Version = Guid.NewGuid()
+            UpdatedBy = "user"
         };
         context.Countries.Add(country);
         await context.SaveChangesAsync();
@@ -358,7 +357,7 @@ public class CountryServiceTests
         // Arrange
         await _factory.CleanDatabaseAsync();
         var context = GetDbContext();
-        var country = new Country { Name = "C1", Iso2 = "C1", Iso3 = "C11", CreatedBy = "user", UpdatedBy = "user", Version = Guid.NewGuid(), IsActive = true };
+        var country = new Country { Name = "C1", Iso2 = "C1", Iso3 = "C11", CreatedBy = "user", UpdatedBy = "user", IsActive = true };
         context.Countries.Add(country);
         await context.SaveChangesAsync();
 
@@ -375,7 +374,7 @@ public class CountryServiceTests
         // Arrange
         await _factory.CleanDatabaseAsync();
         var context = GetDbContext();
-        var country = new Country { Name = "Inactive", Iso2 = "IN", Iso3 = "INA", CreatedBy = "user", UpdatedBy = "user", Version = Guid.NewGuid(), IsActive = false };
+        var country = new Country { Name = "Inactive", Iso2 = "IN", Iso3 = "INA", CreatedBy = "user", UpdatedBy = "user", IsActive = false };
         context.Countries.Add(country);
         await context.SaveChangesAsync();
 
@@ -391,7 +390,7 @@ public class CountryServiceTests
         // Arrange
         await _factory.CleanDatabaseAsync();
         var context = GetDbContext();
-        var country = new Country { Name = "Active", Iso2 = "AC", Iso3 = "ACT", CreatedBy = "user", UpdatedBy = "user", Version = Guid.NewGuid(), IsActive = true };
+        var country = new Country { Name = "Active", Iso2 = "AC", Iso3 = "ACT", CreatedBy = "user", UpdatedBy = "user", IsActive = true };
         context.Countries.Add(country);
         await context.SaveChangesAsync();
 
@@ -407,8 +406,8 @@ public class CountryServiceTests
         // Arrange
         await _factory.CleanDatabaseAsync();
         var context = GetDbContext();
-        var country1 = new Country { Name = "C1", Iso2 = "C1", Iso3 = "C11", CreatedBy = "user", UpdatedBy = "user", Version = Guid.NewGuid(), IsActive = true };
-        var country2 = new Country { Name = "C2", Iso2 = "C2", Iso3 = "C22", CreatedBy = "user", UpdatedBy = "user", Version = Guid.NewGuid(), IsActive = true };
+        var country1 = new Country { Name = "C1", Iso2 = "C1", Iso3 = "C11", CreatedBy = "user", UpdatedBy = "user", IsActive = true };
+        var country2 = new Country { Name = "C2", Iso2 = "C2", Iso3 = "C22", CreatedBy = "user", UpdatedBy = "user", IsActive = true };
         context.Countries.AddRange(country1, country2);
         await context.SaveChangesAsync();
 
@@ -426,8 +425,8 @@ public class CountryServiceTests
         // Arrange
         await _factory.CleanDatabaseAsync();
         var context = GetDbContext();
-        var country1 = new Country { Name = "C1", Iso2 = "C1", Iso3 = "C11", CreatedBy = "user", UpdatedBy = "user", Version = Guid.NewGuid(), IsActive = true };
-        var country2 = new Country { Name = "C2", Iso2 = "C2", Iso3 = "C22", CreatedBy = "user", UpdatedBy = "user", Version = Guid.NewGuid(), IsActive = true };
+        var country1 = new Country { Name = "C1", Iso2 = "C1", Iso3 = "C11", CreatedBy = "user", UpdatedBy = "user", IsActive = true };
+        var country2 = new Country { Name = "C2", Iso2 = "C2", Iso3 = "C22", CreatedBy = "user", UpdatedBy = "user", IsActive = true };
         context.Countries.AddRange(country1, country2);
         await context.SaveChangesAsync();
 
@@ -445,8 +444,8 @@ public class CountryServiceTests
         // Arrange
         await _factory.CleanDatabaseAsync();
         var context = GetDbContext();
-        var country1 = new Country { Name = "C1", Iso2 = "C1", Iso3 = "C11", CreatedBy = "user", UpdatedBy = "user", Version = Guid.NewGuid(), IsActive = true };
-        var country2 = new Country { Name = "C2", Iso2 = "C2", Iso3 = "C22", CreatedBy = "user", UpdatedBy = "user", Version = Guid.NewGuid(), IsActive = true };
+        var country1 = new Country { Name = "C1", Iso2 = "C1", Iso3 = "C11", CreatedBy = "user", UpdatedBy = "user", IsActive = true };
+        var country2 = new Country { Name = "C2", Iso2 = "C2", Iso3 = "C22", CreatedBy = "user", UpdatedBy = "user", IsActive = true };
         context.Countries.AddRange(country1, country2);
         await context.SaveChangesAsync();
 
@@ -464,8 +463,8 @@ public class CountryServiceTests
         // Arrange
         await _factory.CleanDatabaseAsync();
         var context = GetDbContext();
-        var country1 = new Country { Name = "C1", Iso2 = "C1", Iso3 = "C11", CreatedBy = "user", UpdatedBy = "user", Version = Guid.NewGuid(), IsActive = true };
-        var country2 = new Country { Name = "C2", Iso2 = "C2", Iso3 = "C22", CreatedBy = "user", UpdatedBy = "user", Version = Guid.NewGuid(), IsActive = true };
+        var country1 = new Country { Name = "C1", Iso2 = "C1", Iso3 = "C11", CreatedBy = "user", UpdatedBy = "user", IsActive = true };
+        var country2 = new Country { Name = "C2", Iso2 = "C2", Iso3 = "C22", CreatedBy = "user", UpdatedBy = "user", IsActive = true };
         context.Countries.AddRange(country1, country2);
         await context.SaveChangesAsync();
 
@@ -585,8 +584,8 @@ public class CountryServiceTests
         // Arrange
         await _factory.CleanDatabaseAsync();
         var context = GetDbContext();
-        context.Countries.Add(new Country { Name = "Asia Country", Region = "Asia", Iso2 = "AC", Iso3 = "ACT", CreatedBy = "user", UpdatedBy = "user", Version = Guid.NewGuid() });
-        context.Countries.Add(new Country { Name = "Europe Country", Region = "Europe", Iso2 = "EC", Iso3 = "ECT", CreatedBy = "user", UpdatedBy = "user", Version = Guid.NewGuid() });
+        context.Countries.Add(new Country { Name = "Asia Country", Region = "Asia", Iso2 = "AC", Iso3 = "ACT", CreatedBy = "user", UpdatedBy = "user" });
+        context.Countries.Add(new Country { Name = "Europe Country", Region = "Europe", Iso2 = "EC", Iso3 = "ECT", CreatedBy = "user", UpdatedBy = "user" });
         await context.SaveChangesAsync();
 
         var service = new AppCountryService(context, _cacheServiceMock.Object, _loggerMock.Object, _degradationContext);
@@ -605,8 +604,8 @@ public class CountryServiceTests
         // Arrange
         await _factory.CleanDatabaseAsync();
         var context = GetDbContext();
-        context.Countries.Add(new Country { Name = "SE Asia", Region = "Asia", Subregion = "Southeast Asia", Iso2 = "SA", Iso3 = "SEA", CreatedBy = "user", UpdatedBy = "user", Version = Guid.NewGuid() });
-        context.Countries.Add(new Country { Name = "E Asia", Region = "Asia", Subregion = "East Asia", Iso2 = "EA", Iso3 = "EAS", CreatedBy = "user", UpdatedBy = "user", Version = Guid.NewGuid() });
+        context.Countries.Add(new Country { Name = "SE Asia", Region = "Asia", Subregion = "Southeast Asia", Iso2 = "SA", Iso3 = "SEA", CreatedBy = "user", UpdatedBy = "user" });
+        context.Countries.Add(new Country { Name = "E Asia", Region = "Asia", Subregion = "East Asia", Iso2 = "EA", Iso3 = "EAS", CreatedBy = "user", UpdatedBy = "user" });
         await context.SaveChangesAsync();
 
         var service = new AppCountryService(context, _cacheServiceMock.Object, _loggerMock.Object, _degradationContext);
@@ -625,8 +624,8 @@ public class CountryServiceTests
         // Arrange
         await _factory.CleanDatabaseAsync();
         var context = GetDbContext();
-        context.Countries.Add(new Country { Name = "Zebra", Population = 1000, Iso2 = "ZA", Iso3 = "ZAB", CreatedBy = "user", UpdatedBy = "user", Version = Guid.NewGuid() });
-        context.Countries.Add(new Country { Name = "Alpha", Population = 5000, Iso2 = "AA", Iso3 = "AAB", CreatedBy = "user", UpdatedBy = "user", Version = Guid.NewGuid() });
+        context.Countries.Add(new Country { Name = "Zebra", Population = 1000, Iso2 = "ZA", Iso3 = "ZAB", CreatedBy = "user", UpdatedBy = "user" });
+        context.Countries.Add(new Country { Name = "Alpha", Population = 5000, Iso2 = "AA", Iso3 = "AAB", CreatedBy = "user", UpdatedBy = "user" });
         await context.SaveChangesAsync();
 
         var service = new AppCountryService(context, _cacheServiceMock.Object, _loggerMock.Object, _degradationContext);
@@ -644,8 +643,8 @@ public class CountryServiceTests
         // Arrange
         await _factory.CleanDatabaseAsync();
         var context = GetDbContext();
-        context.Countries.Add(new Country { Name = "Zeta", Iso2 = "ZZ", Iso3 = "ZZZ", CreatedBy = "user", UpdatedBy = "user", Version = Guid.NewGuid() });
-        context.Countries.Add(new Country { Name = "Alpha", Iso2 = "AA", Iso3 = "AAA", CreatedBy = "user", UpdatedBy = "user", Version = Guid.NewGuid() });
+        context.Countries.Add(new Country { Name = "Zeta", Iso2 = "ZZ", Iso3 = "ZZZ", CreatedBy = "user", UpdatedBy = "user" });
+        context.Countries.Add(new Country { Name = "Alpha", Iso2 = "AA", Iso3 = "AAA", CreatedBy = "user", UpdatedBy = "user" });
         await context.SaveChangesAsync();
 
         var service = new AppCountryService(context, _cacheServiceMock.Object, _loggerMock.Object, _degradationContext);

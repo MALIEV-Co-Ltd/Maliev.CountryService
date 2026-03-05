@@ -73,7 +73,6 @@ namespace Maliev.CountryService.Infrastructure.Migrations
                     un_member = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false),
                     landlocked = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false),
                     is_active = table.Column<bool>(type: "boolean", nullable: false, defaultValue: true),
-                    version = table.Column<Guid>(type: "uuid", nullable: false, defaultValueSql: "gen_random_uuid()"),
                     created_by = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
                     created_at_utc = table.Column<DateTime>(type: "timestamp with time zone", nullable: false, defaultValueSql: "NOW()"),
                     updated_by = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),

@@ -47,8 +47,7 @@ public class CountryServiceDegradationTests
             Iso2 = "TT",
             Iso3 = "TTT",
             CreatedBy = "user",
-            UpdatedBy = "user",
-            Version = Guid.NewGuid()
+            UpdatedBy = "user"
         };
         context.Countries.Add(country);
         await context.SaveChangesAsync();

@@ -40,7 +40,7 @@ public static partial class CountrySeedData
                 Landlocked = true,
                 Iso2 = "AF",
                 Iso3 = "AFG",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -75,7 +75,7 @@ public static partial class CountrySeedData
                 Landlocked = false,
                 Iso2 = "AL",
                 Iso3 = "ALB",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -110,7 +110,7 @@ public static partial class CountrySeedData
                 Landlocked = false,
                 Iso2 = "DZ",
                 Iso3 = "DZA",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -145,7 +145,7 @@ public static partial class CountrySeedData
                 Landlocked = true,
                 Iso2 = "AD",
                 Iso3 = "AND",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -180,7 +180,7 @@ public static partial class CountrySeedData
                 Landlocked = false,
                 Iso2 = "AO",
                 Iso3 = "AGO",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -215,7 +215,7 @@ public static partial class CountrySeedData
                 Landlocked = false,
                 Iso2 = "AG",
                 Iso3 = "ATG",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -250,7 +250,7 @@ public static partial class CountrySeedData
                 Landlocked = false,
                 Iso2 = "AR",
                 Iso3 = "ARG",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -285,7 +285,7 @@ public static partial class CountrySeedData
                 Landlocked = true,
                 Iso2 = "AM",
                 Iso3 = "ARM",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -320,7 +320,7 @@ public static partial class CountrySeedData
                 Landlocked = false,
                 Iso2 = "AU",
                 Iso3 = "AUS",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -355,7 +355,7 @@ public static partial class CountrySeedData
                 Landlocked = true,
                 Iso2 = "AT",
                 Iso3 = "AUT",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -390,7 +390,7 @@ public static partial class CountrySeedData
                 Landlocked = true,
                 Iso2 = "AZ",
                 Iso3 = "AZE",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -425,7 +425,7 @@ public static partial class CountrySeedData
                 Landlocked = false,
                 Iso2 = "BS",
                 Iso3 = "BHS",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -460,7 +460,7 @@ public static partial class CountrySeedData
                 Landlocked = false,
                 Iso2 = "BH",
                 Iso3 = "BHR",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -495,7 +495,7 @@ public static partial class CountrySeedData
                 Landlocked = false,
                 Iso2 = "BD",
                 Iso3 = "BGD",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -530,7 +530,7 @@ public static partial class CountrySeedData
                 Landlocked = false,
                 Iso2 = "BB",
                 Iso3 = "BRB",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -565,7 +565,7 @@ public static partial class CountrySeedData
                 Landlocked = true,
                 Iso2 = "BY",
                 Iso3 = "BLR",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -600,7 +600,7 @@ public static partial class CountrySeedData
                 Landlocked = false,
                 Iso2 = "BE",
                 Iso3 = "BEL",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -635,7 +635,7 @@ public static partial class CountrySeedData
                 Landlocked = false,
                 Iso2 = "BZ",
                 Iso3 = "BLZ",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -670,7 +670,7 @@ public static partial class CountrySeedData
                 Landlocked = false,
                 Iso2 = "BJ",
                 Iso3 = "BEN",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -705,7 +705,7 @@ public static partial class CountrySeedData
                 Landlocked = true,
                 Iso2 = "BT",
                 Iso3 = "BTN",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -740,7 +740,7 @@ public static partial class CountrySeedData
                 Landlocked = true,
                 Iso2 = "BO",
                 Iso3 = "BOL",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -775,7 +775,7 @@ public static partial class CountrySeedData
                 Landlocked = false,
                 Iso2 = "BA",
                 Iso3 = "BIH",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -810,7 +810,7 @@ public static partial class CountrySeedData
                 Landlocked = true,
                 Iso2 = "BW",
                 Iso3 = "BWA",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -845,7 +845,7 @@ public static partial class CountrySeedData
                 Landlocked = false,
                 Iso2 = "BR",
                 Iso3 = "BRA",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -880,7 +880,7 @@ public static partial class CountrySeedData
                 Landlocked = false,
                 Iso2 = "BN",
                 Iso3 = "BRN",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -915,7 +915,7 @@ public static partial class CountrySeedData
                 Landlocked = false,
                 Iso2 = "BG",
                 Iso3 = "BGR",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -950,7 +950,7 @@ public static partial class CountrySeedData
                 Landlocked = true,
                 Iso2 = "BF",
                 Iso3 = "BFA",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -985,7 +985,7 @@ public static partial class CountrySeedData
                 Landlocked = true,
                 Iso2 = "BI",
                 Iso3 = "BDI",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -1020,7 +1020,7 @@ public static partial class CountrySeedData
                 Landlocked = false,
                 Iso2 = "CV",
                 Iso3 = "CPV",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -1055,7 +1055,7 @@ public static partial class CountrySeedData
                 Landlocked = false,
                 Iso2 = "KH",
                 Iso3 = "KHM",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -1090,7 +1090,7 @@ public static partial class CountrySeedData
                 Landlocked = false,
                 Iso2 = "CM",
                 Iso3 = "CMR",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -1125,7 +1125,7 @@ public static partial class CountrySeedData
                 Landlocked = false,
                 Iso2 = "CA",
                 Iso3 = "CAN",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -1160,7 +1160,7 @@ public static partial class CountrySeedData
                 Landlocked = true,
                 Iso2 = "CF",
                 Iso3 = "CAF",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -1195,7 +1195,7 @@ public static partial class CountrySeedData
                 Landlocked = true,
                 Iso2 = "TD",
                 Iso3 = "TCD",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -1230,7 +1230,7 @@ public static partial class CountrySeedData
                 Landlocked = false,
                 Iso2 = "CL",
                 Iso3 = "CHL",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -1265,7 +1265,7 @@ public static partial class CountrySeedData
                 Landlocked = false,
                 Iso2 = "CN",
                 Iso3 = "CHN",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -1300,7 +1300,7 @@ public static partial class CountrySeedData
                 Landlocked = false,
                 Iso2 = "CO",
                 Iso3 = "COL",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -1335,7 +1335,7 @@ public static partial class CountrySeedData
                 Landlocked = false,
                 Iso2 = "KM",
                 Iso3 = "COM",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -1370,7 +1370,7 @@ public static partial class CountrySeedData
                 Landlocked = false,
                 Iso2 = "CD",
                 Iso3 = "COD",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -1405,7 +1405,7 @@ public static partial class CountrySeedData
                 Landlocked = false,
                 Iso2 = "CG",
                 Iso3 = "COG",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -1440,7 +1440,7 @@ public static partial class CountrySeedData
                 Landlocked = false,
                 Iso2 = "CR",
                 Iso3 = "CRI",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -1475,7 +1475,7 @@ public static partial class CountrySeedData
                 Landlocked = false,
                 Iso2 = "CI",
                 Iso3 = "CIV",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -1510,7 +1510,7 @@ public static partial class CountrySeedData
                 Landlocked = false,
                 Iso2 = "HR",
                 Iso3 = "HRV",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -1545,7 +1545,7 @@ public static partial class CountrySeedData
                 Landlocked = false,
                 Iso2 = "CU",
                 Iso3 = "CUB",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -1580,7 +1580,7 @@ public static partial class CountrySeedData
                 Landlocked = false,
                 Iso2 = "CY",
                 Iso3 = "CYP",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -1615,7 +1615,7 @@ public static partial class CountrySeedData
                 Landlocked = true,
                 Iso2 = "CZ",
                 Iso3 = "CZE",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -1650,7 +1650,7 @@ public static partial class CountrySeedData
                 Landlocked = false,
                 Iso2 = "DK",
                 Iso3 = "DNK",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -1685,7 +1685,7 @@ public static partial class CountrySeedData
                 Landlocked = false,
                 Iso2 = "DJ",
                 Iso3 = "DJI",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -1720,7 +1720,7 @@ public static partial class CountrySeedData
                 Landlocked = false,
                 Iso2 = "DM",
                 Iso3 = "DMA",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -1755,7 +1755,7 @@ public static partial class CountrySeedData
                 Landlocked = false,
                 Iso2 = "DO",
                 Iso3 = "DOM",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -1790,7 +1790,7 @@ public static partial class CountrySeedData
                 Landlocked = false,
                 Iso2 = "TL",
                 Iso3 = "TLS",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -1825,7 +1825,7 @@ public static partial class CountrySeedData
                 Landlocked = false,
                 Iso2 = "EC",
                 Iso3 = "ECU",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -1860,7 +1860,7 @@ public static partial class CountrySeedData
                 Landlocked = false,
                 Iso2 = "EG",
                 Iso3 = "EGY",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -1895,7 +1895,7 @@ public static partial class CountrySeedData
                 Landlocked = false,
                 Iso2 = "SV",
                 Iso3 = "SLV",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -1930,7 +1930,7 @@ public static partial class CountrySeedData
                 Landlocked = false,
                 Iso2 = "GQ",
                 Iso3 = "GNQ",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -1965,7 +1965,7 @@ public static partial class CountrySeedData
                 Landlocked = false,
                 Iso2 = "ER",
                 Iso3 = "ERI",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -2000,7 +2000,7 @@ public static partial class CountrySeedData
                 Landlocked = false,
                 Iso2 = "EE",
                 Iso3 = "EST",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -2035,7 +2035,7 @@ public static partial class CountrySeedData
                 Landlocked = true,
                 Iso2 = "ET",
                 Iso3 = "ETH",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -2070,7 +2070,7 @@ public static partial class CountrySeedData
                 Landlocked = false,
                 Iso2 = "FJ",
                 Iso3 = "FJI",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -2105,7 +2105,7 @@ public static partial class CountrySeedData
                 Landlocked = false,
                 Iso2 = "FI",
                 Iso3 = "FIN",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -2140,7 +2140,7 @@ public static partial class CountrySeedData
                 Landlocked = false,
                 Iso2 = "FR",
                 Iso3 = "FRA",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -2175,7 +2175,7 @@ public static partial class CountrySeedData
                 Landlocked = false,
                 Iso2 = "GA",
                 Iso3 = "GAB",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -2210,7 +2210,7 @@ public static partial class CountrySeedData
                 Landlocked = false,
                 Iso2 = "GM",
                 Iso3 = "GMB",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -2245,7 +2245,7 @@ public static partial class CountrySeedData
                 Landlocked = false,
                 Iso2 = "GE",
                 Iso3 = "GEO",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -2280,7 +2280,7 @@ public static partial class CountrySeedData
                 Landlocked = false,
                 Iso2 = "DE",
                 Iso3 = "DEU",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -2315,7 +2315,7 @@ public static partial class CountrySeedData
                 Landlocked = false,
                 Iso2 = "GH",
                 Iso3 = "GHA",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -2350,7 +2350,7 @@ public static partial class CountrySeedData
                 Landlocked = false,
                 Iso2 = "GR",
                 Iso3 = "GRC",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -2385,7 +2385,7 @@ public static partial class CountrySeedData
                 Landlocked = false,
                 Iso2 = "GD",
                 Iso3 = "GRD",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -2420,7 +2420,7 @@ public static partial class CountrySeedData
                 Landlocked = false,
                 Iso2 = "GT",
                 Iso3 = "GTM",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -2455,7 +2455,7 @@ public static partial class CountrySeedData
                 Landlocked = false,
                 Iso2 = "GN",
                 Iso3 = "GIN",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -2490,7 +2490,7 @@ public static partial class CountrySeedData
                 Landlocked = false,
                 Iso2 = "GW",
                 Iso3 = "GNB",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -2525,7 +2525,7 @@ public static partial class CountrySeedData
                 Landlocked = false,
                 Iso2 = "GY",
                 Iso3 = "GUY",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -2560,7 +2560,7 @@ public static partial class CountrySeedData
                 Landlocked = false,
                 Iso2 = "HT",
                 Iso3 = "HTI",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -2595,7 +2595,7 @@ public static partial class CountrySeedData
                 Landlocked = false,
                 Iso2 = "HN",
                 Iso3 = "HND",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -2630,7 +2630,7 @@ public static partial class CountrySeedData
                 Landlocked = true,
                 Iso2 = "HU",
                 Iso3 = "HUN",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -2665,7 +2665,7 @@ public static partial class CountrySeedData
                 Landlocked = false,
                 Iso2 = "IS",
                 Iso3 = "ISL",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -2700,7 +2700,7 @@ public static partial class CountrySeedData
                 Landlocked = false,
                 Iso2 = "IN",
                 Iso3 = "IND",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -2735,7 +2735,7 @@ public static partial class CountrySeedData
                 Landlocked = false,
                 Iso2 = "ID",
                 Iso3 = "IDN",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -2770,7 +2770,7 @@ public static partial class CountrySeedData
                 Landlocked = false,
                 Iso2 = "IR",
                 Iso3 = "IRN",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -2805,7 +2805,7 @@ public static partial class CountrySeedData
                 Landlocked = false,
                 Iso2 = "IQ",
                 Iso3 = "IRQ",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -2840,7 +2840,7 @@ public static partial class CountrySeedData
                 Landlocked = false,
                 Iso2 = "IE",
                 Iso3 = "IRL",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -2875,7 +2875,7 @@ public static partial class CountrySeedData
                 Landlocked = false,
                 Iso2 = "IL",
                 Iso3 = "ISR",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -2910,7 +2910,7 @@ public static partial class CountrySeedData
                 Landlocked = false,
                 Iso2 = "IT",
                 Iso3 = "ITA",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -2945,7 +2945,7 @@ public static partial class CountrySeedData
                 Landlocked = false,
                 Iso2 = "JM",
                 Iso3 = "JAM",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -2980,7 +2980,7 @@ public static partial class CountrySeedData
                 Landlocked = false,
                 Iso2 = "JP",
                 Iso3 = "JPN",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -3015,7 +3015,7 @@ public static partial class CountrySeedData
                 Landlocked = false,
                 Iso2 = "JO",
                 Iso3 = "JOR",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -3050,7 +3050,7 @@ public static partial class CountrySeedData
                 Landlocked = true,
                 Iso2 = "KZ",
                 Iso3 = "KAZ",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -3085,7 +3085,7 @@ public static partial class CountrySeedData
                 Landlocked = false,
                 Iso2 = "KE",
                 Iso3 = "KEN",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -3120,7 +3120,7 @@ public static partial class CountrySeedData
                 Landlocked = false,
                 Iso2 = "KI",
                 Iso3 = "KIR",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -3155,7 +3155,7 @@ public static partial class CountrySeedData
                 Landlocked = false,
                 Iso2 = "KP",
                 Iso3 = "PRK",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -3190,7 +3190,7 @@ public static partial class CountrySeedData
                 Landlocked = false,
                 Iso2 = "KR",
                 Iso3 = "KOR",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -3225,7 +3225,7 @@ public static partial class CountrySeedData
                 Landlocked = true,
                 Iso2 = "XK",
                 Iso3 = "UNK",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -3260,7 +3260,7 @@ public static partial class CountrySeedData
                 Landlocked = false,
                 Iso2 = "KW",
                 Iso3 = "KWT",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -3295,7 +3295,7 @@ public static partial class CountrySeedData
                 Landlocked = true,
                 Iso2 = "KG",
                 Iso3 = "KGZ",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -3330,7 +3330,7 @@ public static partial class CountrySeedData
                 Landlocked = true,
                 Iso2 = "LA",
                 Iso3 = "LAO",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -3365,7 +3365,7 @@ public static partial class CountrySeedData
                 Landlocked = false,
                 Iso2 = "LV",
                 Iso3 = "LVA",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -3400,7 +3400,7 @@ public static partial class CountrySeedData
                 Landlocked = false,
                 Iso2 = "LB",
                 Iso3 = "LBN",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -3435,7 +3435,7 @@ public static partial class CountrySeedData
                 Landlocked = true,
                 Iso2 = "LS",
                 Iso3 = "LSO",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -3470,7 +3470,7 @@ public static partial class CountrySeedData
                 Landlocked = false,
                 Iso2 = "LR",
                 Iso3 = "LBR",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -3505,7 +3505,7 @@ public static partial class CountrySeedData
                 Landlocked = false,
                 Iso2 = "LY",
                 Iso3 = "LBY",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -3540,7 +3540,7 @@ public static partial class CountrySeedData
                 Landlocked = true,
                 Iso2 = "LI",
                 Iso3 = "LIE",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -3575,7 +3575,7 @@ public static partial class CountrySeedData
                 Landlocked = false,
                 Iso2 = "LT",
                 Iso3 = "LTU",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -3610,7 +3610,7 @@ public static partial class CountrySeedData
                 Landlocked = true,
                 Iso2 = "LU",
                 Iso3 = "LUX",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -3645,7 +3645,7 @@ public static partial class CountrySeedData
                 Landlocked = true,
                 Iso2 = "MK",
                 Iso3 = "MKD",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -3680,7 +3680,7 @@ public static partial class CountrySeedData
                 Landlocked = false,
                 Iso2 = "MG",
                 Iso3 = "MDG",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -3715,7 +3715,7 @@ public static partial class CountrySeedData
                 Landlocked = true,
                 Iso2 = "MW",
                 Iso3 = "MWI",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -3750,7 +3750,7 @@ public static partial class CountrySeedData
                 Landlocked = false,
                 Iso2 = "MY",
                 Iso3 = "MYS",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -3785,7 +3785,7 @@ public static partial class CountrySeedData
                 Landlocked = false,
                 Iso2 = "MV",
                 Iso3 = "MDV",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -3820,7 +3820,7 @@ public static partial class CountrySeedData
                 Landlocked = true,
                 Iso2 = "ML",
                 Iso3 = "MLI",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -3855,7 +3855,7 @@ public static partial class CountrySeedData
                 Landlocked = false,
                 Iso2 = "MT",
                 Iso3 = "MLT",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -3890,7 +3890,7 @@ public static partial class CountrySeedData
                 Landlocked = false,
                 Iso2 = "MH",
                 Iso3 = "MHL",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -3925,7 +3925,7 @@ public static partial class CountrySeedData
                 Landlocked = false,
                 Iso2 = "MR",
                 Iso3 = "MRT",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -3960,7 +3960,7 @@ public static partial class CountrySeedData
                 Landlocked = false,
                 Iso2 = "MU",
                 Iso3 = "MUS",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -3995,7 +3995,7 @@ public static partial class CountrySeedData
                 Landlocked = false,
                 Iso2 = "MX",
                 Iso3 = "MEX",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -4030,7 +4030,7 @@ public static partial class CountrySeedData
                 Landlocked = false,
                 Iso2 = "FM",
                 Iso3 = "FSM",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -4065,7 +4065,7 @@ public static partial class CountrySeedData
                 Landlocked = true,
                 Iso2 = "MD",
                 Iso3 = "MDA",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -4100,7 +4100,7 @@ public static partial class CountrySeedData
                 Landlocked = false,
                 Iso2 = "MC",
                 Iso3 = "MCO",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -4135,7 +4135,7 @@ public static partial class CountrySeedData
                 Landlocked = true,
                 Iso2 = "MN",
                 Iso3 = "MNG",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -4170,7 +4170,7 @@ public static partial class CountrySeedData
                 Landlocked = false,
                 Iso2 = "ME",
                 Iso3 = "MNE",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -4205,7 +4205,7 @@ public static partial class CountrySeedData
                 Landlocked = false,
                 Iso2 = "MA",
                 Iso3 = "MAR",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -4240,7 +4240,7 @@ public static partial class CountrySeedData
                 Landlocked = false,
                 Iso2 = "MZ",
                 Iso3 = "MOZ",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -4275,7 +4275,7 @@ public static partial class CountrySeedData
                 Landlocked = false,
                 Iso2 = "MM",
                 Iso3 = "MMR",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -4310,7 +4310,7 @@ public static partial class CountrySeedData
                 Landlocked = false,
                 Iso2 = "NA",
                 Iso3 = "NAM",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -4345,7 +4345,7 @@ public static partial class CountrySeedData
                 Landlocked = false,
                 Iso2 = "NR",
                 Iso3 = "NRU",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -4380,7 +4380,7 @@ public static partial class CountrySeedData
                 Landlocked = true,
                 Iso2 = "NP",
                 Iso3 = "NPL",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -4415,7 +4415,7 @@ public static partial class CountrySeedData
                 Landlocked = false,
                 Iso2 = "NL",
                 Iso3 = "NLD",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -4450,7 +4450,7 @@ public static partial class CountrySeedData
                 Landlocked = false,
                 Iso2 = "NZ",
                 Iso3 = "NZL",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -4485,7 +4485,7 @@ public static partial class CountrySeedData
                 Landlocked = false,
                 Iso2 = "NI",
                 Iso3 = "NIC",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -4520,7 +4520,7 @@ public static partial class CountrySeedData
                 Landlocked = true,
                 Iso2 = "NE",
                 Iso3 = "NER",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -4555,7 +4555,7 @@ public static partial class CountrySeedData
                 Landlocked = false,
                 Iso2 = "NG",
                 Iso3 = "NGA",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -4590,7 +4590,7 @@ public static partial class CountrySeedData
                 Landlocked = false,
                 Iso2 = "NO",
                 Iso3 = "NOR",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -4625,7 +4625,7 @@ public static partial class CountrySeedData
                 Landlocked = false,
                 Iso2 = "OM",
                 Iso3 = "OMN",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -4660,7 +4660,7 @@ public static partial class CountrySeedData
                 Landlocked = false,
                 Iso2 = "PK",
                 Iso3 = "PAK",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -4695,7 +4695,7 @@ public static partial class CountrySeedData
                 Landlocked = false,
                 Iso2 = "PW",
                 Iso3 = "PLW",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -4730,7 +4730,7 @@ public static partial class CountrySeedData
                 Landlocked = false,
                 Iso2 = "PA",
                 Iso3 = "PAN",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -4765,7 +4765,7 @@ public static partial class CountrySeedData
                 Landlocked = false,
                 Iso2 = "PG",
                 Iso3 = "PNG",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -4800,7 +4800,7 @@ public static partial class CountrySeedData
                 Landlocked = true,
                 Iso2 = "PY",
                 Iso3 = "PRY",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -4835,7 +4835,7 @@ public static partial class CountrySeedData
                 Landlocked = false,
                 Iso2 = "PE",
                 Iso3 = "PER",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -4870,7 +4870,7 @@ public static partial class CountrySeedData
                 Landlocked = false,
                 Iso2 = "PH",
                 Iso3 = "PHL",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -4905,7 +4905,7 @@ public static partial class CountrySeedData
                 Landlocked = false,
                 Iso2 = "PL",
                 Iso3 = "POL",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -4940,7 +4940,7 @@ public static partial class CountrySeedData
                 Landlocked = false,
                 Iso2 = "PT",
                 Iso3 = "PRT",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -4975,7 +4975,7 @@ public static partial class CountrySeedData
                 Landlocked = false,
                 Iso2 = "QA",
                 Iso3 = "QAT",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -5010,7 +5010,7 @@ public static partial class CountrySeedData
                 Landlocked = false,
                 Iso2 = "RO",
                 Iso3 = "ROU",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -5045,7 +5045,7 @@ public static partial class CountrySeedData
                 Landlocked = false,
                 Iso2 = "RU",
                 Iso3 = "RUS",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -5080,7 +5080,7 @@ public static partial class CountrySeedData
                 Landlocked = true,
                 Iso2 = "RW",
                 Iso3 = "RWA",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -5115,7 +5115,7 @@ public static partial class CountrySeedData
                 Landlocked = false,
                 Iso2 = "KN",
                 Iso3 = "KNA",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -5150,7 +5150,7 @@ public static partial class CountrySeedData
                 Landlocked = false,
                 Iso2 = "LC",
                 Iso3 = "LCA",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -5185,7 +5185,7 @@ public static partial class CountrySeedData
                 Landlocked = false,
                 Iso2 = "VC",
                 Iso3 = "VCT",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -5220,7 +5220,7 @@ public static partial class CountrySeedData
                 Landlocked = false,
                 Iso2 = "WS",
                 Iso3 = "WSM",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -5255,7 +5255,7 @@ public static partial class CountrySeedData
                 Landlocked = true,
                 Iso2 = "SM",
                 Iso3 = "SMR",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -5290,7 +5290,7 @@ public static partial class CountrySeedData
                 Landlocked = false,
                 Iso2 = "ST",
                 Iso3 = "STP",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -5325,7 +5325,7 @@ public static partial class CountrySeedData
                 Landlocked = false,
                 Iso2 = "SA",
                 Iso3 = "SAU",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -5360,7 +5360,7 @@ public static partial class CountrySeedData
                 Landlocked = false,
                 Iso2 = "SN",
                 Iso3 = "SEN",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -5395,7 +5395,7 @@ public static partial class CountrySeedData
                 Landlocked = true,
                 Iso2 = "RS",
                 Iso3 = "SRB",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -5430,7 +5430,7 @@ public static partial class CountrySeedData
                 Landlocked = false,
                 Iso2 = "SC",
                 Iso3 = "SYC",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -5465,7 +5465,7 @@ public static partial class CountrySeedData
                 Landlocked = false,
                 Iso2 = "SL",
                 Iso3 = "SLE",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -5500,7 +5500,7 @@ public static partial class CountrySeedData
                 Landlocked = false,
                 Iso2 = "SG",
                 Iso3 = "SGP",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -5535,7 +5535,7 @@ public static partial class CountrySeedData
                 Landlocked = true,
                 Iso2 = "SK",
                 Iso3 = "SVK",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -5570,7 +5570,7 @@ public static partial class CountrySeedData
                 Landlocked = false,
                 Iso2 = "SI",
                 Iso3 = "SVN",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -5605,7 +5605,7 @@ public static partial class CountrySeedData
                 Landlocked = false,
                 Iso2 = "SB",
                 Iso3 = "SLB",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -5640,7 +5640,7 @@ public static partial class CountrySeedData
                 Landlocked = false,
                 Iso2 = "SO",
                 Iso3 = "SOM",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -5675,7 +5675,7 @@ public static partial class CountrySeedData
                 Landlocked = false,
                 Iso2 = "ZA",
                 Iso3 = "ZAF",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -5710,7 +5710,7 @@ public static partial class CountrySeedData
                 Landlocked = false,
                 Iso2 = "ES",
                 Iso3 = "ESP",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -5745,7 +5745,7 @@ public static partial class CountrySeedData
                 Landlocked = false,
                 Iso2 = "LK",
                 Iso3 = "LKA",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -5780,7 +5780,7 @@ public static partial class CountrySeedData
                 Landlocked = false,
                 Iso2 = "SD",
                 Iso3 = "SDN",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -5815,7 +5815,7 @@ public static partial class CountrySeedData
                 Landlocked = true,
                 Iso2 = "SS",
                 Iso3 = "SSD",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -5850,7 +5850,7 @@ public static partial class CountrySeedData
                 Landlocked = false,
                 Iso2 = "SR",
                 Iso3 = "SUR",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -5885,7 +5885,7 @@ public static partial class CountrySeedData
                 Landlocked = true,
                 Iso2 = "SZ",
                 Iso3 = "SWZ",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -5920,7 +5920,7 @@ public static partial class CountrySeedData
                 Landlocked = false,
                 Iso2 = "SE",
                 Iso3 = "SWE",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -5955,7 +5955,7 @@ public static partial class CountrySeedData
                 Landlocked = true,
                 Iso2 = "CH",
                 Iso3 = "CHE",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -5990,7 +5990,7 @@ public static partial class CountrySeedData
                 Landlocked = false,
                 Iso2 = "SY",
                 Iso3 = "SYR",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -6025,7 +6025,7 @@ public static partial class CountrySeedData
                 Landlocked = false,
                 Iso2 = "TW",
                 Iso3 = "TWN",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -6060,7 +6060,7 @@ public static partial class CountrySeedData
                 Landlocked = true,
                 Iso2 = "TJ",
                 Iso3 = "TJK",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -6095,7 +6095,7 @@ public static partial class CountrySeedData
                 Landlocked = false,
                 Iso2 = "TZ",
                 Iso3 = "TZA",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -6130,7 +6130,7 @@ public static partial class CountrySeedData
                 Landlocked = false,
                 Iso2 = "TH",
                 Iso3 = "THA",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -6165,7 +6165,7 @@ public static partial class CountrySeedData
                 Landlocked = false,
                 Iso2 = "TG",
                 Iso3 = "TGO",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -6200,7 +6200,7 @@ public static partial class CountrySeedData
                 Landlocked = false,
                 Iso2 = "TO",
                 Iso3 = "TON",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -6235,7 +6235,7 @@ public static partial class CountrySeedData
                 Landlocked = false,
                 Iso2 = "TT",
                 Iso3 = "TTO",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -6270,7 +6270,7 @@ public static partial class CountrySeedData
                 Landlocked = false,
                 Iso2 = "TN",
                 Iso3 = "TUN",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -6305,7 +6305,7 @@ public static partial class CountrySeedData
                 Landlocked = false,
                 Iso2 = "TR",
                 Iso3 = "TUR",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -6340,7 +6340,7 @@ public static partial class CountrySeedData
                 Landlocked = true,
                 Iso2 = "TM",
                 Iso3 = "TKM",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -6375,7 +6375,7 @@ public static partial class CountrySeedData
                 Landlocked = false,
                 Iso2 = "TV",
                 Iso3 = "TUV",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -6410,7 +6410,7 @@ public static partial class CountrySeedData
                 Landlocked = true,
                 Iso2 = "UG",
                 Iso3 = "UGA",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -6445,7 +6445,7 @@ public static partial class CountrySeedData
                 Landlocked = false,
                 Iso2 = "UA",
                 Iso3 = "UKR",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -6480,7 +6480,7 @@ public static partial class CountrySeedData
                 Landlocked = false,
                 Iso2 = "AE",
                 Iso3 = "ARE",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -6515,7 +6515,7 @@ public static partial class CountrySeedData
                 Landlocked = false,
                 Iso2 = "GB",
                 Iso3 = "GBR",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -6550,7 +6550,7 @@ public static partial class CountrySeedData
                 Landlocked = false,
                 Iso2 = "US",
                 Iso3 = "USA",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -6585,7 +6585,7 @@ public static partial class CountrySeedData
                 Landlocked = false,
                 Iso2 = "UY",
                 Iso3 = "URY",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -6620,7 +6620,7 @@ public static partial class CountrySeedData
                 Landlocked = true,
                 Iso2 = "UZ",
                 Iso3 = "UZB",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -6655,7 +6655,7 @@ public static partial class CountrySeedData
                 Landlocked = false,
                 Iso2 = "VU",
                 Iso3 = "VUT",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -6690,7 +6690,7 @@ public static partial class CountrySeedData
                 Landlocked = true,
                 Iso2 = "VA",
                 Iso3 = "VAT",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -6725,7 +6725,7 @@ public static partial class CountrySeedData
                 Landlocked = false,
                 Iso2 = "VE",
                 Iso3 = "VEN",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -6760,7 +6760,7 @@ public static partial class CountrySeedData
                 Landlocked = false,
                 Iso2 = "VN",
                 Iso3 = "VNM",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -6795,7 +6795,7 @@ public static partial class CountrySeedData
                 Landlocked = false,
                 Iso2 = "YE",
                 Iso3 = "YEM",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -6830,7 +6830,7 @@ public static partial class CountrySeedData
                 Landlocked = true,
                 Iso2 = "ZM",
                 Iso3 = "ZMB",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -6865,7 +6865,7 @@ public static partial class CountrySeedData
                 Landlocked = true,
                 Iso2 = "ZW",
                 Iso3 = "ZWE",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -6900,7 +6900,7 @@ public static partial class CountrySeedData
                 Landlocked = false,
                 Iso2 = "HK",
                 Iso3 = "HKG",
-                Version = Guid.NewGuid(),
+
                 IsActive = true,
                 CreatedBy = "SYSTEM",
                 CreatedAtUtc = DateTime.UtcNow,

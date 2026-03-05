@@ -311,8 +311,7 @@ public partial class BulkImportService : IBulkImportService
                         CreatedAtUtc = DateTime.UtcNow,
                         LastModifiedUtc = DateTime.UtcNow,
                         CreatedBy = job.CreatedBy,
-                        UpdatedBy = job.CreatedBy,
-                        Version = Guid.NewGuid()
+                        UpdatedBy = job.CreatedBy
                     }).ToList();
 
                     _context.Countries.AddRange(countriesToInsert);
