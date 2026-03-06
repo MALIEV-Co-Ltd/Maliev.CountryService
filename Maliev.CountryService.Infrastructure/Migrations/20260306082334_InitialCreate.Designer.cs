@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Maliev.CountryService.Infrastructure.Migrations
 {
     [DbContext(typeof(CountryDbContext))]
-    [Migration("20260306073828_InitialCreate")]
+    [Migration("20260306082334_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -432,6 +432,12 @@ namespace Maliev.CountryService.Infrastructure.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)")
                         .HasColumnName("updated_by");
+
+                    b.Property<long>("Version")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasDefaultValue(1L)
+                        .HasColumnName("version");
 
                     b.HasKey("Id")
                         .HasName("pk_countries");

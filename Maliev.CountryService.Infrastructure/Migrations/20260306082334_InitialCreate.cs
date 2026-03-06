@@ -77,6 +77,7 @@ namespace Maliev.CountryService.Infrastructure.Migrations
                     created_at_utc = table.Column<DateTime>(type: "timestamp with time zone", nullable: false, defaultValueSql: "NOW()"),
                     updated_by = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
                     last_modified_utc = table.Column<DateTime>(type: "timestamp with time zone", nullable: false, defaultValueSql: "NOW()"),
+                    version = table.Column<long>(type: "bigint", nullable: false, defaultValue: 1L),
                     deleted_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
                 },
                 constraints: table =>
