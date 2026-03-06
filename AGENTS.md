@@ -73,6 +73,14 @@
    - Iso3: `^[A-Z]{3}$` (3 uppercase letters).
 3. **Resilience**: Query by ISO code instead of ID after DB restarts in resilience tests (IDs may change or be unreliable across resets/seeds if not careful, though UUIDs typically persist, logic implies state reset).
 
+### Entity Framework Core Migrations
+- **Package Restriction**: `Microsoft.EntityFrameworkCore.Design` MUST ONLY be referenced in the Infrastructure project where migrations exist. It is PROHIBITED in the Api project.
+- **Creating Migrations**: Always use the Infrastructure project as the startup project:
+  ```bash
+  dotnet ef migrations add <Name> --project Maliev.CountryService.Infrastructure
+  ```
+- **Applying Migrations**: Use the Infrastructure project's context or run migrations at runtime via the Api.
+
 ## 4. Project Structure
 - `Maliev.CountryService.Api`: Main Web API application.
   - `Controllers/`: API Endpoints.

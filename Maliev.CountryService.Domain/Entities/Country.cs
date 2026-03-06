@@ -157,12 +157,6 @@ public class Country
     public bool IsActive { get; set; } = true;
 
     /// <summary>
-    /// Gets or sets the row version for optimistic concurrency.
-    /// </summary>
-    [ConcurrencyCheck]
-    public uint RowVersion { get; set; }
-
-    /// <summary>
     /// Gets or sets the identifier of the user who created this record.
     /// </summary>
     [Required, StringLength(100)]
@@ -183,6 +177,11 @@ public class Country
     /// Gets or sets the UTC timestamp when the record was last modified.
     /// </summary>
     public DateTime LastModifiedUtc { get; set; } = DateTime.UtcNow;
+
+    /// <summary>
+    /// Gets or sets the version number for optimistic concurrency control.
+    /// </summary>
+    public uint Version { get; set; } = 1;
 
     /// <summary>
     /// Gets or sets the UTC timestamp when the record was soft-deleted.
