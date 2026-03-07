@@ -75,9 +75,9 @@
 
 ### Entity Framework Core Migrations
 - **Package Restriction**: `Microsoft.EntityFrameworkCore.Design` MUST ONLY be referenced in the Infrastructure project where migrations exist. It is PROHIBITED in the Api project.
-- **Creating Migrations**: Always use the Infrastructure project as the startup project:
+- **Creating Migrations**: Always use the Infrastructure project as both project and startup-project:
   ```bash
-  dotnet ef migrations add <Name> --project Maliev.CountryService.Infrastructure --startup-project Maliev.CountryService.Api
+  dotnet ef migrations add <Name> --project Maliev.CountryService.Infrastructure --startup-project Maliev.CountryService.Infrastructure
   ```
 - **Applying Migrations**: Use the Infrastructure project's context or run migrations at runtime via the Api.
 
@@ -103,9 +103,9 @@
 ### EF Core Design Package
 - ❌ `Microsoft.EntityFrameworkCore.Design` MUST NOT be in Api projects
 - ✅ It belongs ONLY in the Infrastructure (or Data) project where migrations live
-- Migration commands must target Infrastructure, not Api:
+- Migration commands must target Infrastructure as both project and startup-project (since EF Core Design package is in Infrastructure):
   ```
-  dotnet ef migrations add <Name> --project Maliev.<Domain>Service.Infrastructure --startup-project ../Maliev.<Domain>Service.Api
+  dotnet ef migrations add <Name> --project Maliev.<Domain>Service.Infrastructure --startup-project Maliev.<Domain>Service.Infrastructure
   ```
 
 ### PostgreSQL xmin Concurrency — Mandatory Pattern
