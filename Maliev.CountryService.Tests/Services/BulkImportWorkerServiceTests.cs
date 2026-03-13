@@ -20,7 +20,9 @@ public class BulkImportWorkerServiceTests : IAsyncLifetime
 
     public BulkImportWorkerServiceTests()
     {
-        _postgresContainer = new PostgreSqlBuilder("postgres:18-alpine")
+        _postgresContainer = 
+                #pragma warning disable CS0618
+        new PostgreSqlBuilder().WithImage("postgres:18-alpine")
             .Build();
         _loggerMock = new Mock<ILogger<BulkImportWorkerService>>();
         _bulkImportServiceMock = new Mock<IBulkImportService>();
@@ -78,6 +80,7 @@ public class BulkImportWorkerServiceTests : IAsyncLifetime
         var config = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?> { ["BulkImport:PollIntervalSeconds"] = "1" })
             .Build();
+#pragma warning restore CS0618
         var service = new BulkImportWorkerService(scopeFactory, _loggerMock.Object, config);
 
         // Act
@@ -102,3 +105,6 @@ public class BulkImportWorkerServiceTests : IAsyncLifetime
         _bulkImportServiceMock.Verify(x => x.ProcessImportAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.AtLeastOnce);
     }
 }
+
+
+
