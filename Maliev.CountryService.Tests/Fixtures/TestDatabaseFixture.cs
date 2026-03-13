@@ -21,7 +21,7 @@ public class TestDatabaseFixture : IAsyncLifetime
     public async Task InitializeAsync()
     {
         PostgresContainer = 
-                #pragma warning disable CS0618
+#pragma warning disable CS0618
         new PostgreSqlBuilder().WithImage("postgres:18-alpine")
             .WithDatabase("test_db")
             .WithUsername("postgres")
