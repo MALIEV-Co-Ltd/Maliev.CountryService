@@ -16,7 +16,7 @@ namespace Maliev.CountryService.Api.Controllers;
 /// Maximum 10,000 countries per batch. All operations logged with full audit trail.
 /// </summary>
 [ApiController]
-[ApiVersion("1.0")]
+[ApiVersion("1")]
 [Route("country/v{version:apiVersion}/admin/bulk-import")]
 [EnableRateLimiting(RateLimitPolicies.Batch)]
 public class BulkImportController : ControllerBase

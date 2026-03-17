@@ -16,7 +16,7 @@ namespace Maliev.CountryService.Api.Controllers;
 /// All modifications are logged with full audit trail including user context and ETag-based optimistic concurrency control.
 /// </summary>
 [ApiController]
-[ApiVersion("1.0")]
+[ApiVersion("1")]
 [Route("country/v{version:apiVersion}/admin/countries")]
 [EnableRateLimiting(RateLimitPolicies.Admin)]
 public class AdminCountriesController : ControllerBase

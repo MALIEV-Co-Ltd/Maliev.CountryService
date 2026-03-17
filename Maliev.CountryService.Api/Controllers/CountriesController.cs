@@ -13,7 +13,7 @@ namespace Maliev.CountryService.Api.Controllers;
 /// Provides lookup by ID/ISO codes, pagination, and search capabilities with caching.
 /// </summary>
 [ApiController]
-[ApiVersion("1.0")]
+[ApiVersion("1")]
 [Route("country/v{version:apiVersion}/countries")]
 public class CountriesController : ControllerBase
 {
