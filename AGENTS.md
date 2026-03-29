@@ -73,6 +73,25 @@
    - Iso3: `^[A-Z]{3}$` (3 uppercase letters).
 3. **Resilience**: Query by ISO code instead of ID after DB restarts in resilience tests (IDs may change or be unreliable across resets/seeds if not careful, though UUIDs typically persist, logic implies state reset).
 
+### Testing Strategy (4-Tier Pyramid Context)
+
+This service's tests cover **Tier 1 (Unit)** and **Tier 2 (Service Integration)** of the Maliev testing pyramid:
+
+| Tier | What to Test | Infrastructure |
+|------|-------------|---------------|
+| **Unit** | Business logic, domain models, service methods with mocked dependencies | None (mocks only) |
+| **Service Integration** | API endpoints, database persistence, permission enforcement, input validation | `BaseIntegrationTestFactory` + Testcontainers (Postgres/Redis/RabbitMQ) |
+
+**Tier 3 (System Integration)** — cross-service workflows and event chains — is tested in `Maliev.Aspire.Tests/`.
+
+#### Key Rules
+- Use `BaseIntegrationTestFactory<TProgram, TDbContext>` for integration tests (real Testcontainers, never InMemoryDatabase)
+- Test naming: `MethodName_StateUnderTest_ExpectedBehavior`
+- Minimum 80% code coverage
+- Use `[Fact]` for single cases, `[Theory]` for parameterized tests
+
+> Full ecosystem test strategy: `Maliev.Aspire.Tests/TEST_PLAN.md`
+
 ### Entity Framework Core Migrations
 - **Package Restriction**: `Microsoft.EntityFrameworkCore.Design` MUST ONLY be referenced in the Infrastructure project where migrations exist. It is PROHIBITED in the Api project.
 - **Creating Migrations**: Always use the Infrastructure project as both project and startup-project:
