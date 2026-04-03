@@ -1,77 +1,109 @@
-# Maliev.CountryService Development Guidelines for Agents
+# Maliev.CountryService — Agent Coding Guide
 
-## 1. Commands
+> This repo (`Maliev.CountryService`) is an independent git repo inside the `B:\maliev` workspace. All commands run from this directory.
 
-### Build & Run
-- **Build**: `dotnet build`
-- **Run API**: `dotnet run --project Maliev.CountryService.Api` (or use `F5` in VS/VS Code)
+---
 
-### Testing
-- **Run All Tests**: `dotnet test`
-- **Run Single Test**: `dotnet test --filter "FullyQualifiedName=Namespace.ClassName.MethodName"`
-  - *Example*: `dotnet test --filter "FullyQualifiedName=Maliev.CountryService.Tests.Integration.CountriesControllerTests.GetById_ReturnsOk"`
-- **Run Tests with Coverage**: `dotnet test --collect:"XPlat Code Coverage"`
+## Build, Test & Lint Commands
 
-### Linting & Formatting
-- **Format Code**: `dotnet format`
-- **Check Style**: Build the project; warnings are generally treated as errors in CI. Pay attention to build output.
+```powershell
+# Build (treats warnings as errors — all must be fixed)
+dotnet build Maliev.CountryService.slnx
 
-## 2. Code Style & Conventions
+# Run all tests
+dotnet test Maliev.CountryService.slnx --verbosity normal
 
-### General
-- **Framework**: .NET 10.0 (ASP.NET Core WebAPI).
-- **Language**: C# 12+.
-- **Nullable Reference Types**: Enabled (`<Nullable>enable</Nullable>`).
-- **Observability**: Uses `Maliev.Aspire.ServiceDefaults` for OpenTelemetry, logging, and health checks.
+# Run a single test method
+dotnet test --filter "FullyQualifiedName~CountriesControllerTests.GetById_ReturnsOk"
 
-### Naming Conventions
-- **Classes/Methods/Properties**: `PascalCase`.
-- **Parameters/Local Variables**: `camelCase`.
-- **Private Fields**: `_camelCase` (underscore prefix).
-- **Interfaces**: `IPascalCase` (prefix with 'I').
-- **Async Methods**: Suffix with `Async` (e.g., `GetByIdAsync`).
+# Run all tests in a class
+dotnet test --filter "FullyQualifiedName~CountriesControllerTests"
 
-### API Design
-- **Controllers**: Inherit from `ControllerBase`, decorated with `[ApiController]`.
-- **Versioning**: Use `[ApiVersion("1.0")]` and `[Route("country/v{version:apiVersion}/[controller]")]`.
-- **Attributes**: Explicitly define HTTP verbs (`[HttpGet]`, `[HttpPost]`).
-- **Response Types**: Use `[ProducesResponseType]` for all possible status codes (200, 404, etc.).
-- **Validation**: Use Data Annotations and check `ModelState.IsValid` (handled automatically by `[ApiController]`).
+# Run with code coverage
+dotnet test Maliev.CountryService.slnx --collect:"XPlat Code Coverage"
 
-### Asynchronous Programming
-- Use `async/await` for all I/O operations.
-- **Always** propagate `CancellationToken` to async methods (e.g., controller actions, services, EF Core calls).
+# Format check
+dotnet format Maliev.CountryService.slnx
 
-### Dependency Injection
-- Use constructor injection.
-- Register services in `Program.cs` using the appropriate lifetime (`AddScoped`, `AddSingleton`, `AddTransient`).
+# EF Core migrations (Infrastructure project only)
+dotnet ef migrations add <Name> --project Maliev.CountryService.Infrastructure --startup-project Maliev.CountryService.Infrastructure
+```
 
-### Logging
-- Use `ILogger<T>` for logging.
-- Prefer `[LoggerMessage]` source generator for high-performance logging (see `Program.cs` partial class example).
+---
 
-## 3. Testing Guidelines
+## Code Style & Conventions
 
-### Framework
-- **xUnit** for unit and integration tests.
-- **TestContainers** for PostgreSQL, Redis, RabbitMQ.
+### Workspace Structure
+```
+Maliev.CountryService/
+├── Maliev.CountryService.Api/           # Controllers, Consumers, Middleware
+├── Maliev.CountryService.Application/   # Use cases, DTOs, Interfaces, Handlers
+├── Maliev.CountryService.Domain/        # Entities, value objects, domain interfaces
+├── Maliev.CountryService.Infrastructure/ # EF Core DbContext, repositories, HTTP clients
+├── Maliev.CountryService.Tests/         # Unit + Integration tests (xUnit)
+├── Directory.Build.props                # Central package versioning
+└── Maliev.CountryService.slnx          # Solution file (.slnx preferred over .sln)
+```
 
-### Test Structure
-- **Integration Tests**: Inherit from `IntegrationTestBase`.
+### C# Naming & Formatting
+- **Namespaces**: File-scoped (`namespace Maliev.CountryService.Domain.Entities;`)
+- **Classes/Methods/Properties**: `PascalCase`
+- **Private fields**: `_camelCase` (underscore prefix)
+- **Parameters/locals**: `camelCase`
+- **Async methods**: Suffix with `Async` (e.g., `GetByIdAsync`)
+- **Interfaces**: Prefix with `I` (e.g., `ICountryService`)
+- **Permissions**: GCP-style `{domain}.{plural-resource}.{action}` as `public const string` in a `Permissions` static class
+  - Valid: `country.countries.create`, `country.countries.read`
+  - Invalid: `country.country.create` (singular), `countries.create` (missing domain)
+- **XML docs**: Required on ALL public methods and properties
+- **Nullable**: Enabled (`<Nullable>enable</Nullable>`). Use `?` explicitly
+- **Imports**: System first, then third-party, then local. Alphabetize within groups. Remove unused `using`
+- **Braces**: Allman style (new line) for methods and control structures. Expression-bodied for properties/accessors
+- **Indentation**: 4 spaces, LF line endings, UTF-8, trim trailing whitespace
+
+### C# Patterns
+- **DI**: Constructor injection with `private readonly` fields
+- **Controllers**: `[ApiController]`, `[ApiVersion("1")]`, `[Route("country/v{version:apiVersion}/[controller]")]`
+- **Logging**: `ILogger<T>` with structured placeholders (never interpolate): `_logger.LogInformation("Processing {CountryId}", countryId)`
+- **Error handling**: Global exception middleware. Return `ProblemDetails` / `ErrorResponse` DTOs. Never expose stack traces
+- **JSON**: Check existing conventions in this service for naming policy
+- **Manual mapping**: Static extension methods (`ToDto()`, `ToEntity()`). AutoMapper is banned
+- **Validation**: `System.ComponentModel.DataAnnotations` on DTOs. FluentValidation is banned
+- **Observability**: Uses `Maliev.Aspire.ServiceDefaults` for OpenTelemetry, logging, and health checks
+- **LoggerMessage**: Prefer `[LoggerMessage]` source generator for high-performance logging
+
+---
+
+## Banned Libraries (Build Will Fail)
+
+| Banned | Use Instead |
+|--------|-------------|
+| AutoMapper | Manual mapping extensions |
+| FluentValidation | DataAnnotations or manual validation |
+| FluentAssertions | Standard xUnit `Assert.*` |
+| Swashbuckle/Swagger | Scalar (at `/country/scalar`) |
+| InMemoryDatabase (EF Core) | Testcontainers with real PostgreSQL |
+
+---
+
+## Testing Rules
+
+- **Framework**: xUnit with standard `Assert` (`Assert.Equal`, `Assert.NotNull`, etc.)
+- **Naming**: `MethodName_StateUnderTest_ExpectedBehavior` or `HTTP_METHOD_Path_Scenario_ExpectedStatus`
+- **Coverage**: Minimum 80% per service
+- **Integration tests**: `BaseIntegrationTestFactory<TProgram, TDbContext>` with Testcontainers (PostgreSQL, Redis, RabbitMQ). Never InMemoryDatabase
+- **System tests** (Tier 3): `AspireTestFixture` with `[Collection("AspireDomainTests")]` — shared AppHost, never one per class
+- **Eventual consistency**: Use `TestHelpers.WaitForAsync`. Never `Task.Delay`
+- **MassTransit consumers**: Must have consumer tests using `AddMassTransitTestHarness()`
+
+### CountryService Test Infrastructure
+
+- **Integration Tests**: Inherit from `IntegrationTestBase`
 - **Collections**:
-  - Use `[Collection("TestDatabase")]` for tests sharing the DB container.
-  - Use `[Collection("ResilienceTests")]` for tests needing DB restart/manipulation.
-- **Database Cleanup**: `CleanDatabaseAsync()` is called automatically in `IntegrationTestBase.InitializeAsync()`. Ensure your test class inherits correctly.
-- **Factory**: Use `TestWebApplicationFactory` to create the test client.
-
-### Critical Rules (from CLAUDE.md)
-1. **Required Fields**: `CreateCountryRequest` MUST include:
-   - `Timezones`, `Borders`, `CallingCodes`, `TopLevelDomains`
-   - `Currencies`, `Languages`, `Translations`, `Flags`
-2. **ISO Validation**:
-   - Iso2: `^[A-Z]{2}$` (2 uppercase letters).
-   - Iso3: `^[A-Z]{3}$` (3 uppercase letters).
-3. **Resilience**: Query by ISO code instead of ID after DB restarts in resilience tests (IDs may change or be unreliable across resets/seeds if not careful, though UUIDs typically persist, logic implies state reset).
+  - Use `[Collection("TestDatabase")]` for tests sharing the DB container
+  - Use `[Collection("ResilienceTests")]` for tests needing DB restart/manipulation
+- **Database Cleanup**: `CleanDatabaseAsync()` is called automatically in `IntegrationTestBase.InitializeAsync()`. Ensure your test class inherits correctly
+- **Factory**: Use `TestWebApplicationFactory` to create the test client
 
 ### Testing Strategy (4-Tier Pyramid Context)
 
@@ -84,68 +116,40 @@ This service's tests cover **Tier 1 (Unit)** and **Tier 2 (Service Integration)*
 
 **Tier 3 (System Integration)** — cross-service workflows and event chains — is tested in `Maliev.Aspire.Tests/`.
 
-#### Key Rules
-- Use `BaseIntegrationTestFactory<TProgram, TDbContext>` for integration tests (real Testcontainers, never InMemoryDatabase)
-- Test naming: `MethodName_StateUnderTest_ExpectedBehavior`
-- Minimum 80% code coverage
-- Use `[Fact]` for single cases, `[Theory]` for parameterized tests
-
 > Full ecosystem test strategy: `Maliev.Aspire.Tests/TEST_PLAN.md`
 
-### Entity Framework Core Migrations
-- **Package Restriction**: `Microsoft.EntityFrameworkCore.Design` MUST ONLY be referenced in the Infrastructure project where migrations exist. It is PROHIBITED in the Api project.
-- **Creating Migrations**: Always use the Infrastructure project as both project and startup-project:
-  ```bash
-  dotnet ef migrations add <Name> --project Maliev.CountryService.Infrastructure --startup-project Maliev.CountryService.Infrastructure
-  ```
-- **Applying Migrations**: Use the Infrastructure project's context or run migrations at runtime via the Api.
+### Critical Test Rules (Country-Specific)
+1. **Required Fields**: `CreateCountryRequest` MUST include:
+   - `Timezones`, `Borders`, `CallingCodes`, `TopLevelDomains`
+   - `Currencies`, `Languages`, `Translations`, `Flags`
+2. **ISO Validation**:
+   - Iso2: `^[A-Z]{2}$` (2 uppercase letters)
+   - Iso3: `^[A-Z]{3}$` (3 uppercase letters)
+3. **Resilience**: Query by ISO code instead of ID after DB restarts in resilience tests (IDs may change or be unreliable across resets/seeds, though UUIDs typically persist)
 
-## 4. Project Structure
-- `Maliev.CountryService.Api`: Main Web API application.
-  - `Controllers/`: API Endpoints.
-  - `Services/`: Business logic.
-  - `Models/`: DTOs.
-  - `Data/`: EF Core context and entities.
-- `Maliev.CountryService.Tests`: Integration and Unit tests.
-  - `Integration/`: End-to-end tests with TestContainers.
-  - `Fixtures/`: Shared test context and factories.
+---
 
-## 5. Error Handling
-- Use global exception handling (middleware/exception filters).
-- Return standard `ProblemDetails` or specific error DTOs.
-- `NotFound()` for missing resources.
-- `BadRequest()` for validation failures.
+## Mandatory Rules
 
+- **`TreatWarningsAsErrors = true`**: Zero warnings allowed. No suppression
+- **`[RequirePermission("country.countries.action")]`**: On all endpoints, not plain `[Authorize]`
+- **API versioning**: All routes versioned (`v1/`)
+- **Service prefix**: Routes prefixed with `/country`
+- **Scalar docs**: Configured at `/country/scalar`
+- **Secrets**: Never hardcoded. Use GCP Secret Manager or environment variables
+- **Async/await**: All the way down. Pass `CancellationToken`
+- **EF Core Design package**: Only in Infrastructure project, never in Api
+- **PostgreSQL xmin**: Shadow property only — `entity.Property<uint>("xmin").HasColumnType("xid").IsRowVersion()`. Never add entity property
+  - Never use `UseXminAsConcurrencyToken()` (removed in Npgsql EF v7)
+  - Never add entity property `public uint Xmin { get; set; }` or `public uint xmin { get; set; }`
+  - Never use `.Ignore(e => e.Xmin)` — remove the entity property instead
+- **Temporary files**: Generate in `/temp` folder, clean up afterwards
 
-## Git & Version Control — Mandatory Rules
+---
 
-### 🚨 CRITICAL: Always Commit Code Changes (Non-Negotiable)
-- **You MUST commit your changes to the local repository after completing any meaningful unit of work.**
-- **Never accumulate uncommitted changes.** Do not wait until end of session or until something breaks.
-- **Commit early and often** — if a change is meaningful (even a small fix or refactor), commit it.
-- **You do NOT need to push to remote** — local commits are sufficient to protect against accidental loss.
-- **If you are unsure whether to commit, commit anyway.** Extra commits are harmless; lost work is irreversible.
-- This rule applies even if you are just "testing" or "exploring" — use git branches to isolate experimental work and commit those changes too.
+## Git Rules
 
-### 🚨 CRITICAL: Never Use `git checkout` to Restore Broken Files
-- **NEVER use `git checkout` to restore or recover files.** This operation discards uncommitted changes permanently and will result in data loss.
-- **To undo/recover from broken files: first commit your current changes, then use `git revert` or `git reset --soft` to safely undo.**
-
-## Database & EF Core — Mandatory Rules
-
-### EF Core Design Package
-- ❌ `Microsoft.EntityFrameworkCore.Design` MUST NOT be in Api projects
-- ✅ It belongs ONLY in the Infrastructure (or Data) project where migrations live
-- Migration commands must target Infrastructure as both project and startup-project (since EF Core Design package is in Infrastructure):
-  ```
-  dotnet ef migrations add <Name> --project Maliev.<Domain>Service.Infrastructure --startup-project Maliev.<Domain>Service.Infrastructure
-  ```
-
-### PostgreSQL xmin Concurrency — Mandatory Pattern
-Use shadow property ONLY. Never add a Xmin/xmin property to domain entities.
-```csharp
-entity.Property<uint>("xmin").HasColumnType("xid").IsRowVersion();
-```
-- ❌ Never use `UseXminAsConcurrencyToken()` (removed in Npgsql EF v7)
-- ❌ Never use entity property `public uint Xmin { get; set; }` or `public uint xmin { get; set; }`
-- ❌ Never use `.Ignore(e => e.Xmin)` — remove the entity property instead
+- Each `Maliev.*` folder is an independent git repo. `cd` into it before git commands
+- **Commit early and often** after every meaningful unit of work. Do not accumulate changes
+- **Never use `git checkout` to restore files** — commit first, then `git revert` or `git reset --soft`
+- Feature branches merged to `develop` via PR. Do not push without being asked
