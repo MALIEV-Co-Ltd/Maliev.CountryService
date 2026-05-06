@@ -9,6 +9,9 @@
 *.swp
 *.swo
 *.user
+*.csproj.user
+*.rsuser
+*.DotSettings.user
 *.suo
 *.userosscache
 *.sln.docstates
