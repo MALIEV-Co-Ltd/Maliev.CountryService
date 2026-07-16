@@ -100,7 +100,8 @@ try
     // Register hosted services
     builder.Services.AddHostedService<CacheWarmingService>();
     builder.Services.AddHostedService<BulkImportWorkerService>();
-    builder.AddIAMServiceClient("country");
+    builder.AddAuthServiceTokenExchange("CountryService");
+    builder.AddAuthServiceIAMClient();
     builder.Services.AddIAMRegistration<Maliev.CountryService.Api.Services.CountryIAMRegistrationService>("country");
 
     var app = builder.Build();
