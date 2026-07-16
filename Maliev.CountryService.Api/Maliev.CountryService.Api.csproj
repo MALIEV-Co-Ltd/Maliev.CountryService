@@ -24,7 +24,7 @@
   <ItemGroup Condition="'$(GITHUB_ACTIONS)' == 'true'">
     <ProjectReference Include="..\Maliev.CountryService.Application\Maliev.CountryService.Application.csproj" />
     <ProjectReference Include="..\Maliev.CountryService.Infrastructure\Maliev.CountryService.Infrastructure.csproj" />
-    <PackageReference Include="Maliev.Aspire.ServiceDefaults" Version="$(SharedLibraryVersion)" />
+    <PackageReference Include="Maliev.Aspire.ServiceDefaults" Version="$(ServiceDefaultsVersion)" />
   </ItemGroup>
 
 </Project>

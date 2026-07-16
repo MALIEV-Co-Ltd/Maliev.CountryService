@@ -12,6 +12,7 @@ EXPOSE 8081
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
+COPY ["Directory.Build.props", "."]
 COPY ["Maliev.CountryService.Api/Maliev.CountryService.Api.csproj", "Maliev.CountryService.Api/"]
 COPY ["Maliev.CountryService.Application/Maliev.CountryService.Application.csproj", "Maliev.CountryService.Application/"]
 COPY ["Maliev.CountryService.Domain/Maliev.CountryService.Domain.csproj", "Maliev.CountryService.Domain/"]
@@ -19,17 +20,18 @@ COPY ["Maliev.CountryService.Infrastructure/Maliev.CountryService.Infrastructure
 COPY ["nuget.config", "."]
 RUN --mount=type=secret,id=nuget_username \
     --mount=type=secret,id=nuget_password \
+    GITHUB_ACTIONS=true \
     NUGET_USERNAME=$(cat /run/secrets/nuget_username) \
     NUGET_PASSWORD=$(cat /run/secrets/nuget_password) \
     dotnet restore "./Maliev.CountryService.Api/Maliev.CountryService.Api.csproj"
 COPY . .
 WORKDIR "/src/Maliev.CountryService.Api"
-RUN dotnet build "./Maliev.CountryService.Api.csproj" -c $BUILD_CONFIGURATION -o /app/build
+RUN GITHUB_ACTIONS=true dotnet build "./Maliev.CountryService.Api.csproj" -c $BUILD_CONFIGURATION -o /app/build
 
 # This stage is used to publish the service project to be copied to the final stage
 FROM build AS publish
 ARG BUILD_CONFIGURATION=Release
-RUN dotnet publish "./Maliev.CountryService.Api.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
+RUN GITHUB_ACTIONS=true dotnet publish "./Maliev.CountryService.Api.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
 
 # This stage is used in production or when running from VS in regular mode (Default when not using the Debug configuration)
 FROM base AS final

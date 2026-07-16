@@ -62,7 +62,7 @@ public class BaseIntegrationTestFactory<TProgram, TDbContext> : WebApplicationFa
         {
             if (!_containersStarted)
             {
-                _postgresContainer = 
+                _postgresContainer =
 #pragma warning disable CS0618
         new PostgreSqlBuilder().WithImage("postgres:18-alpine")
                     .Build();
@@ -178,6 +178,14 @@ public class BaseIntegrationTestFactory<TProgram, TDbContext> : WebApplicationFa
                 ["ConnectionStrings:rabbitmq"] = _rabbitmqContainer!.GetConnectionString(),
                 ["CORS:AllowedOrigins:0"] = "http://localhost:3000",
                 ["CORS_ALLOWED_ORIGINS"] = "http://localhost:3000",
+                ["ServiceAuthentication:ClientId"] = "service-country-service",
+                ["ServiceAuthentication:ClientSecret"] = "country-test-secret-with-at-least-32-bytes",
+                ["Services:AuthService:BaseUrl"] = "https://auth.test",
+                ["Services:IAMService:BaseUrl"] = "https://iam.test",
+                ["Jwt:PublicKey"] = Convert.ToBase64String(
+                    System.Text.Encoding.UTF8.GetBytes(_testRsa.ExportSubjectPublicKeyInfoPem())),
+                ["Jwt:Issuer"] = "https://test-issuer.maliev.com",
+                ["Jwt:Audience"] = "https://test-audience.maliev.com",
                 ["IAM:RegistrationDelaySeconds"] = "0",
                 ["RateLimiting:PermitLimit"] = "10000",
                 ["RateLimiting:WindowMinutes"] = "1",
