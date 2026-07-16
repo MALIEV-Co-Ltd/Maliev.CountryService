@@ -5,6 +5,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using System.Security.Claims;
 using System.Security.Cryptography;
+using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -62,9 +63,8 @@ public class BaseIntegrationTestFactory<TProgram, TDbContext> : WebApplicationFa
         {
             if (!_containersStarted)
             {
-                _postgresContainer =
 #pragma warning disable CS0618
-        new PostgreSqlBuilder().WithImage("postgres:18-alpine")
+                _postgresContainer = new PostgreSqlBuilder().WithImage("postgres:18-alpine")
                     .Build();
 
                 _redisContainer = new RedisBuilder("redis:7.4-alpine")
@@ -183,7 +183,7 @@ public class BaseIntegrationTestFactory<TProgram, TDbContext> : WebApplicationFa
                 ["Services:AuthService:BaseUrl"] = "https://auth.test",
                 ["Services:IAMService:BaseUrl"] = "https://iam.test",
                 ["Jwt:PublicKey"] = Convert.ToBase64String(
-                    System.Text.Encoding.UTF8.GetBytes(_testRsa.ExportSubjectPublicKeyInfoPem())),
+                    Encoding.UTF8.GetBytes(_testRsa.ExportSubjectPublicKeyInfoPem())),
                 ["Jwt:Issuer"] = "https://test-issuer.maliev.com",
                 ["Jwt:Audience"] = "https://test-audience.maliev.com",
                 ["IAM:RegistrationDelaySeconds"] = "0",
