@@ -47,7 +47,10 @@ public sealed class RepositoryGovernanceTests
         Assert.Contains("dotnet format", source, StringComparison.Ordinal);
         Assert.Contains("dotnet build", source, StringComparison.Ordinal);
         Assert.Contains("dotnet test", source, StringComparison.Ordinal);
-        Assert.Contains("gitleaks/gitleaks-action@dcedce43c6f43de0b836d1fe38946645c9c638dc", source, StringComparison.Ordinal);
+        Assert.Contains("gitleaks_8.30.1_linux_x64.tar.gz", source, StringComparison.Ordinal);
+        Assert.Contains("551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb", source, StringComparison.Ordinal);
+        Assert.Contains("./gitleaks dir CountryService --no-banner --redact", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("gitleaks/gitleaks-action", source, StringComparison.Ordinal);
         Assert.Contains("aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25", source, StringComparison.Ordinal);
         Assert.DoesNotContain("uses: actions/checkout@v", source, StringComparison.Ordinal);
         Assert.DoesNotContain("uses: actions/setup-dotnet@v", source, StringComparison.Ordinal);
