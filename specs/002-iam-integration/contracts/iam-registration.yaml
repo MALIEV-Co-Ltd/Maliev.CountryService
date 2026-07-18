@@ -1,0 +1,73 @@
+openapi: 3.0.3
+info:
+  title: IAM Registration API
+  description: API used by services to register their permissions and roles.
+  version: 1.0.0
+paths:
+  /api/v1/permissions/register:
+    post:
+      summary: Register service permissions
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PermissionRegistrationRequest'
+      responses:
+        '200':
+          description: Permissions registered successfully
+  /api/v1/roles/register:
+    post:
+      summary: Register predefined service roles
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RoleRegistrationRequest'
+      responses:
+        '200':
+          description: Roles registered successfully
+
+components:
+  schemas:
+    PermissionRegistrationRequest:
+      type: object
+      properties:
+        serviceName:
+          type: string
+        permissions:
+          type: array
+          items:
+            $ref: '#/components/schemas/PermissionEntry'
+    PermissionEntry:
+      type: object
+      properties:
+        permissionId:
+          type: string
+        description:
+          type: string
+        isCritical:
+          type: bool
+    RoleRegistrationRequest:
+      type: object
+      properties:
+        serviceName:
+          type: string
+        roles:
+          type: array
+          items:
+            $ref: '#/components/schemas/RoleEntry'
+    RoleEntry:
+      type: object
+      properties:
+        roleId:
+          type: string
+        roleName:
+          type: string
+        description:
+          type: string
+        permissions:
+          type: array
+          items:
+            type: string

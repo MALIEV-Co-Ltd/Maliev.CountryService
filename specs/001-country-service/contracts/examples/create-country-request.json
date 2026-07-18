@@ -1,0 +1,69 @@
+{
+  "iso2": "JP",
+  "iso3": "JPN",
+  "name": "Japan",
+  "officialName": "Japan",
+  "numericCode": "392",
+  "capital": "Tokyo",
+  "region": "Asia",
+  "subregion": "Eastern Asia",
+  "latitude": 35.6762,
+  "longitude": 139.6503,
+  "demonym": "Japanese",
+  "areaKm2": 377975,
+  "population": 125800000,
+  "giniCoefficient": 32.9,
+  "timezones": [
+    "UTC+09:00"
+  ],
+  "borders": [],
+  "callingCodes": [
+    "+81"
+  ],
+  "topLevelDomains": [
+    ".jp"
+  ],
+  "currencies": {
+    "JPY": {
+      "name": "Japanese yen",
+      "symbol": "¥"
+    }
+  },
+  "languages": {
+    "jpn": "Japanese"
+  },
+  "translations": {
+    "ara": "اليابان",
+    "ces": "Japonsko",
+    "cym": "Japan",
+    "deu": "Japan",
+    "eng": "Japan",
+    "fin": "Japani",
+    "fra": "Japon",
+    "hrv": "Japan",
+    "hun": "Japán",
+    "ita": "Giappone",
+    "kor": "일본",
+    "nld": "Japan",
+    "per": "ژاپن",
+    "pol": "Japonia",
+    "por": "Japão",
+    "rus": "Япония",
+    "slk": "Japonsko",
+    "spa": "Japón",
+    "swe": "Japan",
+    "urd": "جاپان",
+    "zho": "日本"
+  },
+  "flags": {
+    "svg": "https://flagcdn.com/jp.svg",
+    "png": "https://flagcdn.com/w320/jp.png"
+  },
+  "coatOfArms": {
+    "svg": "https://mainfacts.com/media/images/coats_of_arms/jp.svg",
+    "png": "https://mainfacts.com/media/images/coats_of_arms/jp.png"
+  },
+  "independent": true,
+  "unMember": true,
+  "landlocked": false
+}

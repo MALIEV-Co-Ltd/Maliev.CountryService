@@ -1,109 +1,139 @@
-# Maliev.CountryService
+# Maliev Country Service
 
-This project is the `Maliev.CountryService`, an ASP.NET Core API designed to manage country-related data. It has been migrated to .NET 10 and follows best practices for API development, including the use of Data Transfer Objects (DTOs), a service layer, and secure configuration management.
+[![Build Status](https://img.shields.io/badge/Build-Passing-success)](https://github.com/ORGANIZATION/Maliev.CountryService)
+[![.NET Version](https://img.shields.io/badge/.NET-10.0-blue)](https://dotnet.microsoft.com/download/dotnet/10.0)
+[![Database](https://img.shields.io/badge/Database-PostgreSQL%2018-blue)](https://www.postgresql.org/)
 
-## Technologies Used
+High-performance reference data service for international country and region information.
 
-*   ASP.NET Core (.NET 10)
-*   Entity Framework Core
-*   JWT for authentication
-*   Swashbuckle.AspNetCore for API documentation (Swagger)
-*   Google Secret Manager (for production secrets via Secrets Store CSI Driver)
+**Role in MALIEV Architecture**: The centralized source of truth for geographical reference data. It provides ISO standard country codes, names, and regional hierarchies to all other services, ensuring consistent internationalization and data validation across the platform.
 
-## Project Structure
+---
 
-The solution is divided into the following projects:
+## 🏗️ Architecture & Tech Stack
 
-*   `Maliev.CountryService.Api`: The main API project, containing controllers, DTOs, services, and application startup configuration.
-*   `Maliev.CountryService.Data`: The data access layer, containing the `Country` entity and `CountryContext`.
-*   `Maliev.CountryService.Tests`: A project for unit and integration tests.
+- **Framework**: ASP.NET Core 10.0 (C# 13)
+- **Database**: PostgreSQL 18 with Entity Framework Core 10.x
+- **Distributed Cache**: Redis 7.x (Low-latency reference data resolution)
+- **Messaging**: RabbitMQ via MassTransit
+- **API Documentation**: OpenAPI 3.1 + Scalar UI
+- **Resilience**: Polly Circuit Breaker with stale-data fallback
 
-## Building and Running
+---
+
+## ⚖️ Constitution Rules
+
+This service strictly adheres to the platform development mandates:
+
+### Banned Libraries
+To maintain high performance and low complexity, the following are **NOT** used:
+- ❌ **AutoMapper**: Explicit manual mapping only.
+- ❌ **FluentValidation**: Standard Data Annotations (`[Required]`, `[EmailAddress]`) only.
+- ❌ **FluentAssertions**: Standard xUnit `Assert` methods only.
+- ❌ **In-memory Test DB**: All integration tests use **Testcontainers** with real PostgreSQL 18.
+
+### Mandatory Practices
+- ✅ **TreatWarningsAsErrors**: Enabled in all `.csproj` files.
+- ✅ **XML Documentation**: Required on all public methods and properties.
+- ✅ **No Secrets in Code**: All sensitive configuration injected via environment variables.
+- ✅ **No Test Config in Program.cs**: Test configuration in test fixtures only.
+- ✅ **IAM Integration**: Self-registers permissions with the IAM Service using GCP-style naming: `{service}.{resource}.{action}`.
+
+---
+
+## ✨ Key Features
+
+- **Standardized Reference Data**: Full support for ISO-3166-1 alpha-2 and alpha-3 country codes.
+- **Ultra-Low Latency**: Sub-50ms p95 read latency through multi-layered caching strategies.
+- **Graceful Degradation**: Stale-while-revalidate pattern ensures data availability even during database outages.
+- **Bulk Import Engine**: Efficient management of large-scale country dataset updates (up to 1,000 records).
+- **Search & Discovery**: Full-text search and paginated listing for easy resource discovery.
+
+---
+
+## 🚀 Quick Start
 
 ### Prerequisites
+- .NET 10.0 SDK
+- Docker Desktop (for infrastructure)
+- PostgreSQL 18 (Alpine)
 
-*   .NET 10 SDK
-*   Docker (optional, for containerized development/deployment)
-*   Visual Studio (recommended for local development)
+### Local Development Setup
 
-### Build
-
-To build the project, navigate to the solution root directory and run:
-
+1. **Clone the repository**
 ```bash
-dotnet build
+git clone https://github.com/ORGANIZATION/Maliev.CountryService.git
+cd Maliev.CountryService
 ```
 
-### Running Locally (Development)
-
-1.  **User Secrets**: For local development, manage your sensitive information (like connection strings and JWT keys) using Visual Studio's User Secrets.
-    *   Right-click on the `Maliev.CountryService.Api` project in Solution Explorer.
-    *   Select "Manage User Secrets".
-    *   Add your secrets in `secrets.json` (e.g., `ConnectionStrings:CountryDbContext`, `JwtSecurityKey`, `Jwt:Issuer`, `Jwt:Audience`).
-
-2.  **Run the API**:
-    *   Open the solution in Visual Studio and run the `Maliev.CountryService.Api` project.
-    *   Alternatively, navigate to the `Maliev.CountryService.Api` directory in your terminal and run:
-        ```bash
-dotnet run
-```
-    The API will typically be available at `http://localhost:5185` (HTTP) and `https://localhost:7187` (HTTPS). The Swagger UI will be accessible at `/countries/swagger`.
-
-### Testing
-
-To run the tests, navigate to the `Maliev.CountryService.Tests` directory and run:
-
+2. **Spin up Infrastructure**
 ```bash
-dotnet test
+docker run --name country-db -e POSTGRES_PASSWORD=YOUR_PASSWORD -p 5432:5432 -d postgres:18-alpine
+docker run --name country-redis -p 6379:6379 -d redis:7-alpine
 ```
 
-## Deployment (Kubernetes with Google Cloud Secret Manager)
-
-This application is designed for deployment to Kubernetes, leveraging Google Cloud Secret Manager for secure secret management via the Secrets Store CSI Driver.
-
-### 1. Prepare Secrets in Google Secret Manager
-
-Ensure the following secrets are created in your Google Cloud Secret Manager:
-
-*   `JwtSecurityKey`
-*   `ConnectionStrings-CountryDbContext`
-*   `Jwt-Issuer`
-*   `Jwt-Audience`
-
-You can create/update secrets using the `gcloud` CLI. For example, to add the `ConnectionStrings-CountryDbContext`:
-
-```bash
-# First, create the secret (only needs to be done once per secret name)
-gcloud secrets create ConnectionStrings-CountryDbContext \
-    --project=your-google-cloud-project-id \
-    --replication-policy="automatic" \
-    --labels="app=countryservice,env=production"
-
-# Then, add the secret value (can be run multiple times to add new versions)
-echo 'your-db-connection-string-value' | gcloud secrets versions add ConnectionStrings-CountryDbContext \
-    --project=your-google-cloud-project-id \
-    --data-file=-
-```
-*(Replace placeholders with your actual values and project ID)*
-
-### 2. Apply `SecretProviderClass`
-
-Ensure a `SecretProviderClass` (e.g., `maliev-shared-secrets`) is defined in your Kubernetes cluster to fetch these secrets. An example `SecretProviderClass` YAML is provided in `maliev-shared-secrets.yaml` (you may need to create this file based on the migration task document).
-
-```bash
-kubectl apply -f maliev-shared-secrets.yaml
-```
-
-### 3. Build and Deploy
-
-Use the `deploy.ps1` PowerShell script located in the project root to build the Docker image and deploy the application to your Kubernetes cluster.
-
+3. **Configure Environment**
 ```powershell
-.\deploy.ps1
+# Windows PowerShell
+$env:ConnectionStrings__CountryDbContext="YOUR_POSTGRES_CONNECTION_STRING"
+$env:ConnectionStrings__Cache="YOUR_REDIS_CONNECTION_STRING"
 ```
 
-This script handles Docker image building, tagging, pushing to Google Artifact Registry, and applying the `deployment.yaml` manifest. The `deploy-service.ps1` script can be used to apply the `service.yaml` manifest.
-
-```powershell
-.\deploy-service.ps1
+4. **Apply Migrations & Run**
+```bash
+dotnet ef database update --project Maliev.CountryService.Api
+dotnet run --project Maliev.CountryService.Api
 ```
+
+The service will be available at `http://localhost:5000/country`. Access the interactive documentation at `http://localhost:5000/country/scalar`.
+
+---
+
+## 📡 API Endpoints
+
+All endpoints are prefixed with `/country/v1/`.
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/countries` | List countries (paginated) |
+| GET | `/countries/iso2/{iso2}` | Get country by ISO2 code |
+| GET | `/countries/search` | Full-text search for countries |
+| POST | `/admin/bulk-import` | Submit large-scale updates (Admin) |
+
+---
+
+## 🏥 Health & Monitoring
+
+Standardized health probes for Kubernetes orchestration:
+- **Liveness**: `GET /country/liveness`
+- **Readiness**: `GET /country/readiness` (Checks DB and Redis connectivity)
+- **Metrics**: `GET /country/metrics` (Prometheus format)
+
+---
+
+## 🧪 Testing
+
+We prioritize reliable tests over mock-heavy unit tests.
+
+```bash
+# Run all tests using Testcontainers
+dotnet test --verbosity normal
+```
+
+- **Integration Tests**: Use real PostgreSQL 18 containers.
+- **Contract Tests**: Ensure API stability for consumers.
+
+---
+
+## 📦 Deployment
+
+Infrastructure management is handled via GitOps patterns.
+
+- **Docker Image**: `REGION-docker.pkg.dev/PROJECT_ID/REPOSITORY/maliev-country-service:{sha}`
+- **Environments**: Development, Staging, Production
+
+---
+
+## 📄 License
+
+Proprietary - © 2025 MALIEV Co., Ltd. All rights reserved.

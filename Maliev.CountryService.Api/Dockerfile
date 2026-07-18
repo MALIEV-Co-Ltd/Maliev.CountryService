@@ -1,30 +1,60 @@
+# syntax=docker/dockerfile:1.7
 # See https://aka.ms/customizecontainer to learn how to customize your debug container and how Visual Studio uses this Dockerfile to build your images for faster debugging.
 
 # This stage is used when running from VS in fast mode (Default for Debug configuration)
-FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS base
+FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS base
 USER $APP_UID
 WORKDIR /app
 EXPOSE 8080
 EXPOSE 8081
 
-
 # This stage is used to build the service project
-FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
+COPY --from=aspire . /Maliev.Aspire/
+COPY --from=messaging . /Maliev.MessagingContracts/
+COPY ["Directory.Build.props", "."]
 COPY ["Maliev.CountryService.Api/Maliev.CountryService.Api.csproj", "Maliev.CountryService.Api/"]
-RUN dotnet restore "./Maliev.CountryService.Api/Maliev.CountryService.Api.csproj"
+COPY ["Maliev.CountryService.Application/Maliev.CountryService.Application.csproj", "Maliev.CountryService.Application/"]
+COPY ["Maliev.CountryService.Domain/Maliev.CountryService.Domain.csproj", "Maliev.CountryService.Domain/"]
+COPY ["Maliev.CountryService.Infrastructure/Maliev.CountryService.Infrastructure.csproj", "Maliev.CountryService.Infrastructure/"]
+COPY ["nuget.config", "."]
+COPY ["Maliev.CountryService.Api/packages.lock.json", "Maliev.CountryService.Api/"]
+COPY ["Maliev.CountryService.Application/packages.lock.json", "Maliev.CountryService.Application/"]
+COPY ["Maliev.CountryService.Domain/packages.lock.json", "Maliev.CountryService.Domain/"]
+COPY ["Maliev.CountryService.Infrastructure/packages.lock.json", "Maliev.CountryService.Infrastructure/"]
+RUN dotnet restore "./Maliev.CountryService.Api/Maliev.CountryService.Api.csproj" \
+    --configfile ./nuget.config \
+    --locked-mode
 COPY . .
 WORKDIR "/src/Maliev.CountryService.Api"
-RUN dotnet build "./Maliev.CountryService.Api.csproj" -c $BUILD_CONFIGURATION -o /app/build
+RUN dotnet build "./Maliev.CountryService.Api.csproj" -c $BUILD_CONFIGURATION -o /app/build --no-restore
 
 # This stage is used to publish the service project to be copied to the final stage
 FROM build AS publish
 ARG BUILD_CONFIGURATION=Release
-RUN dotnet publish "./Maliev.CountryService.Api.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
+RUN dotnet publish "./Maliev.CountryService.Api.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false --no-restore
 
 # This stage is used in production or when running from VS in regular mode (Default when not using the Debug configuration)
 FROM base AS final
 WORKDIR /app
-COPY --from=publish /app/publish .
+
+# Ensure 'app' owns the workdir (app user already exists in ASP.NET runtime image)
+RUN chown -R app:app /app
+
+# Switch to non-root user
+USER app
+
+# Copy published application (now owned by app)
+COPY --chown=app:app --from=publish /app/publish .
+
+# Set environment variables
+ENV ASPNETCORE_URLS=http://+:8080
+ENV ASPNETCORE_ENVIRONMENT=Production
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:8080/country/liveness || exit 1
+
 ENTRYPOINT ["dotnet", "Maliev.CountryService.Api.dll"]

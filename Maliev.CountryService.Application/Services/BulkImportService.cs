@@ -1,0 +1,398 @@
+using Maliev.CountryService.Application.Interfaces;
+using Maliev.CountryService.Application.Models.BulkImport;
+using Maliev.CountryService.Application.Models.Countries;
+using Maliev.CountryService.Domain.Entities;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using System.Text.Json;
+using System.Text.RegularExpressions;
+
+namespace Maliev.CountryService.Application.Services;
+
+/// <summary>
+/// Bulk import service implementation with two-phase validation and processing.
+/// Phase 1: Validate the entire batch and report errors before writing anything.
+/// Phase 2: Atomically write all validated records to the database.
+/// </summary>
+public partial class BulkImportService : IBulkImportService
+{
+    private readonly ICountryDbContext _context;
+    private readonly ICountryService _countryService;
+    private readonly ILogger<BulkImportService> _logger;
+
+    /// <summary>Regex for validating ISO 3166-1 alpha-2 codes.</summary>
+    [GeneratedRegex("^[A-Z]{2}$")]
+    private static partial Regex Iso2Regex();
+
+    /// <summary>Regex for validating ISO 3166-1 alpha-3 codes.</summary>
+    [GeneratedRegex("^[A-Z]{3}$")]
+    private static partial Regex Iso3Regex();
+
+    /// <summary>Regex for validating ISO 3166-1 numeric codes.</summary>
+    [GeneratedRegex("^[0-9]{3}$")]
+    private static partial Regex NumericCodeRegex();
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="BulkImportService"/> class.
+    /// </summary>
+    /// <param name="context">The database context.</param>
+    /// <param name="countryService">The country service for CRUD operations.</param>
+    /// <param name="logger">The logger instance.</param>
+    public BulkImportService(
+        ICountryDbContext context,
+        ICountryService countryService,
+        ILogger<BulkImportService> logger)
+    {
+        _context = context;
+        _countryService = countryService;
+        _logger = logger;
+    }
+
+    private static List<string> ValidateCountryRequest(CreateCountryRequest country)
+    {
+        var errors = new List<string>();
+
+        if (string.IsNullOrWhiteSpace(country.Iso2))
+            errors.Add("ISO2 code is required");
+        else if (country.Iso2.Length != 2)
+            errors.Add("ISO2 code must be exactly 2 characters");
+        else if (!Iso2Regex().IsMatch(country.Iso2))
+            errors.Add("ISO2 code must be uppercase letters only");
+
+        if (string.IsNullOrWhiteSpace(country.Iso3))
+            errors.Add("ISO3 code is required");
+        else if (country.Iso3.Length != 3)
+            errors.Add("ISO3 code must be exactly 3 characters");
+        else if (!Iso3Regex().IsMatch(country.Iso3))
+            errors.Add("ISO3 code must be uppercase letters only");
+
+        if (string.IsNullOrWhiteSpace(country.Name))
+            errors.Add("Country name is required");
+        else if (country.Name.Length > 100)
+            errors.Add("Country name must not exceed 100 characters");
+
+        if (!string.IsNullOrWhiteSpace(country.OfficialName) && country.OfficialName.Length > 200)
+            errors.Add("Official name must not exceed 200 characters");
+
+        if (!string.IsNullOrWhiteSpace(country.NumericCode) &&
+            (country.NumericCode.Length != 3 || !NumericCodeRegex().IsMatch(country.NumericCode)))
+            errors.Add("Numeric code must be exactly 3 digits");
+
+        if (country.Latitude.HasValue && (country.Latitude.Value < -90 || country.Latitude.Value > 90))
+            errors.Add("Latitude must be between -90 and 90");
+
+        if (country.Longitude.HasValue && (country.Longitude.Value < -180 || country.Longitude.Value > 180))
+            errors.Add("Longitude must be between -180 and 180");
+
+        if (country.AreaKm2.HasValue && country.AreaKm2.Value <= 0)
+            errors.Add("Area must be greater than 0");
+
+        if (country.Population.HasValue && country.Population.Value < 0)
+            errors.Add("Population cannot be negative");
+
+        if (country.GiniCoefficient.HasValue && (country.GiniCoefficient.Value < 0 || country.GiniCoefficient.Value > 100))
+            errors.Add("Gini coefficient must be between 0 and 100");
+
+        return errors;
+    }
+
+    /// <summary>
+    /// Validates a bulk import request checking for duplicates within the batch and against the database.
+    /// </summary>
+    /// <param name="request">The bulk import request containing countries to validate.</param>
+    /// <param name="userId">The ID of the user initiating the import.</param>
+    /// <param name="cancellationToken">Token to cancel the operation.</param>
+    /// <returns>A status response containing validation results and errors.</returns>
+    public async Task<BulkImportStatusResponse> ValidateImportAsync(BulkImportRequest request, string userId, CancellationToken cancellationToken = default)
+    {
+        var job = new BulkImportJob
+        {
+            Status = "Validating",
+            TotalRecords = request.Countries.Count,
+            ProcessedRecords = 0,
+            CreatedBy = userId,
+            UserId = userId,
+            CreatedAtUtc = DateTime.UtcNow,
+            StartedAtUtc = DateTime.UtcNow,
+            ValidationErrors = "[]",
+            PayloadData = JsonSerializer.Serialize(request)
+        };
+
+        _context.BulkImportJobs.Add(job);
+        await _context.SaveChangesAsync(cancellationToken);
+
+        var errors = new List<ValidationErrorResponse>();
+
+        var iso2Seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var iso3Seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        var existingIso2Codes = await _context.Countries
+            .Select(c => c.Iso2.ToUpper())
+            .ToListAsync(cancellationToken);
+
+        var existingIso3Codes = await _context.Countries
+            .Select(c => (c.Iso3 ?? "").ToUpper())
+            .ToListAsync(cancellationToken);
+
+        var existingIso2Set = new HashSet<string>(existingIso2Codes, StringComparer.OrdinalIgnoreCase);
+        var existingIso3Set = new HashSet<string>(existingIso3Codes, StringComparer.OrdinalIgnoreCase);
+
+        for (int i = 0; i < request.Countries.Count; i++)
+        {
+            var country = request.Countries[i];
+            if (country == null) continue;
+
+            var rowNumber = i + 1;
+
+            var validationErrors = ValidateCountryRequest(country);
+            if (validationErrors.Any())
+            {
+                foreach (var error in validationErrors)
+                {
+                    errors.Add(new ValidationErrorResponse
+                    {
+                        RowNumber = rowNumber,
+                        Field = "Request",
+                        Message = error
+                    });
+                }
+                continue;
+            }
+
+            var iso2Upper = (country.Iso2 ?? "").ToUpperInvariant();
+            var iso3Upper = (country.Iso3 ?? "").ToUpperInvariant();
+
+            if (iso2Seen.Contains(iso2Upper))
+            {
+                errors.Add(new ValidationErrorResponse
+                {
+                    RowNumber = rowNumber,
+                    Field = "Iso2",
+                    Message = $"Duplicate ISO2 code '{country.Iso2}' within batch"
+                });
+            }
+            else
+            {
+                iso2Seen.Add(iso2Upper);
+            }
+
+            if (iso3Seen.Contains(iso3Upper))
+            {
+                errors.Add(new ValidationErrorResponse
+                {
+                    RowNumber = rowNumber,
+                    Field = "Iso3",
+                    Message = $"Duplicate ISO3 code '{country.Iso3}' within batch"
+                });
+            }
+            else
+            {
+                iso3Seen.Add(iso3Upper);
+            }
+
+            if (existingIso2Set.Contains(iso2Upper))
+            {
+                errors.Add(new ValidationErrorResponse
+                {
+                    RowNumber = rowNumber,
+                    Field = "Iso2",
+                    Message = $"Country with ISO2 code '{country.Iso2}' already exists in database"
+                });
+            }
+
+            if (existingIso3Set.Contains(iso3Upper))
+            {
+                errors.Add(new ValidationErrorResponse
+                {
+                    RowNumber = rowNumber,
+                    Field = "Iso3",
+                    Message = $"Country with ISO3 code '{country.Iso3}' already exists in database"
+                });
+            }
+        }
+
+        if (errors.Any())
+        {
+            job.Status = "ValidationFailed";
+            job.ValidationErrors = JsonSerializer.Serialize(errors);
+            job.FailedRecords = errors.Select(e => e.RowNumber).Distinct().Count();
+        }
+        else
+        {
+            job.Status = "Validated";
+        }
+
+        await _context.SaveChangesAsync(cancellationToken);
+
+        _logger.LogInformation("Bulk import validation completed: JobId {JobId}, Status {Status}, Errors {ErrorCount}",
+            job.Id, job.Status, errors.Count);
+
+        return MapToStatusResponse(job, errors);
+    }
+
+    /// <summary>
+    /// Processes a validated bulk import job with atomic transaction.
+    /// </summary>
+    /// <param name="jobId">The unique identifier of the validated job to process.</param>
+    /// <param name="cancellationToken">Token to cancel the operation.</param>
+    /// <returns>A status response containing processing results.</returns>
+    public async Task<BulkImportStatusResponse> ProcessImportAsync(Guid jobId, CancellationToken cancellationToken = default)
+    {
+        var job = await _context.BulkImportJobs
+            .FirstOrDefaultAsync(j => j.Id == jobId, cancellationToken);
+
+        if (job == null)
+        {
+            throw new KeyNotFoundException($"Bulk import job {jobId} not found");
+        }
+
+        if (job.Status != "Validated" && job.Status != "Processing")
+        {
+            throw new InvalidOperationException($"Job {jobId} is in status '{job.Status}', cannot process. Only 'Validated' jobs can be processed.");
+        }
+
+        if (job.Status == "Validated")
+        {
+            job.Status = "Processing";
+            job.StartedAtUtc = DateTime.UtcNow;
+            await _context.SaveChangesAsync(cancellationToken);
+        }
+
+        try
+        {
+            if (string.IsNullOrEmpty(job.PayloadData))
+            {
+                throw new InvalidOperationException("Job payload data is missing");
+            }
+
+            var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+            var request = JsonSerializer.Deserialize<BulkImportRequest>(job.PayloadData, options);
+            if (request == null || request.Countries == null)
+            {
+                throw new InvalidOperationException("Failed to deserialize job payload data");
+            }
+
+            var strategy = _context.Database.CreateExecutionStrategy();
+            await strategy.ExecuteAsync(async () =>
+            {
+                using var transaction = await _context.Database.BeginTransactionAsync(cancellationToken);
+
+                try
+                {
+                    var countriesToInsert = request.Countries.Select(c => new Country
+                    {
+                        Iso2 = c.Iso2.ToUpperInvariant(),
+                        Iso3 = c.Iso3?.ToUpperInvariant(),
+                        Name = c.Name,
+                        OfficialName = c.OfficialName,
+                        NumericCode = c.NumericCode,
+                        Capital = c.Capital,
+                        Region = c.Region,
+                        Subregion = c.Subregion,
+                        Latitude = c.Latitude,
+                        Longitude = c.Longitude,
+                        Demonym = c.Demonym,
+                        AreaKm2 = c.AreaKm2,
+                        Population = c.Population,
+                        GiniCoefficient = c.GiniCoefficient,
+                        Timezones = c.Timezones ?? "[]",
+                        Borders = c.Borders ?? "[]",
+                        CallingCodes = c.CallingCodes ?? "[]",
+                        TopLevelDomains = c.TopLevelDomains ?? "[]",
+                        Currencies = c.Currencies ?? "{}",
+                        Languages = c.Languages ?? "{}",
+                        Translations = c.Translations ?? "{}",
+                        Flags = c.Flags ?? "{}",
+                        CoatOfArms = c.CoatOfArms ?? "{}",
+                        Independent = c.Independent ?? false,
+                        UnMember = c.UnMember ?? false,
+                        Landlocked = c.Landlocked ?? false,
+                        IsActive = true,
+                        CreatedAtUtc = DateTime.UtcNow,
+                        LastModifiedUtc = DateTime.UtcNow,
+                        CreatedBy = job.CreatedBy,
+                        UpdatedBy = job.CreatedBy
+                    }).ToList();
+
+                    _context.Countries.AddRange(countriesToInsert);
+                    await _context.SaveChangesAsync(cancellationToken);
+
+                    job.ProcessedRecords = job.TotalRecords;
+                    job.Status = "Completed";
+                    job.CompletedAtUtc = DateTime.UtcNow;
+
+                    await _context.SaveChangesAsync(cancellationToken);
+                    await transaction.CommitAsync(cancellationToken);
+
+                    _logger.LogInformation("Bulk import processing completed: JobId {JobId}, Records {Count}",
+                        job.Id, job.TotalRecords);
+
+                    await _countryService.InvalidateListCachesAsync(cancellationToken);
+                }
+                catch (Exception)
+                {
+                    await transaction.RollbackAsync(cancellationToken);
+                    throw;
+                }
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Bulk import processing failed: JobId {JobId}", job.Id);
+
+            job.Status = "Failed";
+            job.CompletedAtUtc = DateTime.UtcNow;
+            job.ValidationErrors = JsonSerializer.Serialize(new[] { new { message = ex.Message } });
+            await _context.SaveChangesAsync(cancellationToken);
+
+            throw;
+        }
+
+        return MapToStatusResponse(job, new List<ValidationErrorResponse>());
+    }
+
+    /// <summary>
+    /// Gets the status of a bulk import job.
+    /// </summary>
+    /// <param name="jobId">The unique identifier of the job.</param>
+    /// <param name="cancellationToken">Token to cancel the operation.</param>
+    /// <returns>A status response containing the current job status, or null if not found.</returns>
+    public async Task<BulkImportStatusResponse?> GetJobStatusAsync(Guid jobId, CancellationToken cancellationToken = default)
+    {
+        var job = await _context.BulkImportJobs
+            .FirstOrDefaultAsync(j => j.Id == jobId, cancellationToken);
+
+        if (job == null)
+        {
+            return null;
+        }
+
+        var errors = string.IsNullOrEmpty(job.ValidationErrors) || job.ValidationErrors == "[]"
+            ? new List<ValidationErrorResponse>()
+            : JsonSerializer.Deserialize<List<ValidationErrorResponse>>(job.ValidationErrors) ?? new List<ValidationErrorResponse>();
+
+        return MapToStatusResponse(job, errors);
+    }
+
+    private static BulkImportStatusResponse MapToStatusResponse(BulkImportJob job, List<ValidationErrorResponse> errors)
+    {
+        long? durationMs = null;
+        if (job.CompletedAtUtc.HasValue && job.StartedAtUtc.HasValue)
+        {
+            durationMs = (long)(job.CompletedAtUtc.Value - job.StartedAtUtc.Value).TotalMilliseconds;
+        }
+
+        return new BulkImportStatusResponse
+        {
+            JobId = job.Id,
+            Status = job.Status,
+            TotalRecords = job.TotalRecords,
+            ProcessedRecords = job.ProcessedRecords,
+            ValidationErrors = errors,
+            CreatedAtUtc = job.CreatedAtUtc,
+            StartedAtUtc = job.StartedAtUtc,
+            CompletedAtUtc = job.CompletedAtUtc,
+            DurationMs = durationMs
+        };
+    }
+}
