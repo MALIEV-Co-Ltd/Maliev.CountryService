@@ -18,7 +18,7 @@ namespace Maliev.CountryService.Api.Controllers;
 [ApiController]
 [ApiVersion("1")]
 [Route("country/v{version:apiVersion}/admin/countries")]
-[EnableRateLimiting(RateLimitPolicies.Admin)]
+[EnableRateLimiting(CountryRateLimitPolicies.Admin)]
 public class AdminCountriesController : ControllerBase
 {
     private readonly ICountryService _countryService;

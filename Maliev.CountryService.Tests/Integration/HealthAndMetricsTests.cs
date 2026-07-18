@@ -98,47 +98,14 @@ public class HealthAndMetricsTests : IntegrationTestBase
     [Fact]
     public async Task OpenApi_V1_ReturnsJsonDocument()
     {
-        // Act - Try to fetch OpenAPI document
-        try
-        {
-            var response = await _client.GetAsync("/country/openapi/v1.json");
+        var response = await _client.GetAsync("/country/openapi/v1.json");
 
-            // Allow redirects or not found (OpenAPI endpoint may not be available in test environment)
-            if (response.StatusCode == HttpStatusCode.NotFound ||
-                response.StatusCode == HttpStatusCode.Redirect ||
-                response.StatusCode == HttpStatusCode.MovedPermanently ||
-                response.StatusCode == HttpStatusCode.TemporaryRedirect)
-            {
-                // Skip test if endpoint not configured in test environment
-                return;
-            }
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal("application/json", response.Content.Headers.ContentType?.MediaType);
 
-            // Assert
-            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-
-            if (response.Content.Headers.ContentType?.MediaType != null)
-            {
-                Assert.Equal("application/json", response.Content.Headers.ContentType?.MediaType);
-            }
-
-            var content = await response.Content.ReadAsStringAsync();
-            Assert.Contains("openapi", content.ToLower());
-        }
-        catch (HttpRequestException)
-        {
-            // OpenAPI endpoint may not be configured in test environment - skip test
-            return;
-        }
-        catch (NullReferenceException)
-        {
-            // OpenAPI XML comment generator may fail in test environment - skip test
-            return;
-        }
-        catch (Exception)
-        {
-            // Any other exception in OpenAPI generation - skip test
-            return;
-        }
+        var content = await response.Content.ReadAsStringAsync();
+        Assert.Contains("\"openapi\"", content, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("/country/v1/countries", content, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -148,26 +115,14 @@ public class HealthAndMetricsTests : IntegrationTestBase
         var request = new HttpRequestMessage(HttpMethod.Get, "/country/scalar");
         var response = await _client.SendAsync(request);
 
-        // Allow redirects or not found (Scalar endpoint may not be available in test environment)
-        if (response.StatusCode == HttpStatusCode.NotFound ||
-            response.StatusCode == HttpStatusCode.Redirect ||
-            response.StatusCode == HttpStatusCode.MovedPermanently)
-        {
-            // Skip test if endpoint not configured in test environment
-            return;
-        }
-
-        // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal("text/html", response.Content.Headers.ContentType?.MediaType);
 
         var content = await response.Content.ReadAsStringAsync();
-        // Scalar or documentation page should be present
-        Assert.True(
-            content.Contains("Scalar") ||
-            content.Contains("API") ||
-            content.Contains("Documentation") ||
-            content.Contains("Country"),
-            "Response should contain documentation content");
+        Assert.Contains("Scalar", content, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Country Documentation", content, StringComparison.Ordinal);
+        Assert.Contains("openapi", content, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("v1.json", content, StringComparison.Ordinal);
     }
 
     [Fact]

@@ -256,8 +256,8 @@ curl -X GET "http://localhost:5000/country/v1/countries/search?q=stan" \
 ### Setting Up Authentication
 
 ```bash
-# Set your JWT token (replace with actual token)
-export JWT_TOKEN="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+# Set your JWT token locally; never commit a real token
+export JWT_TOKEN="replace-with-access-token"
 
 # Or use inline (replace in examples below)
 AUTHORIZATION_HEADER="Authorization: Bearer YOUR_JWT_TOKEN_HERE"

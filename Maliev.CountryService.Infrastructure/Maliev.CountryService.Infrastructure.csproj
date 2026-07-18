@@ -6,7 +6,6 @@
     <Nullable>enable</Nullable>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
-    <SharedLibraryVersion Condition="'$(SharedLibraryVersion)' == ''">1.0.*-*</SharedLibraryVersion>
   </PropertyGroup>
 
   <ItemGroup>
@@ -20,16 +19,10 @@
     </PackageReference>
   </ItemGroup>
 
-  <ItemGroup Condition="'$(GITHUB_ACTIONS)' != 'true'">
+  <ItemGroup>
     <ProjectReference Include="..\Maliev.CountryService.Application\Maliev.CountryService.Application.csproj" />
     <ProjectReference Include="..\Maliev.CountryService.Domain\Maliev.CountryService.Domain.csproj" />
     <ProjectReference Include="..\..\Maliev.Aspire\Maliev.Aspire.ServiceDefaults\Maliev.Aspire.ServiceDefaults.csproj" />
-  </ItemGroup>
-
-  <ItemGroup Condition="'$(GITHUB_ACTIONS)' == 'true'">
-    <ProjectReference Include="..\Maliev.CountryService.Application\Maliev.CountryService.Application.csproj" />
-    <ProjectReference Include="..\Maliev.CountryService.Domain\Maliev.CountryService.Domain.csproj" />
-    <PackageReference Include="Maliev.Aspire.ServiceDefaults" Version="$(ServiceDefaultsVersion)" />
   </ItemGroup>
 
   <ItemGroup>
