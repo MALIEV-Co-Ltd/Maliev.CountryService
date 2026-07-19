@@ -10,6 +10,7 @@ using Maliev.CountryService.Api.Authorization;
 using Maliev.CountryService.Api.Controllers;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Routing;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Http;
@@ -106,22 +107,11 @@ public sealed class ServiceAuthenticationWiringTests
     }
 
     /// <summary>
-    /// CI should consume the exact published ServiceDefaults version containing central exchange support.
+    /// CI should compile the exact public ServiceDefaults source containing central exchange support.
     /// </summary>
     [Fact]
-    public void ServiceDefaultsDependency_PinsPublishedCentralExchangeVersion()
+    public void ServiceDefaultsDependency_PinsPublicCentralExchangeSource()
     {
-        var source = ReadRepositoryFile("Directory.Build.props");
-
-        Assert.Contains(
-            "<ServiceDefaultsVersion Condition=\"'$(ServiceDefaultsVersion)' == ''\">1.0.89-alpha</ServiceDefaultsVersion>",
-            source,
-            StringComparison.Ordinal);
-        Assert.DoesNotContain(
-            "<ServiceDefaultsVersion Condition=\"'$(ServiceDefaultsVersion)' == ''\">1.0.*",
-            source,
-            StringComparison.Ordinal);
-
         foreach (var project in new[]
                  {
                      "Maliev.CountryService.Api/Maliev.CountryService.Api.csproj",
@@ -132,28 +122,34 @@ public sealed class ServiceAuthenticationWiringTests
         {
             var projectSource = ReadRepositoryFile(project.Split('/'));
             Assert.Contains(
-                "<PackageReference Include=\"Maliev.Aspire.ServiceDefaults\" Version=\"$(ServiceDefaultsVersion)\" />",
+                "<ProjectReference Include=\"..\\..\\Maliev.Aspire\\Maliev.Aspire.ServiceDefaults\\Maliev.Aspire.ServiceDefaults.csproj\" />",
                 projectSource,
                 StringComparison.Ordinal);
+            Assert.DoesNotContain("PackageReference Include=\"Maliev.Aspire.ServiceDefaults\"", projectSource, StringComparison.Ordinal);
+            Assert.DoesNotContain("GITHUB_ACTIONS", projectSource, StringComparison.Ordinal);
         }
+
+        var workflow = ReadRepositoryFile(".github", "workflows", "_validate.yml");
+        Assert.Contains("repository: MALIEV-Co-Ltd/Maliev.Aspire", workflow, StringComparison.Ordinal);
+        Assert.Contains("ref: 25a5c3b2d3d6b5ce8ed485d2d44a28f4dc4c9b51", workflow, StringComparison.Ordinal);
+        Assert.Contains("repository: MALIEV-Co-Ltd/Maliev.MessagingContracts", workflow, StringComparison.Ordinal);
+        Assert.Contains("ref: 559a00db0c7920a5247fdff60d4476ad23a9a501", workflow, StringComparison.Ordinal);
+        Assert.Contains("UsePackageReferences: \"false\"", workflow, StringComparison.Ordinal);
     }
 
     /// <summary>
-    /// The Docker restore layer must include the shared version property before restoring package-mode projects.
+    /// The Docker build must consume the same public ServiceDefaults source and locked service graph.
     /// </summary>
     [Fact]
-    public void Dockerfile_CopiesSharedVersionPropertiesBeforePackageRestore()
+    public void Dockerfile_UsesPinnedSourceContextAndLockedRestore()
     {
         var source = ReadRepositoryFile("Maliev.CountryService.Api", "Dockerfile");
-        var propertiesCopy = source.IndexOf(
-            "COPY [\"Directory.Build.props\", \".\"]",
-            StringComparison.Ordinal);
-        var restore = source.IndexOf(
-            "dotnet restore \"./Maliev.CountryService.Api/Maliev.CountryService.Api.csproj\"",
-            StringComparison.Ordinal);
 
-        Assert.True(propertiesCopy >= 0, "Dockerfile must copy Directory.Build.props into the restore layer.");
-        Assert.True(restore > propertiesCopy, "Directory.Build.props must be available before dotnet restore.");
+        Assert.Contains("COPY --from=aspire . /Maliev.Aspire/", source, StringComparison.Ordinal);
+        Assert.Contains("COPY --from=messaging . /Maliev.MessagingContracts/", source, StringComparison.Ordinal);
+        Assert.Contains("--locked-mode", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("nuget_password", source, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("GITHUB_ACTIONS", source, StringComparison.Ordinal);
     }
 
     /// <summary>
@@ -170,6 +166,9 @@ public sealed class ServiceAuthenticationWiringTests
         AssertEndpoint<CountriesController>(nameof(CountriesController.Search), "search", "GET", CountryPermissions.CountriesSearch);
 
         AssertControllerRoute<AdminCountriesController>("country/v{version:apiVersion}/admin/countries");
+        Assert.Equal(
+            CountryRateLimitPolicies.Admin,
+            typeof(AdminCountriesController).GetCustomAttribute<EnableRateLimitingAttribute>()?.PolicyName);
         AssertEndpoint<AdminCountriesController>(nameof(AdminCountriesController.Create), null, "POST", CountryPermissions.CountriesCreate);
         AssertEndpoint<AdminCountriesController>(nameof(AdminCountriesController.Update), "{id:guid}", "PUT", CountryPermissions.CountriesUpdate);
         AssertEndpoint<AdminCountriesController>(nameof(AdminCountriesController.Patch), "{id:guid}", "PATCH", CountryPermissions.CountriesUpdate);
@@ -180,6 +179,9 @@ public sealed class ServiceAuthenticationWiringTests
         AssertEndpoint<AdminCountriesController>(nameof(AdminCountriesController.ExportAll), "export", "GET", CountryPermissions.SystemExport);
 
         AssertControllerRoute<BulkImportController>("country/v{version:apiVersion}/admin/bulk-import");
+        Assert.Equal(
+            CountryRateLimitPolicies.Batch,
+            typeof(BulkImportController).GetCustomAttribute<EnableRateLimitingAttribute>()?.PolicyName);
         AssertEndpoint<BulkImportController>(nameof(BulkImportController.SubmitBulkImport), null, "POST", CountryPermissions.ImportUpload);
         AssertEndpoint<BulkImportController>(nameof(BulkImportController.GetJobStatus), "{jobId:guid}", "GET", CountryPermissions.ImportStatus);
         AssertEndpoint<BulkImportController>(nameof(BulkImportController.ProcessJob), "{jobId:guid}/process", "POST", CountryPermissions.ImportExecute);

@@ -8,23 +8,16 @@
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <UserSecretsId>maliev-countryservice-api</UserSecretsId>
     <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
-    <SharedLibraryVersion Condition="'$(SharedLibraryVersion)' == ''">1.0.*-*</SharedLibraryVersion>
   </PropertyGroup>
 
   <ItemGroup>
     <InternalsVisibleTo Include="Maliev.CountryService.Tests" />
   </ItemGroup>
 
-  <ItemGroup Condition="'$(GITHUB_ACTIONS)' != 'true'">
+  <ItemGroup>
     <ProjectReference Include="..\Maliev.CountryService.Application\Maliev.CountryService.Application.csproj" />
     <ProjectReference Include="..\Maliev.CountryService.Infrastructure\Maliev.CountryService.Infrastructure.csproj" />
     <ProjectReference Include="..\..\Maliev.Aspire\Maliev.Aspire.ServiceDefaults\Maliev.Aspire.ServiceDefaults.csproj" />
-  </ItemGroup>
-
-  <ItemGroup Condition="'$(GITHUB_ACTIONS)' == 'true'">
-    <ProjectReference Include="..\Maliev.CountryService.Application\Maliev.CountryService.Application.csproj" />
-    <ProjectReference Include="..\Maliev.CountryService.Infrastructure\Maliev.CountryService.Infrastructure.csproj" />
-    <PackageReference Include="Maliev.Aspire.ServiceDefaults" Version="$(ServiceDefaultsVersion)" />
   </ItemGroup>
 
 </Project>
