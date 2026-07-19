@@ -18,7 +18,7 @@ namespace Maliev.CountryService.Api.Controllers;
 [ApiController]
 [ApiVersion("1")]
 [Route("country/v{version:apiVersion}/admin/bulk-import")]
-[EnableRateLimiting(RateLimitPolicies.Batch)]
+[EnableRateLimiting(CountryRateLimitPolicies.Batch)]
 public class BulkImportController : ControllerBase
 {
     private readonly IBulkImportService _bulkImportService;

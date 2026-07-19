@@ -20,13 +20,13 @@ public class TestDatabaseFixture : IAsyncLifetime
 
     public async Task InitializeAsync()
     {
-        PostgresContainer = 
 #pragma warning disable CS0618
-        new PostgreSqlBuilder().WithImage("postgres:18-alpine")
+        PostgresContainer = new PostgreSqlBuilder().WithImage("postgres:18-alpine")
             .WithDatabase("test_db")
             .WithUsername("postgres")
             .WithPassword("postgres")
             .Build();
+#pragma warning restore CS0618
 
         RedisContainer = new RedisBuilder("redis:7.4-alpine")
             .Build();
