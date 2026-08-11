@@ -25,7 +25,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           repository: MALIEV-Co-Ltd/Maliev.Aspire
-          ref: 25a5c3b2d3d6b5ce8ed485d2d44a28f4dc4c9b51
+          ref: 9ab2cbe520c3de07dbea796d07a2c509a9d28aed
           path: Maliev.Aspire
           persist-credentials: false
 
@@ -33,7 +33,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           repository: MALIEV-Co-Ltd/Maliev.MessagingContracts
-          ref: 559a00db0c7920a5247fdff60d4476ad23a9a501
+          ref: 9f581b02758fd1dd4252581deece3cb57b10f342
           path: Maliev.MessagingContracts
           persist-credentials: false
 
