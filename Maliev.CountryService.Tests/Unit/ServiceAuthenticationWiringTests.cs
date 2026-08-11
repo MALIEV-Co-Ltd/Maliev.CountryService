@@ -131,9 +131,9 @@ public sealed class ServiceAuthenticationWiringTests
 
         var workflow = ReadRepositoryFile(".github", "workflows", "_validate.yml");
         Assert.Contains("repository: MALIEV-Co-Ltd/Maliev.Aspire", workflow, StringComparison.Ordinal);
-        Assert.Contains("ref: 25a5c3b2d3d6b5ce8ed485d2d44a28f4dc4c9b51", workflow, StringComparison.Ordinal);
+        Assert.Contains("ref: 9ab2cbe520c3de07dbea796d07a2c509a9d28aed", workflow, StringComparison.Ordinal);
         Assert.Contains("repository: MALIEV-Co-Ltd/Maliev.MessagingContracts", workflow, StringComparison.Ordinal);
-        Assert.Contains("ref: 559a00db0c7920a5247fdff60d4476ad23a9a501", workflow, StringComparison.Ordinal);
+        Assert.Contains("ref: 9f581b02758fd1dd4252581deece3cb57b10f342", workflow, StringComparison.Ordinal);
         Assert.Contains("UsePackageReferences: \"false\"", workflow, StringComparison.Ordinal);
     }
 
